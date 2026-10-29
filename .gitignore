@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+# Google service account key — KHÔNG bao giờ commit (đặt ngoài repo, chỉ trỏ đường dẫn qua env)
+*service-account*.json
+*service_account*.json
+sa-*.json
+*.db
+*.sqlite3
+.pytest_cache/
+alembic/versions/*.pyc
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+coverage/
+.DS_Store
+var/

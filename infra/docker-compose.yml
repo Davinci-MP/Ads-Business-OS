@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: adsos
+      POSTGRES_PASSWORD: adsos
+      POSTGRES_DB: adsos
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U adsos"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ../apps/api
+    environment:
+      ADSOS_APP_ENV: local
+      ADSOS_DATABASE_URL: postgresql+psycopg://adsos:adsos@postgres:5432/adsos
+      ADSOS_META_ACCESS_TOKEN: ${ADSOS_META_ACCESS_TOKEN}
+      ADSOS_GOOGLE_SHEETS_SPREADSHEET_ID: ${ADSOS_GOOGLE_SHEETS_SPREADSHEET_ID}
+      ADSOS_TELEGRAM_BOT_TOKEN: ${ADSOS_TELEGRAM_BOT_TOKEN}
+      ADSOS_TRON_WALLET_ADDRESS: ${ADSOS_TRON_WALLET_ADDRESS}
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ../apps/api:/code
+    working_dir: /code
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  web:
+    build:
+      context: ../apps/web
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    command: npm run dev
+    volumes:
+      - ../apps/web:/code
+    working_dir: /code
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
