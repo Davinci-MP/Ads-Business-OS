@@ -843,3 +843,58 @@ def test_sheets_report_endpoint_uses_read_only_source_without_mapping_confirmati
     assert payload["mapping_status"] == "PREVIEW_NEEDS_CONFIRMATION"
     assert payload["meta_reconciliation_status"] == "NOT_COMPARED"
     assert payload["customers"][0]["opening_balance"]["source"] == "JOKER!J1"
+
+import pytest
+
+
+def _company_report(row_number=35, total='120.25'):
+    return {
+        'customers': [{'source_sheet': 'CLIENT', 'tab_source_totals': {
+            'spend_vnd': {'value': '100'}}, 'opening_balance': {}}],
+        'summary_tabs': [{'title': 'TỔNG T11', 'header_row': 1, 'rows': [
+            {'summary_row': 1, 'cells': [
+                {'address': f'{col}1', 'value': value}
+                for col, value in zip('ABCDEFG', ['Tên', 'ĐÃ BANK', 'T10/2026', 'RUN', 'PHÍ', 'TỔNG', 'CÒN'])]},
+            {'summary_row': row_number, 'customer_label': 'TỔNG', 'cells': [
+                {'address': f'{col}{row_number}', 'value': value, 'formula': f'=SUM({col}2:{col}{row_number-1})'}
+                for col, value in zip('BCDEFG', ['200', '-10', total, '4', '124.25', '65.75'])]}
+        ]}]
+    }
+
+
+@pytest.mark.parametrize('row_number', [30, 35, 40])
+def test_company_total_follows_label_when_customer_count_changes(row_number):
+    report = enrich_sheets_report(_company_report(row_number), '2026-11')
+    total = report['company_totals']
+    assert total['source_row'] == row_number
+    assert total['metrics']['spend_vnd']['source'] == f'TỔNG T11!D{row_number}'
+    assert total['metrics']['spend_vnd']['value'] == '120.25'
+    assert total['metrics']['spend_vnd']['difference'] == '20.25'
+    assert total['metrics']['opening_balance']['value'] == '-10'
+    assert report['all_customer_totals']['metrics']['spend_vnd']['value'] == '100'
+
+
+@pytest.mark.parametrize('case', ['missing', 'duplicate', 'wrong_month', 'wrong_header'])
+def test_company_total_does_not_guess_ambiguous_or_missing_source(case):
+    from copy import deepcopy
+    report = _company_report()
+    tab = report['summary_tabs'][0]
+    if case == 'missing':
+        tab['rows'].pop()
+    elif case == 'duplicate':
+        tab['rows'].append(deepcopy(tab['rows'][-1]))
+    elif case == 'wrong_month':
+        tab['title'] = 'TỔNG T10'
+    else:
+        tab['rows'][0]['cells'][3]['value'] = 'USD'
+    total = enrich_sheets_report(report, '2026-11')['company_totals']
+    assert total['status'] == 'NEEDS_CONFIRMATION'
+    assert total['metrics']['spend_vnd']['value'] is None
+
+
+@pytest.mark.parametrize('value', [None, '#REF!', 'NaN', 'Infinity'])
+def test_company_total_invalid_cell_never_becomes_zero(value):
+    total = enrich_sheets_report(_company_report(total=value), '2026-11')['company_totals']
+    assert total['metrics']['spend_vnd']['value'] is None
+    assert total['metrics']['spend_vnd']['status'] == 'PARTIAL'
+    assert total['metrics']['budget_deposits_vnd']['value'] == '200'

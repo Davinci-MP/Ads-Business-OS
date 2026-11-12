@@ -229,7 +229,7 @@ export default function ReviewsPage() {
   }
 
   return (
-    <main style={{ padding: 24 }}>
+    <div className="w-full space-y-6 text-white">
       <h1>Đối chiếu thủ công (không cần Meta token)</h1>
       <p>
         Quy trình: chọn khách + ngày báo cáo → đọc Google Sheets thật (chỉ đọc) → nhập Campaign ID + tổng
@@ -377,8 +377,8 @@ export default function ReviewsPage() {
                     <strong>{row.match_status ?? "—"}</strong>
                   </td>
                   <td style={cell}>
-                    <div>baseline {row.baseline_confirmed ? "CONFIRMED ✓" : "preview ✗"}</div>
-                    <div>tập campaign {row.campaign_set_complete ? "đủ ✓" : "chưa xác nhận ✗"}</div>
+                    <div>baseline {row.baseline_confirmed ? "CONFIRMED " : "preview "}</div>
+                    <div>tập campaign {row.campaign_set_complete ? "đủ " : "chưa xác nhận "}</div>
                   </td>
                   <td style={cell}>
                     {row.campaigns.map((cmp) => (
@@ -420,7 +420,7 @@ export default function ReviewsPage() {
           </li>
         ))}
       </ul>
-    </main>
+    </div>
   );
 }
 

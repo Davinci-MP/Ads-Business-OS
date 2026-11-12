@@ -108,7 +108,20 @@ def checkpoint_rows(session):
 def test_scheduler_has_hourly_and_checkpoint_jobs_vn_tz():
     scheduler = build_scheduler()
     by_id = {job.id: job for job in scheduler.get_jobs()}
-    assert set(by_id) == {"meta_sync_hourly", "checkpoint_9h"}
+    assert set(by_id) == {
+        "meta_sync_hourly",
+        "checkpoint_9h",
+        "meta_risk_monitor",
+        "prepaid_billing",
+        "via_token_keepalive",
+        "via_asset_sync",
+    }
+    assert by_id["meta_risk_monitor"].trigger.interval.total_seconds() == 300
+    assert by_id["prepaid_billing"].trigger.interval.total_seconds() == 60
+    assert by_id["via_token_keepalive"].trigger.interval.total_seconds() == 6 * 60 * 60
+    assert by_id["via_asset_sync"].trigger.interval.total_seconds() == 2 * 60 * 60
+    assert by_id["via_token_keepalive"].func.__name__ == "auto_verify_via_tokens"
+    assert by_id["via_asset_sync"].func.__name__ == "scheduled_asset_sync"
     hourly = by_id["meta_sync_hourly"].trigger
     checkpoint = by_id["checkpoint_9h"].trigger
     assert {str(f) for f in hourly.fields if f.name == "hour"} == {"*"}

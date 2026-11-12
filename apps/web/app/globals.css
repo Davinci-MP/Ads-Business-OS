@@ -1,14 +1,47 @@
+:root {
+  color-scheme: dark;
+  --spotify-base: #121212;
+  --spotify-surface: #181818;
+  --spotify-hover: #1f1f1f;
+  --spotify-card: #181818;
+  --spotify-card-elevated: #252525;
+  --spotify-divider: #282828;
+  --spotify-border: #333333;
+  --spotify-green: #1ed760;
+  --spotify-green-hover: #1fdf64;
+  --spotify-white: #ffffff;
+  --spotify-silver: #b3b3b3;
+  --spotify-subtle: #727272;
+  --spotify-red: #f3727f;
+  --spotify-orange: #ffa42b;
+  --spotify-blue: #539df5;
+
+  /* Legacy variable mappings for backward compatibility */
+  --ux-page: #121212;
+  --ux-surface: #181818;
+  --ux-surface-2: #1f1f1f;
+  --ux-surface-3: #252525;
+  --ux-ink: #ffffff;
+  --ux-ink-2: #b3b3b3;
+  --ux-ink-3: #727272;
+  --ux-line: #282828;
+  --ux-line-2: #333333;
+  --ux-accent: #1ed760;
+  --ux-accent-2: #539df5;
+  --ux-accent-soft: rgba(30, 215, 96, 0.15);
+  --ux-mint: #1ed760;
+  --ux-warn: #ffa42b;
+  --ux-danger: #f3727f;
+}
+
 @import "tailwindcss";
 @config "../tailwind.config.js";
 @source "./";
 
 @layer base {
-  /* Khôi phục kiểu heading mặc định cho các trang cũ không dùng Tailwind class.
-     Đặt trong @layer base (cùng lớp với preflight của Tailwind, thấp hơn @layer utilities)
-     để utility như text-xl/font-bold trên /reports vẫn ghi đè đúng. */
-  h1 { font-size: 2em; font-weight: 700; }
-  h2 { font-size: 1.5em; font-weight: 700; }
-  h3 { font-size: 1.17em; font-weight: 700; }
+  h1 { font-size: 1.5rem; font-weight: 700; color: #ffffff; }
+  h2 { font-size: 1.25rem; font-weight: 700; color: #ffffff; }
+  h3 { font-size: 1.125rem; font-weight: 600; color: #ffffff; }
 }
 
 * {
@@ -17,238 +50,276 @@
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  background: #f5f6f8;
-  color: #1c2430;
+  font-family: SpotifyMixUI, CircularSp-Arab, CircularSp-Hebr, CircularSp-Cyrl, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #121212;
+  color: #ffffff;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.nav {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-  background: #16324f;
-  padding: 10px 20px;
-  flex-wrap: nowrap;
-  overflow-x: auto;
-  scrollbar-width: none;
+/* Spotify Dark Theme Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
 }
 
-.nav::-webkit-scrollbar {
-  display: none;
+::-webkit-scrollbar-track {
+  background: #121212;
 }
 
-.nav > * {
-  flex-shrink: 0;
+::-webkit-scrollbar-thumb {
+  background: #282828;
+  border-radius: 9999px;
 }
 
-.nav .brand,
-.nav a {
-  white-space: nowrap;
+::-webkit-scrollbar-thumb:hover {
+  background: #3e3e3e;
 }
 
-.nav .brand {
-  color: #fff;
-  font-weight: 700;
-  margin-right: 24px;
-}
-
-.nav a {
-  color: #c8d6e5;
-  text-decoration: none;
-  padding: 8px 14px;
-  border-radius: 6px;
-  font-size: 14px;
-}
-
-.nav a.active,
-.nav a:hover {
-  background: #2a4a6e;
-  color: #fff;
-}
-
-.mode-badge {
-  margin-left: auto;
-  color: #ffd166;
-  border: 1px solid #ffd166;
-  border-radius: 999px;
-  padding: 3px 12px;
-  font-size: 12px;
-}
-
+/* Spotify Surface & Component Classes */
 .page {
-  max-width: 1180px;
-  margin: 24px auto;
-  padding: 0 20px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
 }
 
 .page h1 {
-  font-size: 22px;
+  font-size: 24px;
   margin: 0 0 16px;
+  font-weight: 700;
+  color: #ffffff;
 }
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
 .card {
-  background: #fff;
-  border: 1px solid #e3e7ee;
-  border-radius: 10px;
-  padding: 14px 16px;
+  background: #181818;
+  border: 1px solid #282828;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 16px 20px;
+  box-shadow: 0 8px 8px rgba(0, 0, 0, 0.3);
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.card:hover {
+  background: #1f1f1f;
 }
 
 .card .label {
   font-size: 12px;
-  color: #66707d;
+  color: #b3b3b3;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  font-weight: 600;
 }
 
 .card .value {
   font-size: 26px;
   font-weight: 700;
-  margin-top: 4px;
+  margin-top: 6px;
+  color: #ffffff;
 }
 
 .card .value.warn {
-  color: #b7791f;
+  color: #ffa42b;
 }
 
 .card .value.bad {
-  color: #c0392b;
+  color: #f3727f;
 }
 
+/* Spotify Table */
 table {
   width: 100%;
   border-collapse: collapse;
-  background: #fff;
-  border: 1px solid #e3e7ee;
-  border-radius: 10px;
+  background: #181818;
+  border: 1px solid #282828;
+  color: #ffffff;
+  border-radius: 8px;
   overflow: hidden;
   font-size: 13px;
+  box-shadow: 0 8px 8px rgba(0, 0, 0, 0.3);
 }
 
 th,
 td {
-  padding: 8px 10px;
-  border-bottom: 1px solid #eef1f5;
+  padding: 10px 14px;
+  border-bottom: 1px solid #282828;
   text-align: left;
   white-space: nowrap;
 }
 
 th {
-  background: #f0f3f7;
-  font-weight: 600;
-  color: #465360;
+  background: #1f1f1f;
+  font-weight: 700;
+  color: #b3b3b3;
+  border-bottom: 1px solid #282828;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  font-size: 11px;
 }
 
+tr:hover td {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Spotify Tag / Pill Badges */
 .tag {
   display: inline-block;
-  border-radius: 999px;
-  padding: 2px 10px;
+  border-radius: 9999px;
+  padding: 3px 12px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
 }
 
 .tag.ok {
-  background: #e3f6e8;
-  color: #1e7d3c;
+  background: rgba(30, 215, 96, 0.15);
+  color: #1ed760;
+  border: 1px solid rgba(30, 215, 96, 0.3);
 }
 
 .tag.warn {
-  background: #fdf1dc;
-  color: #b7791f;
+  background: rgba(255, 164, 43, 0.15);
+  color: #ffa42b;
+  border: 1px solid rgba(255, 164, 43, 0.3);
 }
 
 .tag.bad {
-  background: #fde3e0;
-  color: #c0392b;
+  background: rgba(243, 114, 127, 0.15);
+  color: #f3727f;
+  border: 1px solid rgba(243, 114, 127, 0.3);
 }
 
+/* Spotify Action Buttons & Toolbar */
 .toolbar {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .toolbar button {
-  background: #16324f;
-  color: #fff;
+  background: #1ed760;
+  color: #000000;
   border: 0;
-  border-radius: 6px;
-  padding: 8px 16px;
+  border-radius: 9999px;
+  padding: 10px 22px;
   font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
   cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.toolbar button:hover {
+  background: #1fdf64;
+  transform: scale(1.02);
 }
 
 .error-box {
-  background: #fde3e0;
-  color: #7a231c;
+  background: rgba(243, 114, 127, 0.12);
+  color: #f3727f;
+  border: 1px solid rgba(243, 114, 127, 0.3);
   border-radius: 8px;
-  padding: 10px 14px;
-  margin-bottom: 12px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
   font-size: 13px;
 }
 
 .loading {
-  color: #66707d;
+  color: #b3b3b3;
   font-size: 13px;
 }
 
 .section-title {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
-  margin: 22px 0 8px;
+  margin: 24px 0 12px;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
 }
 
 .muted {
-  color: #66707d;
+  color: #b3b3b3;
 }
 
+/* Forms with Spotify styling */
 .status-form {
-  background: #fff;
-  border: 1px solid #e3e7ee;
-  border-radius: 10px;
-  padding: 14px 16px;
-  margin-bottom: 16px;
+  background: #181818;
+  border: 1px solid #282828;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
   align-items: flex-end;
+  box-shadow: 0 8px 8px rgba(0, 0, 0, 0.3);
 }
 
 .status-form label {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
-  color: #66707d;
+  gap: 6px;
+  font-size: 11px;
+  color: #b3b3b3;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-weight: 600;
 }
 
 .status-form select,
 .status-form input {
-  padding: 7px 10px;
-  border: 1px solid #cfd6e0;
-  border-radius: 6px;
+  padding: 8px 14px;
+  border: 1px solid #333333;
+  background: #1f1f1f;
+  color: #ffffff;
+  border-radius: 9999px;
   font-size: 13px;
   min-width: 180px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.status-form select:focus,
+.status-form input:focus {
+  border-color: #1ed760;
 }
 
 .status-form button {
-  background: #16324f;
-  color: #fff;
+  background: #1ed760;
+  color: #000000;
   border: 0;
-  border-radius: 6px;
-  padding: 9px 18px;
-  font-size: 13px;
+  border-radius: 9999px;
+  padding: 9px 20px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
   cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.status-form button:hover:not(:disabled) {
+  background: #1fdf64;
+  transform: scale(1.02);
 }
 
 .status-form button:disabled {
-  opacity: 0.5;
-  cursor: default;
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .notice {
@@ -257,9 +328,9 @@ th {
 }
 
 .notice.ok {
-  color: #1e7d3c;
+  color: #1ed760;
 }
 
 .notice.err {
-  color: #c0392b;
+  color: #f3727f;
 }

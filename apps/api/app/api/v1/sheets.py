@@ -1,4 +1,4 @@
-﻿"""REST endpoints cho Google Sheets module (S6/S6+, D-024/D-028).
+"""REST endpoints cho Google Sheets module (S6/S6+, D-024/D-028).
 
 Guard cứng:
 - KHÔNG endpoint nào ghi/sửa Google Sheets — chỉ đọc + phân tích + mapping trong DB.
@@ -245,3 +245,29 @@ def sheets_list_mappings(
         }
         for row in rows
     ]
+
+
+class ViaSheetWritebackPayload(BaseModel):
+    report_date: str
+    client_ids: Optional[list[int]] = None
+    dry_run: bool = True
+    auto_create_borders: bool = True
+
+
+@router.post("/writeback-from-vias")
+def writeback_from_vias_direct(
+    body: ViaSheetWritebackPayload,
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.services.sheet_writer import writeback_reporting_rows_to_sheets
+    try:
+        return writeback_reporting_rows_to_sheets(
+            session=db,
+            report_date_str=body.report_date,
+            client_ids=body.client_ids,
+            dry_run=body.dry_run,
+            auto_create_borders=body.auto_create_borders,
+        )
+    except Exception as exc:
+        raise HTTPException(400, str(exc)) from exc
+

@@ -1,0 +1,157 @@
+{
+  "checks": [
+    {
+      "title": "Mọi tài sản. Một góc nhìn.",
+      "width": 1440,
+      "scroll": 1432,
+      "main": true,
+      "route": "/dashboard"
+    },
+    {
+      "title": "Quản Trị Tài Khoản Quảng CáoTài sản quảng cáo",
+      "width": 1440,
+      "scroll": 1432,
+      "main": true,
+      "route": "/accounts"
+    },
+    {
+      "title": "Business Manager",
+      "width": 1440,
+      "scroll": 1432,
+      "main": true,
+      "route": "/bms"
+    },
+    {
+      "title": "Quản lý dàn VIA",
+      "width": 1440,
+      "scroll": 1432,
+      "main": true,
+      "route": "/vias"
+    },
+    {
+      "title": "Khách hàng & đối soát",
+      "width": 1440,
+      "scroll": 1432,
+      "main": true,
+      "route": "/customers"
+    },
+    {
+      "title": "Phân tích & báo cáo",
+      "width": 1440,
+      "scroll": 1432,
+      "main": true,
+      "route": "/analytics"
+    },
+    {
+      "title": "Thiết lập chiến dịch",
+      "width": 1440,
+      "scroll": 1440,
+      "main": true,
+      "route": "/auto-set-camp"
+    },
+    {
+      "title": "Cài đặt hệ thống",
+      "width": 1440,
+      "scroll": 1440,
+      "main": true,
+      "route": "/settings"
+    },
+    {
+      "width": 1024,
+      "scroll": 1016,
+      "route": "/dashboard",
+      "tablet": true
+    },
+    {
+      "width": 1024,
+      "scroll": 1023,
+      "route": "/accounts",
+      "tablet": true
+    },
+    {
+      "width": 1024,
+      "scroll": 1016,
+      "route": "/bms",
+      "tablet": true
+    },
+    {
+      "width": 1024,
+      "scroll": 1016,
+      "route": "/vias",
+      "tablet": true
+    },
+    {
+      "width": 1024,
+      "scroll": 1016,
+      "route": "/customers",
+      "tablet": true
+    },
+    {
+      "width": 1024,
+      "scroll": 1016,
+      "route": "/analytics",
+      "tablet": true
+    },
+    {
+      "width": 1024,
+      "scroll": 1016,
+      "route": "/auto-set-camp",
+      "tablet": true
+    },
+    {
+      "width": 1024,
+      "scroll": 1024,
+      "route": "/settings",
+      "tablet": true
+    },
+    {
+      "width": 390,
+      "scroll": 390,
+      "route": "/dashboard",
+      "mobile": true
+    },
+    {
+      "width": 390,
+      "scroll": 390,
+      "route": "/accounts",
+      "mobile": true
+    },
+    {
+      "width": 390,
+      "scroll": 390,
+      "route": "/bms",
+      "mobile": true
+    },
+    {
+      "width": 390,
+      "scroll": 390,
+      "route": "/vias",
+      "mobile": true
+    },
+    {
+      "width": 390,
+      "scroll": 390,
+      "route": "/customers",
+      "mobile": true
+    },
+    {
+      "width": 390,
+      "scroll": 390,
+      "route": "/analytics",
+      "mobile": true
+    },
+    {
+      "width": 390,
+      "scroll": 390,
+      "route": "/auto-set-camp",
+      "mobile": true
+    },
+    {
+      "width": 390,
+      "scroll": 390,
+      "route": "/settings",
+      "mobile": true
+    }
+  ],
+  "javascript_errors": []
+}

@@ -4,21 +4,24 @@ ghi tài khoản (assign/replace/cost) qua service accounts.py, có audit log.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select, text
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import AdAccount, Customer
+from app.core.local_admin import require_local_admin
+from app.models import AdAccount, Approval, AuditLog, Customer
+from app.connectors.sheets import parse_spreadsheet_url
 from app.services import accounts as account_service
 from app.services import dashboard as dashboard_service
 from app.services import operations_overview as operations_service
+from app.services import treasury as treasury_service
 
 router = APIRouter()
 
@@ -36,6 +39,14 @@ def dashboard_overview(db: Session = Depends(get_db)) -> dict[str, Any]:
     return dashboard_service.overview(db)
 
 
+@router.get("/dashboard/operational")
+def dashboard_operational(date_from: Optional[date] = None, date_to: Optional[date] = None,
+                          db: Session = Depends(get_db)) -> dict[str, Any]:
+    if date_from and date_to and date_from > date_to:
+        raise HTTPException(status_code=400, detail="Ngày bắt đầu phải trước hoặc bằng ngày kết thúc")
+    return dashboard_service.operational_dashboard(db, date_from=date_from, date_to=date_to)
+
+
 @router.get("/dashboard/operations-overview")
 def dashboard_operations_overview(db: Session = Depends(get_db)) -> dict[str, Any]:
     return operations_service.operations_overview(db)
@@ -47,6 +58,12 @@ def dashboard_operations_list(metric: str, db: Session = Depends(get_db)) -> dic
         return operations_service.operations_list(db, metric)
     except KeyError:
         raise HTTPException(404, "Chỉ số không tồn tại")
+
+
+@router.get("/dashboard/treasury-summary")
+def dashboard_treasury_summary(db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Tổng quan nguồn vốn & ngân quỹ hợp nhất (TRON USDT + Binance USDT + PingPong Balances & VCC)."""
+    return treasury_service.get_treasury_summary(db)
 
 
 @router.get("/dashboard/campaigns")
@@ -69,8 +86,17 @@ def dashboard_system(db: Session = Depends(get_db)) -> dict[str, Any]:
 
 @router.get("/customers")
 def list_customers(db: Session = Depends(get_db)) -> list[dict[str, Any]]:
+    approvals: dict[int, str] = {}
+    for approval in db.scalars(select(Approval).where(
+        Approval.entity_type == "CUSTOMER_SHEET_SCHEDULE",
+    ).order_by(Approval.id.desc())).all():
+        if approval.entity_id.isdigit():
+            approvals.setdefault(int(approval.entity_id), approval.status)
     return [
-        {"id": c.id, "name": c.name, "recon_mode": c.recon_mode}
+        {"id": c.id, "name": c.name, "recon_mode": c.recon_mode, "fee_rate": str(c.fee_rate),
+         "telegram_chat_id": c.telegram_chat_id, "telegram_username": c.telegram_username,
+         "sheet_url": c.sheet_url, "sheet_tab_name": c.sheet_tab_name, "sync_time": c.sync_time,
+         "sheet_sync_approval_status": approvals.get(c.id), "is_active": c.is_active}
         for c in db.execute(select(Customer).order_by(Customer.name)).scalars().all()
     ]
 
@@ -83,6 +109,7 @@ def list_ad_accounts(db: Session = Depends(get_db)) -> list[dict[str, Any]]:
             "meta_ad_account_id": a.meta_ad_account_id,
             "name": a.name,
             "status": a.status,
+            "allow_violated_accounts": a.allow_violated_accounts,
         }
         for a in db.execute(select(AdAccount).order_by(AdAccount.id)).scalars().all()
     ]
@@ -92,8 +119,30 @@ def list_ad_accounts(db: Session = Depends(get_db)) -> list[dict[str, Any]]:
 
 
 class CustomerCreate(BaseModel):
-    name: str
-    telegram_chat_id: Optional[str] = None
+    name: str = Field(..., min_length=1, max_length=255)
+    telegram_chat_id: Optional[str] = Field(None, max_length=64)
+    telegram_username: Optional[str] = Field(None, max_length=64)
+    fee_rate: Decimal = Field(Decimal("0.04"), ge=0, le=1, max_digits=6, decimal_places=4)
+    sheet_url: Optional[str] = Field(None, max_length=1024)
+    sheet_tab_name: Optional[str] = Field(None, max_length=255)
+    sync_time: Optional[str] = Field(None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+
+    @field_validator("sheet_url")
+    @classmethod
+    def validate_sheet_url(cls, value: Optional[str]) -> Optional[str]:
+        clean = (value or "").strip()
+        if not clean:
+            return None
+        parse_spreadsheet_url(clean)
+        return clean
+
+
+class CustomerAccountSet(BaseModel):
+    act_ids: list[str] = Field(default_factory=list, max_length=1000)
+
+
+class SheetSyncApprovalRequest(BaseModel):
+    actor: str = Field("owner", min_length=1, max_length=64)
 
 
 class BudgetAlertThresholdUpdate(BaseModel):
@@ -119,16 +168,90 @@ class AdAccountCreate(BaseModel):
     business_manager_id: Optional[str] = None
 
 
-@router.post("/customers")
+@router.post("/customers", dependencies=[Depends(require_local_admin)])
 def create_customer(payload: CustomerCreate, db: Session = Depends(get_db)) -> dict[str, Any]:
     try:
         customer = account_service.create_customer(
-            db, payload.name, telegram_chat_id=payload.telegram_chat_id
+            db, payload.name, telegram_chat_id=payload.telegram_chat_id,
+            telegram_username=(payload.telegram_username or "").strip().lstrip("@") or None,
+            fee_rate=payload.fee_rate, sheet_url=payload.sheet_url,
+            sheet_tab_name=payload.sheet_tab_name, sync_time=payload.sync_time,
         )
         db.commit()
     except account_service.AccountError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"status": "CREATED", "customer_id": customer.id, "name": customer.name}
+
+
+@router.patch("/customers/{customer_id}", dependencies=[Depends(require_local_admin)])
+@router.put("/customers/{customer_id}", dependencies=[Depends(require_local_admin)])
+def update_customer(customer_id: int, payload: CustomerCreate, db: Session = Depends(get_db)) -> dict[str, Any]:
+    try:
+        customer = account_service.update_customer_profile(db, customer_id, payload.name, payload.telegram_chat_id,
+                                                            payload.telegram_username, payload.fee_rate,
+                                                            payload.sheet_url, payload.sheet_tab_name, payload.sync_time)
+        db.commit()
+    except account_service.AccountError as exc:
+        raise HTTPException(400, detail=str(exc)) from exc
+    return {"status": "UPDATED", "customer_id": customer.id, "name": customer.name}
+
+
+@router.delete("/customers/{customer_id}", dependencies=[Depends(require_local_admin)])
+def delete_customer(customer_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
+    try:
+        customer = account_service.deactivate_customer(db, customer_id)
+        db.commit()
+    except account_service.AccountError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"status": "DEACTIVATED", "customer_id": customer.id, "is_active": customer.is_active}
+
+
+@router.put("/customers/{customer_id}/ad-accounts", dependencies=[Depends(require_local_admin)])
+def replace_customer_accounts(customer_id: int, payload: CustomerAccountSet,
+                              db: Session = Depends(get_db)) -> dict[str, Any]:
+    try:
+        accounts = account_service.set_customer_synced_accounts(db, customer_id, payload.act_ids)
+        db.commit()
+    except account_service.AccountError as exc:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"status": "UPDATED", "customer_id": customer_id, "act_ids": [a.act_id for a in accounts]}
+
+
+@router.post("/customers/{customer_id}/sheet-sync/approve", dependencies=[Depends(require_local_admin)])
+def approve_customer_sheet_sync(customer_id: int, payload: SheetSyncApprovalRequest,
+                                db: Session = Depends(get_db)) -> dict[str, Any]:
+    customer = db.get(Customer, customer_id)
+    if customer is None or not customer.is_active:
+        raise HTTPException(status_code=404, detail="Không tìm thấy khách hàng đang hoạt động")
+    if not (customer.sheet_url and customer.sheet_tab_name and customer.sync_time):
+        raise HTTPException(status_code=400, detail="Chưa đủ URL, tên tab và giờ đồng bộ Google Sheets")
+    approval = db.scalar(select(Approval).where(
+        Approval.entity_type == "CUSTOMER_SHEET_SCHEDULE",
+        Approval.entity_id == str(customer_id),
+        Approval.status == "PENDING",
+    ).order_by(Approval.id.desc()))
+    if approval is None:
+        approval = Approval(
+            entity_type="CUSTOMER_SHEET_SCHEDULE",
+            entity_id=str(customer_id),
+            status="PENDING",
+            requested_by=payload.actor,
+        )
+        db.add(approval)
+        db.flush()
+    approval.status = "APPROVED"
+    approval.approved_by = payload.actor
+    approval.approved_at = datetime.now().astimezone()
+    db.add(AuditLog(
+        actor=payload.actor,
+        action="customer_sheet_schedule_approved",
+        entity_type="customer",
+        entity_id=str(customer_id),
+        detail={"sheet_tab_name": customer.sheet_tab_name, "sync_time": customer.sync_time},
+    ))
+    db.commit()
+    return {"status": "APPROVED", "customer_id": customer_id}
 
 
 @router.post("/ad-accounts")

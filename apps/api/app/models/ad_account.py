@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import ForeignKey, Numeric, String, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -24,6 +24,7 @@ class AdAccount(Base):
     business_manager_id: Mapped[Optional[str]] = mapped_column(String(64))
     timezone_name: Mapped[str] = mapped_column(String(64))
     status: Mapped[str] = mapped_column(String(32), default=ACCOUNT_ACTIVE)
+    allow_violated_accounts: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
     purchase_cost: Mapped[Optional[Decimal]] = mapped_column(Numeric(14, 2))
     opened_at: Mapped[Optional[datetime]] = mapped_column(UTCDateTime())
     restricted_at: Mapped[Optional[datetime]] = mapped_column(UTCDateTime())

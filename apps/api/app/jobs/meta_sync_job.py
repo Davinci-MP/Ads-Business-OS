@@ -51,7 +51,10 @@ def flush_outbox(session: Any, notifier: TelegramBotConnector) -> int:
     ).scalars().all()
     for row in pending:
         try:
-            notifier.send_admin_message(row.message)
+            if row.chat_id:
+                notifier.send_message(row.chat_id, row.message)
+            else:
+                notifier.send_admin_message(row.message)
             row.status = OUTBOX_SENT
             row.sent_at = datetime.now(timezone.utc)
             row.last_error = None

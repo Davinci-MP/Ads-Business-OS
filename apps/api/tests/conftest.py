@@ -10,9 +10,19 @@ from sqlalchemy.orm import sessionmaker
 from app.models import AdAccount, AdAccountAssignment, Campaign, Customer
 from app.models.campaign import RECOGNITION_CONFIRMED, RECOGNITION_UNRECOGNIZED
 from app.models.customer import RECON_PROFIT_SHARE
+from app.core.config import settings
+from cryptography.fernet import Fernet
 
 API_DIR = Path(__file__).resolve().parents[1]
 TEST_DB_FILE = API_DIR / "test_adsos.db"
+
+
+@pytest.fixture(autouse=True)
+def default_test_fernet_key(monkeypatch):
+    """Đảm bảo mọi test suite đều có Fernet test key hợp lệ, không phụ thuộc plaintext fallback."""
+    if not getattr(settings, "exchange_master_key", ""):
+        key = Fernet.generate_key().decode()
+        monkeypatch.setattr(settings, "exchange_master_key", key)
 
 
 def datetime_utc(year, month, day, hour=0, minute=0):

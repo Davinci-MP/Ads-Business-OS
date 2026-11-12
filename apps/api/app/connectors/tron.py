@@ -1,4 +1,4 @@
-﻿"""TRON connector — CHỈ ĐỌC số dư USDT TRC20 trên ví chung.
+"""TRON connector — CHỈ ĐỌC số dư USDT TRC20 trên ví chung.
 
 Quy tắc (theo chỉ đạo chủ dự án):
 - 호출 TrongGrid chỉ đọc: GET `v1/accounts` và POST `wallet/triggerconstantcontract`
@@ -37,12 +37,14 @@ def _now_iso() -> str:
 
 
 def _abi_parameter(address: str) -> str:
-    """Mã hoá địa chỉ TRON thành 32 byte ABI cho `_balanceOf(address)` (hex, không 0x)."""
+    """Mã hoá địa chỉ TRON thành 32 byte ABI cho `_balanceOf(address)` (20 byte địa chỉ thực, MSB padded với 0)."""
     num = 0
     for ch in address:
         num = num * 58 + _BASE58_ALPHABET.index(ch)
     raw = num.to_bytes(25, "big")
-    return raw.hex().ljust(64, "0")
+    # Địa chỉ TRON Base58Check 25 bytes gồm: 1 byte prefix (0x41) + 20 byte EVM address + 4 byte checksum.
+    # Chuẩn ABI Solidity của address: 20 bytes địa chỉ thực, đệm 12 bytes 0 (24 hex zeros) vào bên TRÁI (MSB).
+    return raw[1:21].hex().rjust(64, "0")
 
 
 def _parse_balance_of_hex(hex_value: str) -> str | None:

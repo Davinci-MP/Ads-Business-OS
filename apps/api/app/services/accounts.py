@@ -17,7 +17,7 @@ from typing import Any, Optional
 from sqlalchemy import or_, select, update
 from sqlalchemy.orm import Session
 
-from app.models import AuditLog, AdAccount, AdAccountAssignment, Customer
+from app.models import Approval, AuditLog, AdAccount, AdAccountAssignment, Customer, SyncedAdAccount
 from app.models.ad_account import ACCOUNT_ACTIVE, ACCOUNT_REPLACED
 from app.models.customer import utcnow
 
@@ -28,6 +28,24 @@ class AccountError(Exception):
 
 def _audit(session: Session, actor: str, action: str, entity_type: str, entity_id: str, detail: dict) -> None:
     session.add(AuditLog(actor=actor, action=action, entity_type=entity_type, entity_id=entity_id, detail=detail))
+
+
+def _request_sheet_sync_approval(session: Session, customer: Customer, actor: str) -> None:
+    approvals = session.scalars(select(Approval).where(
+        Approval.entity_type == "CUSTOMER_SHEET_SCHEDULE",
+        Approval.entity_id == str(customer.id),
+        Approval.status.in_(("PENDING", "APPROVED")),
+    )).all()
+    for approval in approvals:
+        approval.status = "REVOKED"
+    if customer.sheet_url and customer.sheet_tab_name and customer.sync_time:
+        session.add(Approval(
+            entity_type="CUSTOMER_SHEET_SCHEDULE",
+            entity_id=str(customer.id),
+            status="PENDING",
+            requested_by=actor,
+            note="Chờ phê duyệt ghi Google Sheets tự động theo lịch khách hàng.",
+        ))
 
 
 def set_budget_alert_threshold(session: Session, customer_id: int, value: Decimal | None,
@@ -258,6 +276,11 @@ def create_customer(
     name: str,
     telegram_chat_id: Optional[str] = None,
     actor: str = "admin",
+    fee_rate: Decimal = Decimal("0.04"),
+    telegram_username: Optional[str] = None,
+    sheet_url: Optional[str] = None,
+    sheet_tab_name: Optional[str] = None,
+    sync_time: Optional[str] = None,
 ) -> Customer:
     """Tạo khách mới (chỉ thêm; không có DELETE — D-002 giữ lịch sử)."""
     name = (name or "").strip()
@@ -268,9 +291,157 @@ def create_customer(
     ).scalar_one_or_none()
     if duplicate is not None:
         raise AccountError(f"Khách '{name}' đã tồn tại")
-    customer = Customer(name=name, telegram_chat_id=telegram_chat_id)
+    if not fee_rate.is_finite() or fee_rate < 0 or fee_rate > 1:
+        raise AccountError("Tỷ lệ phí phải nằm trong khoảng 0 đến 1")
+    customer = Customer(
+        name=name,
+        telegram_chat_id=telegram_chat_id,
+        telegram_username=telegram_username,
+        fee_rate=fee_rate,
+        sheet_url=(sheet_url or "").strip() or None,
+        sheet_tab_name=(sheet_tab_name or "").strip() or None,
+        sync_time=(sync_time or "").strip() or None,
+    )
     session.add(customer)
-    _audit(session, actor, "customer_created", "customer", name, {"telegram_chat_id": telegram_chat_id})
+    session.flush()
+    _request_sheet_sync_approval(session, customer, actor)
+    _audit(session, actor, "customer_created", "customer", name,
+           {"telegram_chat_id": telegram_chat_id, "telegram_username": telegram_username,
+            "fee_rate": str(fee_rate), "sheet_tab_name": customer.sheet_tab_name,
+            "sync_time": customer.sync_time})
+    session.flush()
+    return customer
+
+
+def update_customer_profile(session: Session, customer_id: int, name: str, telegram_chat_id: str | None,
+                            telegram_username: str | None, fee_rate: Decimal,
+                            sheet_url: str | None = None, sheet_tab_name: str | None = None,
+                            sync_time: str | None = None, actor: str = "admin") -> Customer:
+    customer = session.get(Customer, customer_id)
+    if customer is None:
+        raise AccountError("Không tìm thấy khách hàng")
+    clean_name = name.strip()
+    if not clean_name or not fee_rate.is_finite() or not Decimal(0) <= fee_rate <= Decimal(1):
+        raise AccountError("Tên hoặc tỷ lệ phí không hợp lệ")
+    duplicate = session.scalar(select(Customer).where(Customer.name == clean_name, Customer.id != customer_id))
+    if duplicate:
+        raise AccountError("Tên khách hàng đã tồn tại")
+    old = {"name": customer.name, "fee_rate": str(customer.fee_rate), "telegram_chat_id": customer.telegram_chat_id,
+           "telegram_username": customer.telegram_username, "sheet_url": customer.sheet_url,
+           "sheet_tab_name": customer.sheet_tab_name, "sync_time": customer.sync_time}
+    customer.name, customer.fee_rate = clean_name, fee_rate
+    customer.telegram_chat_id = telegram_chat_id or None
+    customer.telegram_username = (telegram_username or "").strip().lstrip("@") or None
+    customer.sheet_url = (sheet_url or "").strip() or None
+    customer.sheet_tab_name = (sheet_tab_name or "").strip() or None
+    customer.sync_time = (sync_time or "").strip() or None
+    new_sheet_config = (customer.sheet_url, customer.sheet_tab_name, customer.sync_time)
+    if new_sheet_config != (old["sheet_url"], old["sheet_tab_name"], old["sync_time"]):
+        _request_sheet_sync_approval(session, customer, actor)
+    _audit(session, actor, "customer_profile_updated", "customer", str(customer.id),
+           {"before": old, "after": {"name": clean_name, "fee_rate": str(fee_rate),
+            "telegram_chat_id": customer.telegram_chat_id, "telegram_username": customer.telegram_username,
+            "sheet_url": customer.sheet_url, "sheet_tab_name": customer.sheet_tab_name,
+            "sync_time": customer.sync_time}})
+    session.flush()
+    return customer
+
+
+def set_customer_synced_accounts(
+    session: Session,
+    customer_id: int,
+    act_ids: list[str],
+    actor: str = "admin",
+) -> list[SyncedAdAccount]:
+    customer = session.get(Customer, customer_id)
+    if customer is None or not customer.is_active:
+        raise AccountError("Không tìm thấy khách hàng đang hoạt động")
+    clean_ids = list(dict.fromkeys(value.replace("act_", "").strip() for value in act_ids if value.strip()))
+    requested = session.scalars(select(SyncedAdAccount).where(SyncedAdAccount.act_id.in_(clean_ids))).all() if clean_ids else []
+    found = {account.act_id for account in requested}
+    missing = [act_id for act_id in clean_ids if act_id not in found]
+    if missing:
+        raise AccountError(f"Không tìm thấy TKQC: {', '.join(missing)}")
+    for account in requested:
+        if account.customer_id != customer_id and account.status_dot != "LIVE":
+            raise AccountError(f"TKQC {account.act_id} không ở trạng thái LIVE nên không thể gán mới")
+
+    current = session.scalars(select(SyncedAdAccount).where(SyncedAdAccount.customer_id == customer_id)).all()
+    desired = set(clean_ids)
+    now = utcnow()
+
+    def mirror_assignment(account: SyncedAdAccount, target_customer_id: int | None) -> None:
+        meta_id = account.act_id.replace("act_", "").strip()
+        ad_account = session.scalar(select(AdAccount).where(or_(
+            AdAccount.meta_ad_account_id == meta_id,
+            AdAccount.meta_ad_account_id == f"act_{meta_id}",
+        )))
+        if ad_account is None and target_customer_id is not None:
+            ad_account = AdAccount(
+                meta_ad_account_id=f"act_{meta_id}",
+                name=account.name,
+                business_manager_id=account.bm_id,
+                timezone_name=account.timezone_name or "Asia/Ho_Chi_Minh",
+                status=ACCOUNT_ACTIVE,
+            )
+            session.add(ad_account)
+            session.flush()
+        if ad_account is None:
+            return
+        open_rows = session.scalars(select(AdAccountAssignment).where(
+            AdAccountAssignment.ad_account_id == ad_account.id,
+            AdAccountAssignment.valid_to.is_(None),
+        )).all()
+        if len(open_rows) == 1 and open_rows[0].customer_id == target_customer_id:
+            return
+        for row in open_rows:
+            row.valid_to = now
+        if target_customer_id is not None:
+            session.add(AdAccountAssignment(
+                customer_id=target_customer_id,
+                ad_account_id=ad_account.id,
+                valid_from=now,
+            ))
+
+    for account in current:
+        if account.act_id not in desired:
+            account.customer_id = None
+            mirror_assignment(account, None)
+    for account in requested:
+        if account.customer_id != customer_id:
+            account.customer_id = customer_id
+            mirror_assignment(account, customer_id)
+
+    _audit(session, actor, "customer_accounts_replaced", "customer", str(customer_id), {
+        "act_ids": clean_ids,
+        "unassigned_count": sum(1 for account in current if account.act_id not in desired),
+    })
+    session.flush()
+    return requested
+
+
+def deactivate_customer(session: Session, customer_id: int, actor: str = "admin") -> Customer:
+    customer = session.get(Customer, customer_id)
+    if customer is None:
+        raise AccountError("Không tìm thấy khách hàng")
+    if not customer.is_active:
+        return customer
+    now = utcnow()
+    customer.is_active = False
+    for account in session.scalars(select(SyncedAdAccount).where(SyncedAdAccount.customer_id == customer_id)).all():
+        account.customer_id = None
+    for assignment in session.scalars(select(AdAccountAssignment).where(
+        AdAccountAssignment.customer_id == customer_id,
+        AdAccountAssignment.valid_to.is_(None),
+    )).all():
+        assignment.valid_to = now
+    for approval in session.scalars(select(Approval).where(
+        Approval.entity_type == "CUSTOMER_SHEET_SCHEDULE",
+        Approval.entity_id == str(customer_id),
+        Approval.status.in_(("PENDING", "APPROVED")),
+    )).all():
+        approval.status = "REVOKED"
+    _audit(session, actor, "customer_deactivated", "customer", str(customer_id), {})
     session.flush()
     return customer
 

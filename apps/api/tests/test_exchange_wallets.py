@@ -500,3 +500,151 @@ def test_rate_limit_defers_following_reads(db, master_key_env):
     assert result["status"] == "ERROR"
     with pytest.raises(svc.ExchangeConflict):
         svc.read_balances(db, connection.id, transport=HappyTransport())
+
+
+# ======================== PINGPONG INTEGRATION TESTS ========================
+from app.connectors.pingpong import PingPongConnector
+from tests.test_pingpong_connector import MockPingPongTransport
+
+
+def test_pingpong_save_connection_and_encryption(db, master_key_env):
+    """Lưu kết nối PingPong mã hóa Fernet, kiểm tra last4 và extra."""
+    transport = MockPingPongTransport()
+    conn = svc.save_connection(
+        db,
+        "PingPong VCC Chính",
+        "pp_client_test_id_123",
+        "pp_client_secret_test_456",
+        provider="pingpong",
+        account_id="ACC_MERCHANT_01",
+        base_url="https://gateway.pingpongx.com",
+        transport=transport,
+    )
+    assert conn.id is not None
+    assert conn.provider == "pingpong"
+    assert conn.label == "PingPong VCC Chính"
+    assert conn.wallet_types == ["funding", "cards"]
+    assert conn.read_only_verified is False
+
+    # Kiểm tra credentials được mã hóa
+    cred = db.scalars(select(ExchangeCredentials).where(ExchangeCredentials.connection_id == conn.id)).first()
+    assert cred is not None
+    assert cred.api_key_last4 == "_123"
+    assert "pp_client_secret" not in cred.encrypted_api_secret
+
+    fernet = svc._fernet()
+    decrypted_key = fernet.decrypt(cred.encrypted_api_key.encode("utf-8")).decode("utf-8")
+    decrypted_secret = fernet.decrypt(cred.encrypted_api_secret.encode("utf-8")).decode("utf-8")
+    assert decrypted_key == "pp_client_test_id_123"
+    assert decrypted_secret == "pp_client_secret_test_456"
+
+    # Kiểm tra view
+    view = svc.get_connection_view(db, conn.id)
+    assert view["provider"] == "pingpong"
+    assert view["account_id"] == "ACC_MERCHANT_01"
+    assert view["read_only_verified"] is False
+
+
+def test_pingpong_base_url_only_edit_rechecks_using_encrypted_credentials(db, master_key_env):
+    transport = MockPingPongTransport()
+    conn = svc.save_connection(db, "Issuing fixture", "123456", "fixture-app-secret",
+        provider="pingpong", transport=transport)
+    original = db.scalar(select(ExchangeCredentials).where(ExchangeCredentials.connection_id == conn.id))
+    before_secret = svc._fernet().decrypt(original.encrypted_api_secret.encode())
+    transport.history.clear()
+    svc.update_credentials(db, conn.id, base_url="https://sandbox-gateway.pingpongx.com", transport=transport)
+    assert svc.get_connection_view(db, conn.id)["base_url"] == "https://sandbox-gateway.pingpongx.com"
+    assert svc._fernet().decrypt(original.encrypted_api_secret.encode()) == before_secret
+    assert transport.history[0][2]["app_id"] == "123456"
+    transport.history.clear()
+    with pytest.raises(svc.ExchangeVerificationFailed):
+        svc.update_credentials(db, conn.id, base_url="https://pingpongx.com", transport=transport)
+    assert not transport.history
+    assert svc.get_connection_view(db, conn.id)["base_url"] == "https://sandbox-gateway.pingpongx.com"
+
+
+def test_pingpong_read_balances_and_cards(db, master_key_env):
+    """Đọc số dư đa tệ và snapshot thẻ ảo VCC từ PingPong."""
+    transport = MockPingPongTransport()
+    conn = svc.save_connection(
+        db,
+        "PingPong Đọc Thẻ",
+        "pp_client_test_id_123",
+        "pp_client_secret_test_456",
+        provider="pingpong",
+        transport=transport,
+    )
+
+    _, result = svc.read_balances(db, conn.id, transport=transport)
+    assert result["status"] == "OK"
+    assert result["snapshots"] == 3  # USD, EUR, SGD
+    assert result["cards"] == 2      # 2 thẻ VCC
+
+    # Kiểm tra snapshots số dư đa tệ
+    snapshots = svc.list_snapshots(db, conn.id)
+    assert len(snapshots) == 3
+    currencies = {s["asset"] for s in snapshots}
+    assert currencies == {"USD", "EUR", "SGD"}
+
+    # Kiểm tra snapshots thẻ ảo VCC
+    cards = svc.list_cards(db, conn.id)
+    assert len(cards) == 2
+    c1 = next(c for c in cards if c["card_id"] == "vcc_001")
+    assert c1["last4"] == "4567"
+    assert c1["status"] == "ACTIVE"
+    assert c1["card_name"] == "Media Buyer FB 01"
+
+    c2 = next(c for c in cards if c["card_id"] == "vcc_002")
+    assert c2["last4"] == "8888"
+    assert c2["status"] == "REVOKED"
+
+    # API errors after a successful read must preserve the last valid snapshots.
+    from app.connectors.pingpong import BALANCE_PATH, CARDS_PATH
+    failed = MockPingPongTransport({
+        BALANCE_PATH: httpx.Response(200, json={"code": 5000, "data": None}),
+        CARDS_PATH: httpx.Response(200, json={"code": 5000, "data": None}),
+    })
+    _, failed_result = svc.read_balances(db, conn.id, transport=failed)
+    assert failed_result["status"] == "ERROR"
+    assert svc.list_snapshots(db, conn.id) == snapshots
+    assert svc.list_cards(db, conn.id) == cards
+
+
+def test_pingpong_api_endpoints(db, master_key_env, client, monkeypatch):
+    """Kiểm tra gọi API GET /exchange/connections, POST read-balances, và GET /cards."""
+    transport = MockPingPongTransport()
+    def _pp_factory(**kw):
+        kw.pop("transport", None)
+        return PingPongConnector(**kw, transport=transport)
+
+    monkeypatch.setattr(svc, "PingPongConnector", _pp_factory)
+
+    # 1. Thêm kết nối qua API
+    resp = client.post(
+        "/api/v1/exchange/connections",
+        json={
+            "provider": "pingpong",
+            "label": "PingPong API Test",
+            "api_key": "pp_client_api_key_999",
+            "api_secret": "pp_client_secret_api_888",
+            "account_id": "ACC_TEST",
+        },
+    )
+    assert resp.status_code == 200, resp.text
+    data = resp.json()
+    conn_id = data["connection"]["id"]
+    assert data["connection"]["provider"] == "pingpong"
+
+    # 2. Đọc số dư qua API
+    read_resp = client.post(f"/api/v1/exchange/connections/{conn_id}/read-balances")
+    assert read_resp.status_code == 200
+    read_data = read_resp.json()
+    assert read_data["result"]["status"] == "OK"
+    assert len(read_data["cards"]) == 2
+
+    # 3. Lấy danh sách thẻ ảo qua API GET /cards
+    cards_resp = client.get(f"/api/v1/exchange/connections/{conn_id}/cards")
+    assert cards_resp.status_code == 200
+    cards_data = cards_resp.json()
+    assert len(cards_data["cards"]) == 2
+    assert cards_data["cards"][0]["last4"] in ("4567", "8888")

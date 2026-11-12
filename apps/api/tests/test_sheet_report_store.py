@@ -55,6 +55,11 @@ def _source(db, period="2026-10", name="first"):
 
 def _report(value="10", sheet_id=7, title="SYNTHETIC"):
     return {
+        "summary_tabs": [{"title": "TỔNG", "header_row": 1, "rows": [
+            {"summary_row": 1, "cells": [{"address": f"{col}1", "value": label}
+             for col, label in zip("ABCDEFG", ["Tên", "ĐÃ BANK", "Kỳ trước", "RUN", "PHÍ", "TỔNG", "CÒN"])]},
+            {"summary_row": 30, "customer_label": "TỔNG", "cells": [
+                {"address": "C30", "value": value}, {"address": "G30", "value": value}]}]}],
         "read_at": datetime.now(timezone.utc).isoformat(), "status": "PARTIAL", "mode": "live",
         "customers": [{"source_sheet": title, "sheet_id": sheet_id, "profile_status": "NEEDS_CONFIRMATION",
                        "tab_source_totals": {"current_balance": {"value": value}},
@@ -345,8 +350,12 @@ def test_source_and_unchanged_snapshots_survive_session_restart(db, monkeypatch)
     try:
         assert reopened.get(SheetReportSource, source_id).sync_enabled is True
         snapshots = reopened.scalars(select(SheetReportSnapshot).where(SheetReportSnapshot.source_id == source_id)).all()
-        assert len(snapshots) == 2
-        assert snapshots[0].report["customers"] == snapshots[1].report["customers"]
+        # Cơ chế deduplication: dữ liệu không đổi chỉ lưu 1 snapshot và tái sử dụng
+        assert len(snapshots) == 1
+        assert snapshots[0].report["customers"] is not None
+        attempts = reopened.scalars(select(SheetReportSyncAttempt).where(SheetReportSyncAttempt.source_id == source_id)).all()
+        assert len(attempts) == 2
+        assert attempts[0].snapshot_id == attempts[1].snapshot_id == snapshots[0].id
         assert snapshots[0].mapping_config == store.MAPPING_CONFIG
     finally:
         reopened.close()
@@ -368,6 +377,10 @@ def test_year_summary_uses_one_snapshot_per_active_month_and_never_adds_balances
             "billing_total": {"value": spend, "source": "H1"},
         })
         customer["deposits"] = receipts
+        result["summary_tabs"][0]["rows"][1]["cells"] = [
+            {"address": f"{col}30", "value": val}
+            for col, val in zip("BCDEFG", ["0", opening, spend, "0.49", spend, balance])
+        ]
         customer["usdt_receipts_state"] = "HAS_RECORDS" if receipts else "NO_RECORDED"
         return result
 
@@ -465,8 +478,10 @@ def test_sheets_scheduler_runs_on_start_then_every_15_minutes_without_meta(db, m
     scheduler.start_sheet_scheduler()
     try:
         jobs = scheduler._scheduler.get_jobs()
-        assert [job.id for job in jobs] == ["sheets_reports"]
-        assert jobs[0].trigger.interval == timedelta(seconds=scheduler.TICK_SECONDS)
+        jobs_by_id = {job.id: job for job in jobs}
+        assert set(jobs_by_id) == {"sheets_reports", "customer_sheets_sync"}
+        assert jobs_by_id["sheets_reports"].trigger.interval == timedelta(seconds=scheduler.TICK_SECONDS)
+        assert jobs_by_id["customer_sheets_sync"].trigger.interval == timedelta(seconds=scheduler.TICK_SECONDS)
         deadline = time.monotonic() + 12
         while time.monotonic() < deadline:
             db.expire_all()
@@ -875,3 +890,35 @@ def test_customer_year_summary_api_guards(db, monkeypatch):
         assert source is not None
     finally:
         app.dependency_overrides.clear()
+
+
+def test_sync_source_deduplicates_identical_snapshots(db, monkeypatch):
+    source = _source(db)
+    monkeypatch.setattr(store, "read_source_report", lambda *_: _report("50"))
+    first = store.sync_source(db, source.id, "MANUAL")
+    second = store.sync_source(db, source.id, "SCHEDULED")
+    assert first.snapshot_id == second.snapshot_id
+    assert len(db.scalars(select(SheetReportSnapshot).where(SheetReportSnapshot.source_id == source.id)).all()) == 1
+    assert len(db.scalars(select(SheetReportSyncAttempt).where(SheetReportSyncAttempt.source_id == source.id)).all()) == 2
+
+    # When report changes, a new snapshot is created
+    monkeypatch.setattr(store, "read_source_report", lambda *_: _report("60"))
+    third = store.sync_source(db, source.id, "SCHEDULED")
+    assert third.snapshot_id != second.snapshot_id
+    assert len(db.scalars(select(SheetReportSnapshot).where(SheetReportSnapshot.source_id == source.id)).all()) == 2
+    assert len(db.scalars(select(SheetReportSyncAttempt).where(SheetReportSyncAttempt.source_id == source.id)).all()) == 3
+
+
+def test_year_summary_uses_company_row_instead_of_customer_sum(db, monkeypatch):
+    source = _source(db, '2026-11')
+    report = _report('15')
+    report['customers'][0]['tab_source_totals']['spend_vnd'] = {'value': '100'}
+    report['summary_tabs'][0]['rows'][1]['cells'].append({'address': 'D30', 'value': '120'})
+    monkeypatch.setattr(store, 'read_source_report', lambda *args: report)
+    store.sync_source(db, source.id, 'MANUAL')
+    result = build_year_summary(db, 2026)
+    metric = result['months'][10]['metrics']['spend_vnd']
+    assert metric['value'] == '120'
+    assert metric['source'] == 'TỔNG!D30'
+    assert metric['difference'] == '20'
+    assert result['flows']['spend_vnd']['value'] == '120'

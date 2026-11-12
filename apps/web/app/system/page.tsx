@@ -6,12 +6,12 @@ import { fmtTime, fmtVnd, type SystemInfo } from "../../lib/api";
 export default function SystemPage() {
   const { data, error, loading, reload } = useApi<SystemInfo>("/dashboard/system");
 
-  if (loading) return <main className="page"><p className="loading">Đang tải dữ liệu từ DB…</p></main>;
+  if (loading) return <div className="w-full space-y-6"><p className="loading">Đang tải dữ liệu từ DB…</p></div>;
   if (error || !data)
     return (
-      <main className="page">
+      <div className="w-full space-y-6">
         <p className="error-box">Không đọc được dữ liệu: {error}</p>
-      </main>
+      </div>
     );
 
   const hasIssues =
@@ -21,7 +21,7 @@ export default function SystemPage() {
     data.unverified_snapshots.length > 0;
 
   return (
-    <main className="page">
+    <div className="w-full space-y-6">
       <h1>Giám sát hệ thống</h1>
       <div className="cards">
         <div className="card">
@@ -112,6 +112,6 @@ export default function SystemPage() {
       <p className="notice muted">
         Danh sách này chỉ liệt kê — hệ thống không tự sửa số liệu đã xác nhận; cần chủ dự án xử lý thủ công.
       </p>
-    </main>
+    </div>
   );
 }

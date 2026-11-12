@@ -14,9 +14,17 @@ sa-*.json
 alembic/versions/*.pyc
 node_modules/
 .next/
+.next-build/
 out/
 next-env.d.ts
 *.tsbuildinfo
 coverage/
 .DS_Store
 var/
+profiles/
+apps/api/profiles/
+
+# Hồ sơ Chrome và dữ liệu tạm chỉ dành cho nghiệm thu giao diện local
+artifacts/ui-refactor/chrome-profile/
+.test-admin-ui-*/
+.test-admin-ui-*.log

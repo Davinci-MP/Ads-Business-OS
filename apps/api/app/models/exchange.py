@@ -1,11 +1,13 @@
-"""Kết nối sàn giao dịch (D-056) — chỉ đọc số dư USDT Spot/Funding.
+"""Kết nối sàn giao dịch & nguồn tiền (D-056, PingPong VCC) — chỉ đọc.
 
-- `exchange_connections`: cấu hình 1 connection cho 1 provider (Binance/OKX/MEXC);
+- `exchange_connections`: cấu hình 1 connection cho 1 provider (Binance/PingPong/OKX/MEXC);
   ngắt kết nối chỉ đổi status (REMOVED) — KHÔNG xoá lịch sử snapshot/history.
-- `exchange_credentials`: API key/secret CHỈ lưu dạng mã hóa (Fernet) — không plaintext;
+- `exchange_credentials`: API key/secret/extra CHỈ lưu dạng mã hóa (Fernet) — không plaintext;
   mỗi connection tối đa 1 dòng (unique connection_id).
 - `exchange_balance_snapshots`: snapshot append-only, unique (connection_id, wallet_type,
   asset, read_at) — chống ghi trùng khi job chạy lại cùng thời điểm.
+- `exchange_card_snapshots`: snapshot thẻ ảo VCC append-only, unique (connection_id,
+  card_id, read_at) — chỉ lưu 4 số cuối (last4), không lưu PAN/CVV.
 - `exchange_sync_history`: mỗi lần đồng bộ 1 dòng (OK/PARTIAL/ERROR), detail không chứa secret.
 """
 from datetime import datetime
@@ -20,6 +22,7 @@ from app.models.customer import utcnow
 from app.models.types import UTCDateTime
 
 EXCH_PROVIDER_BINANCE = "binance"
+EXCH_PROVIDER_PINGPONG = "pingpong"
 EXCH_PROVIDER_OKX = "okx"
 EXCH_PROVIDER_MEXC = "mexc"
 
@@ -28,6 +31,7 @@ EXCH_STATUS_REMOVED = "REMOVED"
 
 EXCH_WALLET_SPOT = "spot"
 EXCH_WALLET_FUNDING = "funding"
+EXCH_WALLET_CARDS = "cards"
 
 EXCH_SOURCE_MANUAL = "MANUAL"
 EXCH_SOURCE_AUTO = "AUTO"
@@ -71,6 +75,7 @@ class ExchangeCredentials(Base):
     provider: Mapped[str] = mapped_column(String(32))
     encrypted_api_key: Mapped[str] = mapped_column(Text)
     encrypted_api_secret: Mapped[str] = mapped_column(Text)
+    encrypted_extra: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     api_key_last4: Mapped[str] = mapped_column(String(8), default="")
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, onupdate=utcnow)
@@ -95,6 +100,29 @@ class ExchangeBalanceSnapshot(Base):
     withdrawing: Mapped[Optional[Decimal]] = mapped_column(Numeric(28, 8))
     source: Mapped[str] = mapped_column(String(16))
     read_at: Mapped[datetime] = mapped_column(UTCDateTime())
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
+
+
+class ExchangeCardSnapshot(Base):
+    __tablename__ = "exchange_card_snapshots"
+    __table_args__ = (
+        UniqueConstraint(
+            "connection_id", "card_id", "read_at",
+            name="uq_exchange_card_snapshot_read",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    connection_id: Mapped[int] = mapped_column(ForeignKey("exchange_connections.id"))
+    card_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    card_name: Mapped[str] = mapped_column(String(128), default="")
+    last4: Mapped[str] = mapped_column(String(8), nullable=False)
+    currency: Mapped[str] = mapped_column(String(16), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="ACTIVE")
+    spending_limit: Mapped[Optional[Decimal]] = mapped_column(Numeric(28, 8))
+    available_balance: Mapped[Optional[Decimal]] = mapped_column(Numeric(28, 8))
+    source: Mapped[str] = mapped_column(String(16), default=EXCH_SOURCE_MANUAL)
+    read_at: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow)
 
 

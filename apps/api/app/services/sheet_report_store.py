@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import time
 from contextlib import contextmanager
@@ -11,7 +12,7 @@ from pathlib import Path
 from typing import Iterator
 
 from sqlalchemy import select, text, update
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 
 from app.connectors.sheets import GoogleSheetsConnector, SheetsAPIError, SheetsAuthError
 from app.models.sheet_reports import (
@@ -95,11 +96,14 @@ def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def latest_snapshot(session: Session, source_id: int) -> SheetReportSnapshot | None:
-    return session.scalar(
+def latest_snapshot(session: Session, source_id: int, defer_report: bool = False) -> SheetReportSnapshot | None:
+    stmt = (
         select(SheetReportSnapshot).where(SheetReportSnapshot.source_id == source_id)
         .order_by(SheetReportSnapshot.id.desc()).limit(1)
     )
+    if defer_report:
+        stmt = stmt.options(defer(SheetReportSnapshot.report))
+    return session.scalar(stmt)
 
 
 def read_source_report(spreadsheet_id: str, connector_factory=None, source_period=None, mapping_config=None) -> dict:
@@ -124,6 +128,13 @@ def read_source_report(spreadsheet_id: str, connector_factory=None, source_perio
                for c in report["customers"]):
         raise SheetsAPIError("Không đọc được tab khách có cấu trúc phù hợp; giữ bản lưu gần nhất.")
     return report
+
+
+def report_content_hash(report_data: dict) -> str:
+    """Hash nội dung báo cáo Sheets (loại bỏ read_at để so sánh dữ liệu thực chất)."""
+    normalized = {k: v for k, v in report_data.items() if k != "read_at"}
+    serialized = json.dumps(normalized, sort_keys=True, ensure_ascii=True, default=str)
+    return hashlib.sha256(serialized.encode("utf-8")).hexdigest()
 
 
 def sync_source(session: Session, source_id: int, trigger: str, connector_factory=None) -> SheetReportSyncAttempt:
@@ -153,12 +164,23 @@ def sync_source(session: Session, source_id: int, trigger: str, connector_factor
                 raise SheetsAPIError("Phiên bản mapping không còn được hỗ trợ; giữ nguyên bản lưu và kiểm tra cấu trúc.")
             report = read_source_report(source.spreadsheet_id, connector_factory, source.period, source.mapping_config)
             read_at = datetime.fromisoformat(report["read_at"])
-            snapshot = SheetReportSnapshot(
-                source_id=source_id, read_at=read_at, mapping_version=source.mapping_version, mapping_config=source.mapping_config,
-                quality=report["status"], report=report,
-            )
-            session.add(snapshot)
-            session.flush()
+            last_snap = latest_snapshot(session, source_id, defer_report=False)
+            if (
+                last_snap is not None
+                and last_snap.mapping_version == source.mapping_version
+                and last_snap.mapping_config == source.mapping_config
+                and last_snap.quality == report["status"]
+                and last_snap.report
+                and report_content_hash(last_snap.report) == report_content_hash(report)
+            ):
+                snapshot = last_snap
+            else:
+                snapshot = SheetReportSnapshot(
+                    source_id=source_id, read_at=read_at, mapping_version=source.mapping_version, mapping_config=source.mapping_config,
+                    quality=report["status"], report=report,
+                )
+                session.add(snapshot)
+                session.flush()
             attempt.snapshot_id = snapshot.id
             attempt.status = report["status"]
         except SheetsAPIError as exc:

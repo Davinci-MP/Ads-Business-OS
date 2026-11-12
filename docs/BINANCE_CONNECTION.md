@@ -1,6 +1,6 @@
 # Ví & tài khoản sàn
 
-Trang: `/config/wallets`, truy cập từ Cấu hình. Chỉ Binance Spot/Funding USDT được hỗ trợ; OKX/MEXC chưa hỗ trợ.
+Trang: `/config/wallets`, truy cập từ Cấu hình. Binance Spot/Funding USDT và connector đọc PingPong Issuing 2.7.1 đã được triển khai; OKX/MEXC chưa hỗ trợ. PingPong xem [PINGPONG_CONNECTION.md](PINGPONG_CONNECTION.md), chưa nghiệm thu live bằng khóa thật.
 
 ## Bảo mật local
 

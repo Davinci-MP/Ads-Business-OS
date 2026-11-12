@@ -244,7 +244,8 @@ def resp_is_auth_failure(status: int, code: Any) -> bool:
 
 
 def _error_message(path: str, status: int, code: Any, payload: Any) -> str:
-    brief = "Yêu cầu bị Binance từ chối; kiểm tra quyền, IP và thời gian máy chủ."
+    binance_msg = payload.get("msg") if isinstance(payload, dict) and payload.get("msg") else None
+    brief = binance_msg or "Yêu cầu bị Binance từ chối; kiểm tra quyền, IP và thời gian máy chủ."
     return f"{path}: HTTP {status}, code={code}, msg={_redact(str(brief))}"
 
 

@@ -1,0 +1,40 @@
+import type { SyncedAdAccount, SyncedBM, ViaProfile, ViaStats } from "../lib/api";
+export type Customer = {
+  id: number;
+  name: string;
+  telegram_chat_id: string | null;
+  telegram_username: string | null;
+  fee_rate: string;
+  recon_mode: string;
+  is_active: boolean;
+  sheet_url: string | null;
+  sheet_tab_name: string | null;
+  sync_time: string | null;
+  sheet_sync_approval_status: string | null;
+};
+export type AssetData = { accounts: SyncedAdAccount[]; bms: SyncedBM[]; vias: ViaProfile[]; stats: ViaStats | null; customers: Customer[] };
+export type MoneyBlock = { amount: string | number | null; currency: string | null; by_currency?: Record<string, string | number>; data_state?: string };
+export type Kpi = { meta_spend: MoneyBlock; service_fee_revenue: MoneyBlock; meta_source_label: string; meta_mode: string; company_data_state: string };
+export type DailyReport = { chart_rows: { business_date: string; meta_by_currency: Record<string, number | string>; fee_by_currency: Record<string, number | string> }[]; rows: { business_date: string; customer_id: number | null; customer_name: string | null; meta_by_currency: Record<string, number | string>; fee_by_currency: Record<string, number | string> }[]; meta_mode: string; meta_source_label: string };
+export type CampaignDraft = { id: number; draft_code: string; draft_name: string; source_act_id: string | null; source_via_uid: string | null; objective: string; daily_budget: number | string; initial_status: string; created_at: string | null };
+export type RemoteCommand = { id: number; via_uid: string; act_id: string | null; command_type?: string; status: string; created_at: string | null; draft_info?: { draft_name: string } | null };
+export type OperationalDashboard = {
+  business_date: string;
+  meta_mode: string;
+  metrics: {
+    today_spend_by_currency: Record<string, string>;
+    debt_threshold_by_currency: Record<string, string>;
+    active_accounts: number;
+    disabled_today: number;
+    fee_by_currency: Record<string, string>;
+    assigned_accounts: number;
+    warning_accounts: number;
+    binance_usdt: string;
+    pingpong_usd: string;
+    binance_accounts: number;
+    pingpong_accounts: number;
+  };
+  chart: DailyReport;
+  top_accounts: Array<{ act_id: string; account_name: string; customer_name: string; currency: string; spend: string }>;
+  commands: Array<{ id: number; command: string; target_account: string; status: string; created_at: string | null }>;
+};

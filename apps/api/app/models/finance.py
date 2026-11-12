@@ -42,6 +42,7 @@ class TelegramOutbox(Base):
     __tablename__ = "telegram_outbox"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    chat_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     message: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(16), default=OUTBOX_PENDING)
     attempts: Mapped[int] = mapped_column(default=0)

@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.db import SessionLocal
 from app.models.sheet_reports import SheetReportSource, SheetReportSyncAttempt
 from app.services.sheet_report_store import SyncBusy, sync_source
+from app.jobs.sheets_sync import run_customer_sheets_sync
 
 logger = logging.getLogger(__name__)
 _scheduler: BackgroundScheduler | None = None
@@ -93,6 +94,9 @@ def start_sheet_scheduler() -> None:
     _scheduler.add_job(sync_enabled_sources, IntervalTrigger(seconds=TICK_SECONDS), id="sheets_reports",
                        max_instances=1, coalesce=True,
                        next_run_time=datetime.now(timezone.utc) + timedelta(seconds=5))
+    _scheduler.add_job(run_customer_sheets_sync, IntervalTrigger(seconds=TICK_SECONDS), id="customer_sheets_sync",
+                       max_instances=1, coalesce=True,
+                       next_run_time=datetime.now(timezone.utc) + timedelta(seconds=10))
     _scheduler.start()
 
 

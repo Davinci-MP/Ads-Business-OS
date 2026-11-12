@@ -1,0 +1,65 @@
+{
+  "manifest_version": 3,
+  "name": "ADSOS CHECK PRO — Quản Lý TKQC, BM & Auto Set Camp",
+  "version": "2.6.1",
+  "description": "Tiện ích kiểm tra tài nguyên quảng cáo Meta, Business Manager, thẻ thanh toán, bảo mật quản trị và điều phối Set Camp tự động từ xa.",
+  "permissions": [
+    "cookies",
+    "storage",
+    "tabs",
+    "activeTab",
+    "scripting",
+    "unlimitedStorage",
+    "alarms",
+    "offscreen",
+    "declarativeNetRequest",
+    "declarativeNetRequestWithHostAccess",
+    "proxy",
+    "webRequest",
+    "webRequestAuthProvider"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "*://*.facebook.com/*",
+    "https://business.facebook.com/*",
+    "https://adsmanager.facebook.com/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["fb-opt-main.js", "fb-opt-relay.js", "bridge-main.js"],
+      "matches": ["*://*.facebook.com/*", "*://*.messenger.com/*"]
+    },
+    {
+      "resources": ["bridge-main.js"],
+      "matches": ["*://localhost/*", "*://127.0.0.1/*"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ADSOS CHECK PRO"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": ["*://*.facebook.com/*", "*://*.messenger.com/*"],
+      "js": ["fb-opt-main.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    },
+    {
+      "matches": ["*://*.facebook.com/*", "*://*.messenger.com/*"],
+      "js": ["fb-opt-relay.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}

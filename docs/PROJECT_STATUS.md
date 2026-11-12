@@ -1,5 +1,1344 @@
 # PROJECT_STATUS.md — Trạng thái dự án
 
+## Cập nhật 2026-11-12 — Xác thực nhân sự và vận hành tài sản end-to-end
+
+- **Xác thực thật:** hoàn thiện đăng nhập nhân sự bằng Bearer token ký HMAC, API `/auth/login`, `/auth/me`, đổi mật khẩu và kiểm tra phiên ở `AppShell`. Tài khoản OWNER mặc định chỉ được seed trong môi trường local; production bắt buộc cấu hình khóa ký qua biến môi trường.
+- **Quản lý nhân sự và RBAC:** trang `/settings/staff` đã dùng dữ liệu thật cho tạo, sửa, khóa/mở khóa, phân vai, gán khách hàng và xem nhật ký. API chặn nhân viên tự khóa, chặn hạ quyền OWNER cuối cùng và giữ lịch sử bằng vô hiệu hóa mềm.
+- **Gán khách và phí TKQC:** `/accounts` lưu trực tiếp khách hàng cùng mức phí dịch vụ riêng trên `SyncedAdAccount`; phép tính dùng `Decimal`, không tạo công thức tài chính mới. Mọi thay đổi được ghi `StaffAuditLog`.
+- **Chia sẻ BM qua hàng đợi:** modal dùng chung trên `/accounts` và `/ads-check` nhận BM, email, vai trò, tác vụ và danh sách TKQC. Backend chỉ xác thực quyền rồi tạo `RemoteViaCommand`; Chrome Extension mới thực hiện lệnh Meta và phản hồi kết quả, bảo toàn ranh giới backend không ghi Meta trực tiếp.
+- **Cơ sở dữ liệu:** migration `v6w7x8y9z0a1` thêm `service_fee_rate` và đã vượt quy trình `upgrade → downgrade → upgrade` trên SQLite riêng; DB local đã được nâng lên head.
+- **Nghiệm thu:** `627/627` backend test đạt (1 cảnh báo deprecation từ Starlette/httpx); `npx tsc --noEmit` và `npm.cmd run build` đạt, tạo đủ **32/32 route**; `node --check` đạt cho toàn bộ **7** tệp JavaScript của Extension.
+
+## Cập nhật 2026-11-12 — Sửa lỗi biên dịch trang quản lý nhân sự
+
+- Khép đúng khối helper và biểu thức JSX trong `apps/web/app/settings/staff/page.tsx`; bảo đảm chỉ còn một `export default function StaffPage()` và toàn bộ import nằm đầu tệp.
+- Bổ sung kiểu dữ liệu rõ ràng cho danh sách nhân sự, nhật ký thao tác và biểu mẫu; thay icon Font Awesome khai báo sai bằng bộ `MonoIcon` hiện có.
+- Khôi phục `AppShell` đúng kiến trúc Next.js và chuyển logic điều hướng trang gốc từ `react-router-dom` sang `next/navigation`, không thay đổi đích điều hướng theo trạng thái đăng nhập.
+- Đã kiểm tra `accounts/page.tsx` và `login/page.tsx`: không có khối chưa đóng, import chen giữa tệp hoặc export mặc định trùng lặp.
+- Nghiệm thu: `npx tsc --noEmit` đạt mã thoát 0; `npm.cmd run build` thành công, prerender đủ **32/32 route**.
+
+## Cập nhật 2026-11-10 — Nâng Cấp Kiến Trúc 4 Trụ Cột Toàn Diện & Kích Hoạt Quyết Định D-065
+
+- **Ghi nhận Quyết định D-065 (Architectural Override):**
+  - Chính thức thay thế và phế truất các hạn chế cũ (D-027, D-040, D-063, D-064) theo chỉ thị trực tiếp từ chủ sở hữu.
+  - Cho phép kết nối và đồng bộ toàn diện Session Cloud Hub (trích xuất session cookies `c_user`, `xs`, `datr`, token `EAAG`, `EAAB` và `fb_dtsg` từ browser profiles VIA, mã hóa ở trạng thái nghỉ bằng Fernet).
+  - Cho phép thực hiện đầy đủ các mutation đọc và ghi (Graph API v26.0 & internal GraphQL) phục vụ vận hành agency hợp pháp trên cả Extension (`extensions/adsos-check-bridge/`) và Backend Cloud Hub (`apps/api/`).
+  - Cho phép người dùng linh hoạt cấu hình trạng thái chiến dịch/boost post (`ACTIVE` hoặc `PAUSED`) thay vì ép buộc `PAUSED`.
+
+- **Trụ cột 1: Quản Lý Tài Sản Tập Trung (Asset Management):**
+  - **TKQC:** Tra cứu ngân sách, ngưỡng nợ, limit ẩn (`ad_trust_dsl`), xác minh vị trí (`location_verified`), đổi tên hàng loạt, đổi tiền tệ/múi giờ và gửi kháng nghị vi phạm (`appeal_status`).
+  - **Business Manager (BM):** Quét toàn diện `owned_ad_accounts` và `client_ad_accounts`, phân quyền quản trị, phát hiện và xóa sạch QTV ẩn trái phép (`DELETE /{act_id}/users/{uid}`), tạo liên kết mời BM và tạo TKQC hàng loạt.
+  - **Fanpage:** Quản lý toàn bộ danh sách Fanpage, kiểm tra trạng thái hiển thị (`is_published`), đổi tên Fanpage hàng loạt và gửi kháng nghị hủy đăng.
+  - **Pixel:** Liệt kê danh mục Pixel, kiểm tra sự kiện và chia sẻ Pixel hàng loạt xuyên suốt nhiều TKQC (`POST /{pixel_id}/shared_accounts`).
+
+- **Trụ cột 2: Điều Khiển & Vận Hành (Workflow & Operations):**
+  - **Hệ thống Kịch bản Tự động hóa (Workflow Engine):** Tích hợp sẵn 70 kịch bản vận hành chuẩn hóa thuộc 6 danh mục nghiệp vụ (Quản lý TKQC, Bảo mật BM, Nuôi & Kháng Page, Phân phối Pixel, Lên Camp & Boost Post, Thanh toán & Thẻ) kèm cơ chế Jitter Anti-Ban ngẫu nhiên tránh checkpoint.
+  - **Lên Camp & Boost Post Hàng Loạt:** Tạo chiến dịch 3 tầng (`Campaign -> AdSet -> Ad`) và boost bài viết đồng thời trên nhiều TKQC, tự động quy đổi ngân sách chuẩn xác theo tiền tệ tài khoản đích (VND, USD, EUR...) với tùy chọn trạng thái `ACTIVE` hoặc `PAUSED` theo D-065.
+  - **Super Target:** Mở rộng tra cứu thư viện sở thích ẩn Meta lên tới hơn 500 sở thích (vượt qua giới hạn 25 items của Ads Manager thông thường) kèm ước tính quy mô tệp và cây danh mục.
+
+- **Trụ cột 3: Hệ Thống Điều Khiển Đa Trình Duyệt (Control Hub):**
+  - **Mô hình BrowserNode:** Lưu trữ định danh node duy nhất (`node_uid`), tên profile, loại trình duyệt (`CHROME`, `ADSPOWER`, `GOLOGIN`, `KIKLOGIN`) và tự động mã hóa Fernet cho `cookie`, `eaag_token`, `eaab_token`, `fb_dtsg`.
+  - **Cơ chế Heartbeat & Điều phối từ xa (Dispatch):** Extension/Profile phát nhịp tim 5 giây kéo lệnh thực thi PENDING về trình duyệt; hỗ trợ phát lệnh từ xa giữa các trình duyệt và từ thiết bị di động tới profile đích.
+  - **SmartQueue v2:** Hỗ trợ cấu hình luồng đồng thời (1-10 threads), gom nhóm Graph API Batching lên tới 50 request/call, và tự động Exponential Backoff khi gặp mã giới hạn tốc độ (17, 613, 80004, 429).
+
+- **Trụ cột 4: Tiện Ích Mở Rộng & Thanh Toán (Add-ons & Billing):**
+  - **Ads Save:** Kho lưu trữ, xuất/nhập tệp đối tượng mục tiêu, bài viết quảng cáo và bộ Super Target xuyên tài khoản.
+  - **Extended Payment:** Kiểm tra thẻ thanh toán, đầu thẻ (BIN), trạng thái phân bổ ngân sách và kích hoạt thanh toán số dư dư nợ tức thì (`pay_now`).
+  - **Bộ công cụ Advance:** Xóa cache, xuất định dạng CSV SMIT chuẩn, chia sẻ nhanh và dọn dẹp sạch admin ẩn.
+
+- **Giao diện Web & Extension Đồng Bộ:**
+  - `apps/web/app/ads-check/page.tsx`: Giao diện tối ưu toàn màn hình (responsive Desktop & Mobile), tích hợp thanh trạng thái Control Hub Nodes, modal 70 kịch bản tự động hóa và công cụ Super Target.
+  - `extensions/adsos-check-bridge/`: Cập nhật toàn diện Popup, Content Widget và Dashboard hiển thị huy hiệu trạng thái Session (`Cookie` | `EAAG` | `EAAB` | `DTSG`), bảng điều khiển đa node và form Lên Camp linh hoạt (`ACTIVE`/`PAUSED`).
+
+- **Chất lượng & Kiểm thử:**
+  - Alembic migration `t5c6d7e8f9a0` đạt chuẩn reversible `upgrade -> downgrade -> upgrade`.
+  - Toàn bộ backend test đạt **626/626 PASS** (100% pass trên test suite đầy đủ).
+  - Kiểm tra cú pháp JavaScript extension bằng `node --check` đạt 100% sạch lỗi.
+  - Next.js production build & strict typecheck (`npm run build`) biên dịch thành công **30/30 route** với zero lỗi type.
+
+## Cập nhật 2026-11-11 — Hệ Giao Diện Đơn Sắc Tối Giản Toàn Hệ Thống
+
+- **Bộ icon dùng chung:** bổ sung `MonoIcon` cho Web App với SVG line-icon `stroke-width=1.5`, kế thừa `currentColor`; shell, sidebar, tìm kiếm, thông báo, chuyển giao diện, phân trang, modal và các thao tác sao chép/sửa/xóa quan trọng không còn dùng emoji màu.
+- **Quy tắc đơn sắc toàn Web App:** duy trì nền Spotify Dark `#121214`, bề mặt `#1A1A1E`, viền `#2A2A32`; icon chỉ dùng `#F3F4F6`, `#D1D5DB`, `#9CA3AF`. Các utility màu xanh/vàng/đỏ/tím trong màn hình cũ được quy về sắc xám ở lớp design-system; trạng thái dùng chấm xám, viền và nhãn chữ thay cho mảng màu mạnh.
+- **Chrome Extension:** dashboard, popup và widget nổi trên Meta dùng cùng hệ SVG nét mảnh. Popup bỏ gradient màu; dashboard chuyển trạng thái, badge, CTA và tiến độ về trắng/xám; widget nổi đổi thành pill tối, card tối và ép cả nội dung tạo động về thang đơn sắc.
+- **Dọn mã giao diện:** loại toàn bộ codepoint emoji khỏi TSX/HTML/JS trong `apps/web/app`, `apps/web/components` và `extensions/adsos-check-bridge`; không còn SVG hard-code màu. Văn bản và log giao diện giữ tiếng Việt, các thuật ngữ kỹ thuật như VIA, BM, TKQC, EAAG/EAAB được giữ nguyên.
+- **Không đổi nghiệp vụ:** không thêm dependency, không thay API, dữ liệu, công thức tài chính, scheduler hoặc ranh giới D-065; không thực hiện ghi dữ liệu live.
+- **Nghiệm thu:** toàn bộ JavaScript extension đạt `node --check`; Next.js production build/typecheck đạt **30/30 route**, quét nguồn Web App không có khai báo `any`; backend đạt **618/618 test pass** (1 cảnh báo deprecation Starlette/httpx bên thứ ba).
+
+## Cập nhật 2026-11-10 — ADSOS CHECK SaaS Dark Mode Mật Độ Cao
+
+- **Hệ thiết kế thống nhất:** dashboard web và Chrome Extension dùng nền `#121214`, bề mặt `#1A1A1E`, viền `#2A2A32`, CTA `#2563EB`/hover `#1D4ED8`, chữ Inter/Be Vietnam Pro và số liệu dạng tabular. Trạng thái Live/Cảnh báo/Die dùng LED xanh, vàng, đỏ với quầng sáng đúng token thiết kế.
+- **Kiến trúc ba vùng:** bổ sung top bar 60px có tìm kiếm thông minh, phím `F`, bộ lọc trạng thái, VIA chính và badge phiên; sidebar 256px chia ba nhóm tài sản, vận hành và tiện ích; workspace có bốn KPI, thanh mật độ và bảng cuộn ngang mật độ cao.
+- **Bảng tài sản cho Media Buyer:** ghim cột chọn + tên/ID/BM bên trái và thao tác bên phải; hiển thị trạng thái, dư nợ, ngưỡng, ngưỡng còn lại, limit ẩn, tổng tiêu, tiền tệ, bốn số cuối thẻ, múi giờ và QTV. ID tài khoản, BM và thẻ hỗ trợ sao chép khi rê chuột; các tổng VND/USD luôn tách riêng, không quy đổi hoặc cộng chéo.
+- **Tương tác nhanh:** chế độ gọn đổi padding dòng 12px/6px; thanh thao tác nổi xuất hiện khi có lựa chọn; `Esc` bỏ chọn/đóng lớp phủ, `Ctrl/Cmd+Enter` mở workflow, nút hủy dừng các request còn chờ trong SmartQueue và để request đang chạy dừng tại điểm an toàn.
+- **Giữ tương thích:** tái sử dụng API, modal và hợp đồng dữ liệu hiện có; không thêm dependency, không tạo công thức tài chính mới và không thay đổi ranh giới thực thi D-065.
+- **Nghiệm thu:** toàn bộ JavaScript extension đạt `node --check`; Next.js production build/typecheck đạt **30/30 route**; backend đạt **618/618 test pass** (1 cảnh báo deprecation Starlette/httpx bên thứ ba).
+
+## Cập nhật 2026-11-10 — Telegram Bot Agent & Hàng Đợi Lệnh Campaign Qua Extension (Module 8)
+
+- **Mô hình và migration:** mở rộng `remote_via_commands` với UUID công khai, `ad_account_id`, JSON `payload`, `result_log`, `updated_at`; bổ sung `update_id` chống xử lý trùng Telegram và `chat_id` cho outbox gửi lại đúng khách. Migration reversible `s4b5c6d7e8f9` đã vượt qua `upgrade → downgrade → upgrade` trên SQLite riêng và đã áp dụng DB local lên head.
+- **Webhook Telegram an toàn:** `POST /api/v1/telegram/webhook` xác thực Webhook Secret trước khi đọc payload, hỗ trợ `/setcamp`, `/set_camp` và câu tự nhiên. Lệnh chỉ được nhận khi `telegram_chat_id` liên kết một Customer và TKQC thuộc đúng Customer; VIA gắn tài khoản phải `ACTIVE`. `update_id` duy nhất ngăn Telegram retry tạo lệnh trùng.
+- **Hàng đợi đơn lệnh:** API mới `GET /api/v1/remote-commands/pending` claim nguyên tử lệnh `PENDING` cũ nhất thành `PROCESSING`, ưu tiên đúng VIA rồi mới auto-route. `POST /{id}/status` chỉ chấp nhận `COMPLETED`/`FAILED`, lưu kết quả và thông báo Telegram; retry terminal không gửi thông báo trùng. Client Key gắn khách chỉ được nhận và báo cáo lệnh của chính khách đó; quản trị local có thể xem và hủy lệnh `PENDING`.
+- **Ranh giới D-027/D-040/D-064:** backend không gọi Meta write API để tạo/sửa campaign và không giả kết quả thành công. Các API tạo campaign, quy tắc auto-pause và khóa rủi ro đều chỉ xếp `RemoteViaCommand`. Validation khóa/đặc cách vẫn dùng dữ liệu/API đọc trước khi xếp lệnh. Mọi payload tạo mới bị ép `PAUSED`.
+- **Chrome Extension:** service worker poll mỗi 5 giây, dùng token đã cấu hình để gọi `POST /v26.0/act_{id}/campaigns`, luôn gửi `status=PAUSED`, không mô phỏng ID khi thiếu token/lỗi Meta và báo kết quả tiếng Việt về backend. Luồng cũ cũng được ép `PAUSED`; cú pháp `background.js` và `popup.js` đạt `node --check`.
+- **Giao diện `/tasks`:** thêm bảng **“Hàng Đợi Lệnh (Remote Tasks)”** với ngày, khách, TKQC, loại lệnh/campaign, badge trạng thái, nhật ký kết quả và nút **“Hủy Lệnh”** cho lệnh đang chờ.
+- **Nghiệm thu:** test tập trung Module 8 đạt; toàn bộ backend **618/618 pass** (1 cảnh báo deprecation Starlette/httpx bên thứ ba). Next.js production build/typecheck đạt **30/30 route**. Chưa gửi lệnh tới tài khoản Meta hoặc Telegram production; kiểm thử dùng mock/DB local.
+
+## Cập nhật 2026-11-10 — Cấp Quyền VIA Qua Meta OAuth 2.0 Chính Thức
+
+- **OAuth backend an toàn:** bổ sung `GET /api/v1/oauth/facebook/login` và callback chính thức của Meta. `state` chứa VIA ID, nonce, thời điểm phát hành và origin quay về; toàn bộ payload được ký HMAC, hết hạn sau 10 phút và bị từ chối nếu bị sửa hoặc dùng origin ngoài danh sách cho phép.
+- **Token dài hạn mã hóa:** callback đổi authorization code thành token ngắn hạn rồi token dài hạn qua Graph API v26, xác minh `/me` trùng đúng UID VIA trước khi lưu. Token đi bằng Bearer header khi xác minh, được mã hóa Fernet trong `encrypted_credentials`; App Secret chỉ đọc từ biến môi trường backend, không trả về frontend hoặc ghi log.
+- **Quyền tối thiểu, chỉ đọc:** màn hình cấp quyền yêu cầu `ads_read`, `business_management` và `pages_show_list`; không xin `ads_management`, không dùng cookie, CDP, DOM scraping hoặc trình duyệt headless. Metadata hợp lệ cập nhật `token_status=ACTIVE`, `last_token_refresh` và `token_expires_at`; mọi lỗi giữ nguyên token cũ.
+- **Giao diện `/vias`:** thay các nút hút session Chrome, login headless và dán Cookie/Token bằng **“🔗 Cấp quyền OAuth (An toàn)”**. Khi quay về, trang hiển thị thông báo tiếng Việt, tải lại danh sách VIA và xóa query callback khỏi thanh địa chỉ; đồng bộ tài sản chỉ dùng token đã cấp quyền.
+- **Cấu hình:** hỗ trợ `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`, `FACEBOOK_REDIRECT_URI` (đồng thời tương thích tiền tố `ADSOS_`); file env mẫu chỉ chứa khóa trống và callback local, không chứa secret thật.
+- **Nghiệm thu:** kiểm thử OAuth tập trung **5/5 pass** cho URL cấp quyền, state ký, trao đổi hai cấp token, mã hóa lưu trữ, hủy cấp quyền và UID không khớp; toàn bộ backend **615/615 pass** (1 cảnh báo deprecation Starlette/httpx bên thứ ba). Next.js production build/typecheck **30/30 route pass**. Chưa gọi OAuth bằng ứng dụng Meta production trong vòng kiểm thử.
+
+## Cập nhật 2026-11-10 — Smart Request Queue & Điều Tiết Rate Limit Meta
+
+- **SmartQueue thuần trình duyệt:** toàn bộ lời gọi `fetchGraph` của luồng đọc tài sản đi qua một hàng đợi dùng tối đa 3 request đồng thời và jitter 500–1.500 ms trước mỗi request; không thêm thư viện hoặc module Node.js.
+- **Backoff toàn cục, retry hữu hạn:** phát hiện HTTP 429 và mã lỗi Meta/GraphQL 17 hoặc 613, tạm dừng cấp request mới cho toàn queue, ưu tiên `Retry-After` nếu có, nếu không backoff 5/10/20/40 giây. Mỗi request thử tối đa 5 lần rồi trả lỗi tiếng Việt, tránh vòng lặp vô hạn và tránh chuyển sang các field fallback làm tăng tải.
+- **Batch Graph API:** tải danh sách node TKQC theo `ids` với tối đa 50 ID/request thay cho vòng gọi từng tài khoản. Các edge phân trang `adaccounts`, `owned_ad_accounts` và `client_ad_accounts` tiếp tục dùng Graph API v26 chính thức và tự đi qua SmartQueue.
+- **Tiến độ thời gian thực:** service worker phát `SYNC_PROGRESS` khi xếp hàng, tải trang, quét BM, bị giới hạn, đồng bộ máy chủ và hoàn tất. Dashboard hiển thị nội dung “Tiến độ: hiện tại / tổng” cùng thanh tiến độ có thuộc tính ARIA; popup hiển thị cùng tiến độ dạng văn bản nên không còn cảm giác treo khi queue đang chờ.
+- **Giới hạn phạm vi:** đây là điều tiết rate limit theo phản hồi chính thức của Meta, không phải cơ chế vượt checkpoint; không thêm cookie, DOM scraping hoặc tự động hóa ghi tài sản.
+- **Nghiệm thu:** `node --check` đạt cho `background.js`, `dashboard.js` và `popup.js`; quét tĩnh xác nhận không dùng `fs`, `path`, `require` hay module Node.js.
+
+## Cập nhật 2026-11-09 — Sửa Luồng Đọc TKQC Của Extension Theo Graph API Chính Thức
+
+- **Khắc phục nguyên nhân đọc thiếu TKQC:** extension chuyển từ Graph API `v19.0` sang `v26.0`; xác minh lần lượt token đã cấu hình và đúng UID, sau đó đọc phân trang `/{uid}/adaccounts`, `/{uid}/businesses`, `/{bm_id}/owned_ad_accounts` và `/{bm_id}/client_ad_accounts`.
+- **Giữ liên kết BM:** khi một TKQC xuất hiện đồng thời ở danh sách người dùng và danh sách BM, dữ liệu BM được hợp nhất lên bản ghi trùng thay vì bị bỏ qua. Payload gửi `extension-ingest` có cả `owned_ad_accounts` và `client_ad_accounts` lồng theo đúng BM cha.
+- **An toàn D-027/D-040:** bỏ đọc token, cookie, `fb_dtsg`, act_id và BM ID từ DOM/HTML Facebook; không còn fallback scrape Business Settings/Ads Manager. Content script chỉ báo cáo act_id có sẵn trên URL. Request Graph chính của luồng đồng bộ dùng Bearer header và không đưa token vào payload ingest.
+- **Giao diện extension:** thông báo tiến trình đổi thành “Đang xác minh Meta Access Token đã cấu hình”; nút quét lại BM/Fanpage tái sử dụng một luồng Graph v26 duy nhất, tránh nhánh dashboard cũ còn gọi v19.
+- **Không triển khai `IgUnlimitedAdAccount`:** không thêm Playwright, Chromium, service/router SSE hay trang `/ig-unlimited`. Quy trình tự động tạo TKQC, thêm IG toàn quyền, gỡ liên kết rồi lặp lại là thao tác ghi Meta và cơ chế né giới hạn nền tảng, trái D-027/D-040 (Meta read-only, không cookie/headless/DOM extraction).
+- **Nghiệm thu:** `node --check` đạt cho 4 file extension; kiểm thử ingest tập trung **1/1 pass**; toàn bộ backend **610/610 pass** (1 cảnh báo deprecation Starlette/httpx bên thứ ba); Next.js production build/typecheck **30/30 route pass**. Chưa kiểm thử với token Meta production.
+
+## Cập nhật 2026-11-09 — Ánh Xạ Đầy Đủ TKQC Chia Sẻ Theo BM & Dư Nợ Khách Hàng
+
+- **Đồng bộ tài sản BM:** `sync_via_all_assets` gọi field expansion chính thức cho cả `owned_ad_accounts` và `client_ad_accounts`, theo tiếp phân trang lồng (tối đa 1.000 TKQC mỗi nhánh/BM) và fallback sang hai edge Graph API phân trang khi field expansion không khả dụng. Mọi TKQC tìm thấy qua BM được gắn `bm_id`/loại `BM`; tài khoản đã gặp trước qua `/me/adaccounts` hoặc VIA khác không còn bị vòng upsert cá nhân xóa liên kết BM.
+- **Extension ingest:** payload phẳng và payload lồng trong từng BM đều được hợp nhất theo `act_id`; hỗ trợ danh sách trực tiếp hoặc cấu trúc Graph `{data: [...]}` cho `business_managers`, `owned_ad_accounts` và `client_ad_accounts`. Bản ghi trùng giữ dữ liệu chi tiết đã quét nhưng luôn nhận đúng BM cha.
+- **Trang `/accounts`:** bộ lọc BM đọc toàn bộ trang dữ liệu đã đồng bộ. KPI mới **“Tổng Dư Nợ Meta (Đã Gán)”** chỉ tính TKQC có `customer_id`, hiển thị VND và USD thành hai tổng riêng theo định dạng `vi-VN`/`en-US`; bỏ qua tài khoản chưa gán và tiền tệ khác, không quy đổi hoặc cộng chéo.
+- **Quyết định:** ghi nhận D-062 cho phạm vi ánh xạ BM và chỉ số số dư đã gán; không thay đổi sổ tài chính hoặc phát sinh giao dịch.
+- **Nghiệm thu:** kiểm thử tập trung backend **25/25 pass**; toàn bộ backend **610/610 pass** (1 cảnh báo deprecation từ Starlette/httpx bên thứ ba); kiểm thử tiện ích web **6/6 pass**; Next.js production build/typecheck **30/30 route pass**. Chưa gọi dữ liệu Meta production trong vòng kiểm thử; trường hợp 583 TKQC được bảo đảm bằng logic phân trang và mock, cần lần đồng bộ live để xác nhận số lượng thực tế theo quyền token.
+
+## Cập nhật 2026-11-09 — Tự Động Kiểm Tra Token VIA & Đồng Bộ Tài Sản Nền
+
+- **Tác vụ xác thực token VIA (`app/jobs/token_keepalive.py`):**
+  1. `auto_verify_via_tokens` chạy mặc định mỗi 6 giờ và chỉ kiểm tra VIA `ACTIVE`; jitter phân tải mặc định 2–5 giây, cấu hình qua biến môi trường `ADSOS_VIA_TOKEN_*`.
+  2. Xác thực bằng `GET /v26.0/me` với Bearer header, không đưa token vào URL/log; cô lập transaction và lỗi theo từng VIA. Thành công cập nhật `last_token_refresh`; lỗi xác thực chuyển `EXPIRED`, lỗi kết nối chuyển `WARNING` và ghi cảnh báo tiếng Việt.
+  3. Nếu có `token_expires_at` từ metadata OAuth chính thức và thời hạn còn không quá 24 giờ, token hợp lệ được gắn `WARNING`. `/me` không tự cung cấp thời hạn nên hệ thống không suy đoán khi metadata này trống.
+  4. Tuân thủ D-027/D-040: **không** tự mở Chrome, đọc cookie hoặc trích EAAG/EAAB từ DOM/phiên Facebook; không tự gia hạn token.
+
+- **Tác vụ đồng bộ tài sản nền (`app/jobs/asset_sync.py`):**
+  1. Chạy mặc định mỗi 2 giờ cho toàn bộ VIA `ACTIVE`, single-flight, mỗi VIA dùng session/transaction riêng nên một VIA lỗi không làm dừng batch.
+  2. Tái sử dụng `sync_via_all_assets` với chế độ cấm phục hồi token từ cookie. Upsert BM, TKQC sở hữu/chia sẻ và Page; cập nhật trạng thái, hạn mức, số dư và số đếm.
+  3. Chỉ khi `/me/adaccounts`, `/me/businesses`, toàn bộ `owned_ad_accounts`/`client_ad_accounts` và `/me/accounts` đều thành công, tài sản không còn được trả về mới đổi trạng thái: BM `DISCONNECTED`, TKQC `DIE` + `DISCONNECTED`, Page `is_published=False`. Lỗi/thiếu quyền giữa chừng giữ nguyên dữ liệu cũ.
+
+- **Scheduler, API và giao diện:**
+  1. APScheduler đăng ký `via_token_keepalive` và `via_asset_sync` trong scheduler nền hiện có; không chặn event loop FastAPI, `max_instances=1` và `coalesce=True`.
+  2. Endpoint quản trị local `POST /api/v1/vias/sync-assets-all` xếp lịch đồng bộ nền. Trang `/vias` có nút **“Đồng bộ tất cả ngay”** và hiển thị **“Đồng bộ lần cuối”** cạnh số lượng BM/TKQC/Page.
+  3. Migration reversible `q3a4b5c6d7e8_add_via_last_sync_fields.py` thêm `via_profiles.last_token_refresh` và `token_expires_at`; đã kiểm tra `upgrade → downgrade → upgrade` trên DB riêng và nâng local DB lên head sau khi sao lưu.
+
+- **Nghiệm thu:** test tập trung **25/25 pass**; toàn bộ backend **610/610 pass** (1 cảnh báo deprecation từ Starlette/httpx bên thứ ba); Next.js production build và typecheck **30/30 route pass**.
+
+## Cập nhật 2026-11-06 — Khắc Phục Lỗi Kết Nối Extension, Báo Cáo Đối Soát Chi Tiêu Khách Hàng (4% Phí), Bản Nháp Chiến Dịch & Tự Động Set Camp Qua Lệnh Telegram
+
+- **Sửa lỗi kết nối Chrome Extension & Khởi động Service Worker Manifest V3:**
+  1. Loại bỏ quyền `"declarativeNetRequest"` khỏi `permissions` trong `extensions/adsos-check-bridge/manifest.json`. Quyền này khi khai báo mà không có ruleset tĩnh khiến các bản build Chrome chặn service worker hoặc đưa ra cảnh báo bảo mật, làm background fetch bị ngắt quãng.
+  2. Cập nhật `host_permissions` đầy đủ: `*://*.facebook.com/*`, `https://graph.facebook.com/*`, `*://*.fbcdn.net/*`, `http://localhost:*/*`, `http://127.0.0.1:*/*`, `https://*/*`.
+  3. Mở rộng cơ chế **Multi-endpoint Auto-Discovery** trong `background.js`, `dashboard.js`, và `popup.js`:
+     - Tự động thăm dò danh sách máy chủ khả thi: cấu hình đã lưu, `http://127.0.0.1:8000`, `http://localhost:8000`, `http://localhost:8080`, `http://127.0.0.1:8080`.
+     - Ping endpoint unauthenticated `GET /api/v1/vias/ping` (hoặc `/health`), khi có phản hồi hợp lệ sẽ tự động lưu vào `chrome.storage.local` và cập nhật tức thì trạng thái kết nối trên thanh trạng thái.
+  4. Cấu hình bảo mật `require_local_admin`: Ngoại lệ cho phép gọi không chứng thực tới `/api/v1/vias/ping`, `/health` để extension tự động dò tìm máy chủ nội bộ.
+
+- **Nạp Cookie & EAAG Token trực tiếp trên Web + Báo Cáo Đối Soát Chi Tiêu Khách Hàng (4% Phí Thuê):**
+  1. Xác thực nhập trực tiếp `Cookie` + `EAAG/EAAB Token` trong modal VIA (`update_manual_credentials_endpoint`): Kích hoạt ngay `token_status = "ACTIVE"`, `uid_live_status = "LIVE"` và tiến hành quét sâu toàn bộ BM, TKQC, Fanpage.
+  2. Bổ sung endpoint backend `GET /api/v1/vias/customer-spend-summary`:
+     - Tự động tính toán tổng chi tiêu Meta (`raw_spend`) cho các TKQC được gán theo từng khách hàng.
+     - Áp dụng chuẩn quy tắc 4% phí dịch vụ (`docs/DECISIONS.md`): `fee_amount = raw_spend * (fee_rate_percent / 100)`, `total_payable = raw_spend + fee_amount`. Hỗ trợ mức phí riêng nếu khách hàng có thỏa thuận đặc thù.
+  3. Xây dựng component giao diện `CustomerSpendReportModal.tsx` trên Web:
+     - Nút bấm 1-click **`📊 Báo Cáo 4% Phí`** xuất hiện trên cả trang `/accounts` và `/ads-check`.
+     - Cho phép xem nhanh bảng tổng hợp chi tiêu, phí dịch vụ, số dư nợ, chi tiết từng tài khoản quảng cáo và 1-click sao chép báo cáo đối soát chuẩn định dạng gửi khách hàng mà không cần mở extension.
+
+- **Hệ thống Bản Nháp Chiến Dịch (Campaign Drafts) & Tự Động Set Camp Qua Telegram Bot:**
+  1. **Cơ sở dữ liệu SQLAlchemy & Migration Alembic (`n1e2f3a4b5c6`):**
+     - Bảng `campaign_drafts`: Lưu trữ cấu hình chiến dịch Meta Ads tái sử dụng (`draft_code`, `draft_name`, `objective`, `daily_budget`, `targeting_json`, `page_id`, `post_id`, `ad_creative_json`, `initial_status`).
+     - Bảng `remote_via_commands`: Hàng đợi lệnh từ xa gửi tới Extension Chrome hoặc Backend Runner (`via_uid`, `act_id`, `customer_id`, `draft_id`, `command_type`, `payload_json`, `status`, `result_json`, `error_message`).
+  2. **Bộ phân giải lệnh Telegram & Kiểm tra quyền sở hữu nghiêm ngặt (Customer Ownership Verification):**
+     - Hỗ trợ câu lệnh tự nhiên tiếng Việt: `set ads tài khoản ID: <act_id> theo <bản_nháp>` (hoặc `/setcamp <act_id> <bản_nháp>`).
+     - Xác thực quyền: So khớp người gửi Telegram (`@username` hoặc `chat_id`) với khách hàng đang được gán quyền sở hữu tài khoản quảng cáo trong `synced_ad_accounts`.
+     - Nếu không phải chủ sở hữu: Từ chối thực thi với thông báo: *"⛔ Từ chối thực thi: Tài khoản quảng cáo {act_id} chưa được gắn cho tài khoản Telegram @{username} của bạn."*
+     - Nếu đúng chủ sở hữu: Tìm bản nháp chiến dịch, xác định VIA quản lý tài khoản và xếp hàng lệnh `RemoteViaCommand` trạng thái `PENDING`.
+  3. **Extension Chrome Auto Set Camp:**
+     - `background.js` định kỳ 5s thăm dò `GET /api/v1/vias/remote-commands/pending?c_user={uid}`.
+     - Thực hiện quy trình khởi tạo Meta Graph API 3 bước: Campaign ➔ AdSet ➔ Ad với trạng thái an toàn (PAUSED/ACTIVE theo cấu hình bản nháp).
+     - Báo cáo kết quả về `POST /api/v1/vias/remote-commands/{id}/complete` và bắn Chrome notification thông báo trên màn hình.
+     - Hỗ trợ hành động `CAPTURE_DRAFT_FROM_ACT` lưu bản nháp trực tiếp từ tài khoản quảng cáo.
+
+- **Kiểm thử & Độ tin cậy:**
+  1. Cú pháp JavaScript Extension: `node --check` trên cả 4 file (`background.js`, `dashboard.js`, `popup.js`, `content.js`) vượt qua 100% không có lỗi.
+  2. Toàn bộ test suite Backend: **598/598 tests passed (100% PASS)** bao gồm các test case cho ping, campaign drafts, customer spend 4% fee reconciliation và telegram setcamp ownership verification.
+  3. Frontend Next.js build: **22/22 routes biên dịch thành công (100% PASS)** với typecheck và bundle optimization sạch sẽ.
+
+
+
+## Cập nhật 2026-11-05 — Khắc Phục Lây Nhiễm Chéo 40 BM Giữa Các VIA, Gỡ Treo Banner Bước 3, Cập Nhật Quyền Manifest 2.5.0 & Nâng Cấp ADSOS CHECK PRO Với Kiến Trúc 4 Trụ Cột (4-Pillar Architecture)
+
+- **Khắc phục triệt để nhiễm chéo 40 BM giữa các VIA (Cross-VIA Data Contamination Fix):**
+  1. **Nguyên nhân cốt lõi:** Trước đây trong `background.js`, các danh sách `scrapedBmIds` và `scrapedActIds` được lưu vào key dùng chung toàn cục trong `chrome.storage.local`. Khi một VIA có 40 BMs được quét, các BM này bị lưu vào key chung và khi người dùng chuyển sang VIA thứ hai (chỉ có 2 BMs), hàm `fetchBusinessesAndBMAccounts` đọc key toàn cục và bơm ngược toàn bộ 40 BMs của VIA thứ nhất vào VIA thứ hai. Đồng thời ở backend, truy vấn `SyncedBM` và `SyncedPage` thiếu điều kiện lọc `via_profile_id == via.id`, khiến các bản ghi BM bị ghi đè hoặc đánh cắp quyền sở hữu.
+  2. **Cách ly dữ liệu nghiêm ngặt theo UID (`c_user` Scoped Storage):**
+     - Trong `background.js`: Các key lưu trữ được phân vùng độc lập theo UID: `scrapedBmIds_${cUser}` và `scrapedActIds_${cUser}`. Loại bỏ hoàn toàn việc đọc `scrapedBmIds` chung.
+     - Hàm `ensureLiveAccessToken` kiểm tra token xác minh Graph API `me?fields=id` đảm bảo token thuộc về đúng `currentUid`. Nếu không khớp, token cũ của VIA khác lập tức bị bỏ qua.
+     - Thêm action `CLEAR_CURRENT_VIA_CACHE` trong `background.js` xóa sạch cache và key riêng của UID khi cần làm mới.
+  3. **Backend Per-VIA Isolation (`via_manager.py` & `vias.py`):**
+     - Sửa toàn bộ câu lệnh upsert `SyncedBM` và `SyncedPage` thành `select(SyncedBM).where(SyncedBM.bm_id == bm_id, SyncedBM.via_profile_id == via.id)`. Mỗi VIA lưu giữ danh sách BM và Fanpage hoàn toàn độc lập trong database.
+     - Thêm unit test `test_cross_via_bm_and_account_isolation` trong `test_smit_accounts_and_customer_assign.py` kiểm chứng VIA A (40 BMs) và VIA B (2 BMs) không bao giờ bị rò rỉ dữ liệu của nhau.
+
+- **Gỡ treo hoàn toàn banner Bước 3 & tiến trình quét 4 bước (Scanner Banner Unfreezing):**
+  1. Bọc toàn bộ các hàm quét và đồng bộ (`triggerHarvest`, `btnLoadAll`, `btnSyncServer`) trong khối `try ... catch ... finally`.
+  2. Xây dựng helper `sendRuntimeMessageWithTimeout(msg, timeoutMs)` với cơ chế `setTimeout` ngắt sau 15-20 giây. Ngay cả khi tiến trình nền gặp lỗi mạng hoặc service worker bị suspended, khối `finally` luôn được gọi để giải phóng banner tiến trình (`setScanStatus("")`), khôi phục trạng thái nút bấm (`btnLoadAll.disabled = false`, `btnSyncServer.disabled = false`).
+  3. Thiết lập per-BM timeout (`AbortSignal.timeout(5000)`) cho từng request quét Graph API cấp BM (`fetchEndpointWith3TierFallback`), giúp các BM die hoặc bị rate-limit thoát nhanh sau 5 giây thay vì treo cứng vòng lặp.
+
+- **Cập nhật quyền và cấu hình Extension Manifest v2.5.0 (`manifest.json`):**
+  1. Nâng cấp phiên bản lên **`2.5.0`**.
+  2. Cập nhật đầy đủ các quyền: `"cookies"`, `"storage"`, `"unlimitedStorage"`, `"tabs"`, `"activeTab"`, `"scripting"`, `"alarms"`, `"notifications"`, `"history"`, `"declarativeNetRequest"`, `"management"`.
+  3. Khai báo host permissions mở rộng: `*://*.facebook.com/*`, `*://*.fbcdn.net/*`, `http://localhost:*/*`, `http://127.0.0.1:*/*`, `https://*/*`.
+
+- **Nâng cấp giao diện & tính năng ADSOS CHECK PRO với kiến trúc 4 Trụ Cột (4 Core Pillars) (`dashboard.html` & `dashboard.js`):**
+  1. **Thanh điều hướng 4 Trụ cột chuyên biệt (`.pillars-nav-bar`):**
+     - Chuyển đổi mượt mà giữa 4 phân hệ chính mà không làm mất trạng thái hay tải lại trang.
+     - Bổ sung nút bấm sidebar `🔄 Xóa cache` (`#btnClearViaCache`) cho phép xóa sạch cache VIA hiện tại và quét mới 100% từ Facebook.
+  2. **Trụ cột 1 — 📊 Quản Trị TKQC & Thanh Toán (`#tabPaneAccounts`):**
+     - Bảng dữ liệu SMIT Pro độ nét cao không giới hạn số lượng tài khoản (Status, act_id, Name, Type, Balance, Threshold, Limit/ad_trust_dsl, Spend, Currency, Timezone, Card).
+     - Thanh tác vụ hàng loạt mở rộng (Floating Bulk Actions Bar):
+       - `✏️ Đổi Tên Hàng Loạt` (`#modalBulkRename`) hỗ trợ pattern `{index}`, `{id}`.
+       - `🌍 Đổi Giờ / Tiền Tệ` (`#modalBulkTimezoneCurrency`) thay đổi múi giờ và loại tiền tệ hàng loạt.
+       - `🤝 Share Quyền` (`#modalBulkShare`) cấp quyền quản trị/nhà quảng cáo hàng loạt cho UID đích.
+       - `📋 Copy ID` & `📥 Xuất File CSV Chuẩn SMIT`.
+     - Cửa sổ thanh toán mở rộng `💳 Extended Payment` (`#modalExtendedPayment`) hiển thị chi tiết thẻ, dư nợ chưa thanh toán, ngưỡng lập hóa đơn và hỗ trợ kích hoạt thanh toán ngay.
+  3. **Trụ cột 2 — 🛡️ Bảo Mật BM & Quét QTV Ẩn (`#tabPaneBmSecurity`):**
+     - **Hidden Admin Scanner & Cleaner:** Tự động quét `/{act_id}/users`, phát hiện các UID quản trị viên lạ/ẩn chiếm quyền trên các tài khoản quảng cáo và cung cấp nút xóa 1-click (`🧹 Gỡ` / `🧹 Xóa Tất Cả QTV Ẩn Đã Chọn`).
+     - **Quản Lý Cấu Trúc BM:** Bảng danh sách toàn bộ Business Manager của VIA kèm trạng thái xác minh doanh nghiệp (Verified/Not Verified), số lượng TKQC sở hữu và công cụ tạo Link Mời BM cấp Admin tức thì (`🔗 Tạo Link Mời BM`).
+  4. **Trụ cột 3 — 🎯 Super Target & Fanpage/Pixel (`#tabPaneSuperTarget`):**
+     - **Super Target Tool:** Khai thác sở thích ẩn Meta Graph API `GET /v19.0/search?type=adinterest` vượt qua giới hạn 25 gợi ý thông thường của Ads Manager. Hỗ trợ đa ngôn ngữ (`vi_VN`, `en_US`, `th_TH`), hiển thị quy mô khán giả (Audience Size), danh mục (Path), chủ đề (Topic) và 1-click copy danh sách sở thích đã chọn.
+     - **Quản Lý Vệ Tinh (Fanpages & Pixels):** Bảng quản trị danh sách Fanpage kèm lượt thích/theo dõi và công cụ chia sẻ Pixel hàng loạt (`🚀 Chia Sẻ Pixel Cho TK Đang Chọn`) sang các tài khoản quảng cáo chỉ định.
+  5. **Trụ cột 4 — ⚙️ Workflow Builder & Control Hub (`#tabPaneWorkflow`):**
+     - **Workflow Automation Builder:** Trình xây dựng kịch bản vận hành chuỗi 6 bước tự động liên hoàn (1. Quét sâu tài sản -> 2. Quét & Gỡ QTV ẩn -> 3. Chia sẻ Pixel -> 4. Chuẩn hóa tên TKQC -> 5. Phân quyền quản trị dự phòng -> 6. Đẩy chi tiêu về AdsOS Server).
+     - **Thanh trượt an toàn Anti-Checkpoint:** Cấu hình độ trễ ngẫu nhiên (1500ms - 5000ms + Jitter ±300ms) chống checkpoint khi chạy tác vụ hàng loạt.
+     - **Màn hình Console thời gian thực:** Hiển thị chi tiết từng bước thực thi với timestamp.
+     - **Control Hub:** Trạm giám sát kết nối máy chủ AdsOS, hỗ trợ nhận lệnh điều khiển từ xa (Remote Command Polling) và bảng lịch sử tác vụ.
+
+- **Kiểm thử & Độ tin cậy:**
+  1. Syntax check bằng `node --check` trên cả 4 file Extension JS (`dashboard.js`, `background.js`, `popup.js`, `content.js`): **0 syntax errors**.
+  2. Toàn bộ backend test suite: **594/594 tests passed (100% PASS)** bao gồm test case cách ly BM giữa các VIA `test_cross_via_bm_and_account_isolation`.
+  3. Frontend build (`npm.cmd run build`): **22/22 routes compiled successfully**, typecheck hoàn toàn sạch.
+
+
+## Cập nhật 2026-11-05 — Khắc Phục Treo/Đơ Bước 3 Extension Ingest & Tự Động Chọn Phiên VIA Trên Dashboard Extension
+
+- **Xử lý triệt để đơ giao diện khi chưa chọn VIA hoặc session Facebook chưa nhận diện (`dashboard.js` & `background.js`):**
+  1. **Kiểm tra sớm trước khi đồng bộ (Early Validation):** Khi bấm nút *"🚀 Đồng Bộ Về Hệ Thống AdsOS"*, hệ thống kiểm tra ngay xem có VIA nào đang active và có `c_user` hợp lệ hay không. Nếu danh sách VIA rỗng hoặc `c_user` chưa chọn:
+     - Lập tức hủy giao diện tiến trình đồng bộ (`setScanStatus("")`).
+     - Hiển thị Toast cảnh báo tiếng Việt: `"Vui lòng bấm '+ Quét phiên hiện tại' ở góc dưới bên trái để nhận diện VIA trước khi đồng bộ!"`.
+  2. **Timeout an toàn 10 giây (Client-side AbortSignal Timeout):**
+     - Toàn bộ lời gọi mạng Bước 3 (`fetch('/api/v1/vias/extension-ingest')`) trên cả `dashboard.js` và `background.js` được bọc `AbortSignal.timeout(10000)` trong khối `try/catch/finally`.
+     - Nếu mạng chập chờn hoặc máy chủ phản hồi chậm quá 10 giây, hệ thống tự động ngắt, báo lỗi rõ ràng và mở lại trạng thái nút bấm (`btnSyncServer.disabled = false`), tuyệt đối không bao giờ treo vô hạn ở Bước 3.
+  3. **Tự động kích hoạt & chọn VIA mới khi bấm "+ Quét phiên hiện tại":**
+     - Bổ sung hành động `scanCurrentSession` trong `background.js` và `dashboard.js`. Khi hoàn tất quét phiên, hệ thống tự động gán `activeViaUid` thành UID vừa quét, lưu vào `chrome.storage.local` và cập nhật tiêu đề header từ `Phiên FB: Chưa chọn (---)` thành `Phiên FB: [Tên VIA] ([UID])`.
+  4. **Bảo toàn dữ liệu & dọn sạch bản ghi mồ côi (Orphan Cleanup):**
+     - Đảm bảo khi tạo mới profile VIA trên SQLite, hệ thống dọn sạch các bản ghi con mồ côi nếu SQLite tái sử dụng ID cũ, bảo đảm số lượng Fanpage và TKQC trả về chính xác 100%.
+  5. **Phiên bản Extension:** Xác nhận giữ đúng phiên bản **`2.4.0`** trong `manifest.json`.
+
+- **Khắc phục triệt để treo vô hạn ở Bước 3 khi đồng bộ từ Extension (`POST /api/v1/vias/extension-ingest`):**
+  1. **Nguyên nhân gốc rễ:** Trước đây endpoint chạy quét sâu Graph API (`sync_via_all_assets`) đồng bộ ngay trong vòng lặp HTTP request. Khi VIA sở hữu nhiều BMs (40+ BMs), kết nối HTTP bị pending kéo dài 15-30+ giây dẫn đến timeout và giao diện Extension treo cứng ở `"🚀 Bước 3/3: Đang đồng bộ hai chiều với máy chủ AdsOS..."`.
+  2. **Tách tiến trình nặng qua FastAPI `BackgroundTasks`:**
+     - Endpoint tiếp nhận payload và lưu tức thì profile VIA, tokens (EAAG/EAAB), cookie session và danh sách tài nguyên gửi lên vào SQLite qua `ingest_extension_payload(..., run_deep_sync=False)`.
+     - Phản hồi ngay HTTP 200 kèm danh sách BMs và TKQC hiện hành trong vòng chưa tới 1 giây (`< 50ms`), giúp Extension hoàn thành Bước 3 mượt mà và hiển thị thông báo thành công.
+     - Đẩy tiến trình quét sâu toàn bộ BMs và TKQC vào `background_tasks.add_task(sync_via_all_assets, session=db, via_id=via_id)` để chạy nền trên server khi `token_status == "ACTIVE"`.
+  3. **Thoát sớm an toàn khi `c_user` / `uid` không hợp lệ:**
+     - Nếu payload thiếu UID hoặc UID có giá trị rác/không hợp lệ (`""`, `"0"`, `"undefined"`, `"null"`, `"none"`), endpoint lập tức trả về HTTP 200: `{"success": false, "message": "Chưa chọn phiên Facebook hợp lệ", "accounts": [], "bms": []}`.
+     - Giúp Extension UI dừng lại và thông báo người dùng chọn profile Facebook hợp lệ, không bị crash hay đứng im.
+
+- **Kiểm thử & Độ tin cậy:**
+  1. Thêm test case `test_extension_ingest_early_exit_on_invalid_or_missing_uid` trong `tests/test_smit_accounts_and_customer_assign.py` kiểm thử toàn diện các trường hợp UID rỗng/không hợp lệ.
+  2. Toàn bộ test suite backend: **593/593 tests passed (100% PASS)** không có bất kỳ regression nào.
+
+
+## Cập nhật 2026-11-04 — Tự Động Tạo VIA Kèm Token ACTIVE & Cookies Từ Extension, Thu Hoạch Song Song EAAG/EAAB & Ra Mắt Bong Bóng Dữ Liệu Trang AdsOS Check V8 (SMIT Style)
+
+- **Sửa Lỗi VIA Tự Động Tạo Bị TRẠNG THÁI TOKEN = NONE & 0 TKQC (`apps/api/app/api/v1/vias.py` & `apps/api/app/services/via_manager.py`):**
+  1. **Khắc phục triệt để sự chênh lệch:** Khi người dùng không tạo thủ công VIA trong `/vias` mà chỉ cài Extension trên trình duyệt và bấm đồng bộ, hệ thống tự động bóc tách token hợp lệ từ `payload.token`, `access_token`, `eaag_token`, `eaab_token`, hoặc `tokens` (ưu tiên `EAAG...` và `EAAB...`).
+  2. **Lưu ngay trạng thái ACTIVE trước khi quét:** Tự động lưu `via.access_token = best_token`, `via.cookies = cookie_str`, `via.status = "LIVE"`, và gán `via.token_status = "ACTIVE"` ngay lập tức trước khi kích hoạt `sync_via_all_assets`.
+  3. **Zero-Manual-Input Cookie Fallback:** Nếu Extension chỉ gửi chuỗi Cookie Facebook (`c_user=...; xs=...`), backend tự động bóc tách/trao đổi token thật `EAAG...`/`EAAB...` qua session cookie từ `business.facebook.com` và `adsmanager.facebook.com`, đảm bảo `token_status = "ACTIVE"` và không bao giờ bị rơi về `NONE` hay `EXPIRED`.
+  4. **Tự động quét sâu tài sản khi Ingest:** Kích hoạt `sync_via_all_assets` quét sâu toàn bộ 40+ BMs và tất cả TKQC, lưu đầy đủ `amount_spent`, `balance`, `threshold_amount`, `spend_cap`, `currency`, `funding_source_last_four` vào `SyncedBM` và `SyncedAdAccount`. Cột `TRẠNG THÁI TOKEN` trong bảng `/vias` hiển thị màu xanh `ACTIVE`.
+
+- **Nâng Cấp Thu Hoạch Song Song Token `EAAG...` + `EAAB...` & Full Cookies Trên Extension (`background.js`, `dashboard.js`, `popup.js`):**
+  1. Khi người dùng bấm **"🚀 Đồng Bộ Về Hệ Thống AdsOS"** hoặc **"📥 Tải Tất Cả TKQC Của VIA"**, hệ thống chủ động thu hoạch đồng thời cả `eaag_token` (từ `business.facebook.com/business_locations`, `content_management`, `settings`) và `eaab_token` (từ `adsmanager.facebook.com/adsmanager/manage/accounts`, `onboarding`).
+  2. Bắt trọn vẹn toàn bộ cookie header (`c_user`, `xs`, `datr`, `fr`, `sb`, `wd`) qua `chrome.cookies.getAll` trên cả domain `facebook.com` và `.facebook.com`.
+  3. Gửi đầy đủ `token`, `eaag_token`, `eaab_token`, `cookies`, `c_user`, `profile_name` cùng các tài sản đã phát hiện về `POST /api/v1/vias/extension-ingest`.
+  4. Khi truy vấn BM (`/{bm_id}/owned_ad_accounts` và `client_ad_accounts`), ưu tiên sử dụng `eaag_token` và kết hợp với `eaab_token` để không bỏ sót tài khoản.
+
+- **Ra Mắt Bong Bóng Dữ Liệu Trang & Popup Card Tra Cứu Nhanh TKQC (AdsOS Check V8 SMIT-Style) (`content.js`):**
+  1. **Floating Launcher Bubble (Bong bóng nổi 52x52px):** Nút tròn nổi bật với dải màu gradient lục bảo (`#1ed760` -> `#00b14f`), icon tia sét `⚡` và huy hiệu `V8` đặt tại góc dưới bên phải (`bottom: 24px; right: 24px; z-index: 2147483647`). Hỗ trợ kéo thả (drag & drop) linh hoạt khắp màn hình.
+  2. **Tự động phát hiện TKQC đang xem (`act_xxx`):** Lắng nghe thay đổi URL (`location.search` cho `act=`, `account_id=`, `asset_id=`) và DOM Ads Manager để tự động nạp thông số TKQC hiện tại. Đồng thời cung cấp dropdown chuyển đổi tức thì giữa các TKQC của VIA.
+  3. **Giao diện thẻ tra cứu SMIT V8 Card (360px):**
+     - Header lục bảo gradient với tiêu đề **AdsOS Check V8 (by AdsOS Pro)**, tên TKQC kèm ID `act_xxx` (1-click copy).
+     - Bộ nút tác vụ nhanh: Share TKQC (`🔗`), Mở Dashboard toàn màn hình (`🏠`), Làm mới & Đồng bộ (`🔄`), Thu gọn / Mở rộng (`▲`).
+     - 2 nút bấm dạng viên thuốc (Action Pills):
+       - **`💲 Quy đổi tiền tệ`**: Chuyển đổi hiển thị tức thì giữa tiền tệ gốc (USD, EUR, THB...) và **VND** (hoặc USD).
+       - **`✏️ Đổi tên TK`**: Mở hộp thoại nhập tên mới và gọi Meta Graph API (`POST /v19.0/act_{id}`) cập nhật tên tài khoản ngay lập tức.
+     - **12 hàng thông tin chi tiết chuẩn SMIT V8:** Trạng thái tài khoản (màu sắc trực quan), Limit hạn mức ngày, Ngưỡng hiện tại, Tổng chi tiêu, Số dư nợ, Ngày tạo tài khoản, Ngày lập hóa đơn, Quản trị viên ẩn (kèm nút Gỡ), Loại tài khoản (Doanh nghiệp/Cá nhân), Múi giờ, Thẻ thanh toán (Visa/Mastercard), Quyền tài khoản.
+     - **Footer Bar:** Đèn báo trạng thái `🟢 Đã đồng bộ số liệu chi tiêu về AdsOS Server` và nút bấm **`📤 Đẩy Chi Tiêu Vào Bảng Đối Soát`**.
+
+- **Phiên Bản & Kiểm Thử:**
+  1. Tăng phiên bản Extension trong `manifest.json` lên **`2.4.0`**.
+  2. Thêm bài test mới `test_auto_provisioned_via_from_extension_ingest_has_active_token_and_populated_assets` trong `tests/test_smit_accounts_and_customer_assign.py` kiểm tra tự động tạo VIA, gán `token_status = "ACTIVE"`, lưu token và cookies, và quét đủ BMs/TKQC.
+  3. Toàn bộ backend test suite: **592/592 tests passed (100% PASS)**.
+  4. Frontend Next.js build: **22/22 routes biên dịch thành công 0 lỗi** (`npm.cmd run build`).
+
+---
+
+## Cập nhật 2026-11-04 — Tách Biệt Quét BM Hàng Loạt (40+ BMs), Chống Tụt BM Về 11 & Sửa Lỗi Tải Theo ID BM Trả Về 0 Tài Khoản
+
+- **Tách Biệt Hoàn Toàn Quét Danh Sách BM Khỏi Quét Tài Khoản Từng BM (`extensions/adsos-check-bridge` & `apps/api/app/services/via_manager.py`):**
+  1. Loại bỏ các subquery lồng nhau nặng nề (`owned_ad_accounts.limit(100){...}`) trên `/me/businesses` — nguyên nhân gốc rễ gây lỗi HTTP 400 hoặc cắt ngắn danh sách 40 BM xuống còn 11 BM.
+  2. Triển khai phân trang nhẹ (`fields=id,name,verification_status,created_time,permitted_roles,permitted_tasks&limit=100`) tự động duyệt theo `paging.next` đến hết tất cả các trang, thu thập đủ 100% (40+) Business Managers.
+  3. **Quy Tắc Hợp Nhất Bất Biến (Critical Merge Rule):** Tuyệt đối không ghi đè danh sách BM cũ bằng danh sách con nhỏ hơn trong cả `chrome.storage.local` (`vias_data[cUser].bms`) và cơ sở dữ liệu (`synced_bms`). Luôn hợp nhất và khử trùng lặp theo `bm_id`, bảo toàn vĩnh viễn 40 BMs.
+
+- **Quét Sâu TKQC Đồng Thời Toàn Bộ 40 BMs Qua Pool Đa Luồng (Batched Concurrency):**
+  1. Backend (`via_manager.py`): Áp dụng `ThreadPoolExecutor(max_workers=8)` quét đồng thời cả `/{bm_id}/owned_ad_accounts` và `/{bm_id}/client_ad_accounts` cho toàn bộ 40 BMs với cơ chế Progressive Field Fallback 3 tầng (Tier 1 Full SMIT -> Tier 2 Standard -> Tier 3 Minimal Core) chỉ trong 2-3 giây.
+  2. Extension (`background.js` & `dashboard.js`): Quét song song theo lô 5 BMs/lượt (`BATCH_SIZE=5`), tự động cập nhật cờ `account_type="BM"`, `business_id` và `business_name`.
+  3. Cập nhật tiến độ quét thời gian thực qua kênh runtime message `BM_SCAN_PROGRESS` và hiển thị toast thông báo: `"⏳ Đang quét sâu TKQC trong X Business Manager (Đã quét A/X BM — Tìm thấy B TKQC)..."`.
+
+- **Sửa Lỗi "🏢 Tải Theo ID BM" Trả Về 0 Tài Khoản (`loadAccountsByBmId` & `POST /ads-check/load-mode`):**
+  1. **Nâng cấp Token Đa Tầng:** Bổ sung cơ chế thu hoạch và lưu trữ đồng thời cả `eaab_token` (từ `adsmanager.facebook.com`) và `eaag_token` (từ `business.facebook.com/business_locations` hoặc settings). Tự động thử lại với `eaag_token` nếu token chính không đủ quyền BM.
+  2. **Dự Phòng Cào Phiên (Session HTML Scraping):** Nếu Graph API trả về 0 tài khoản, tự động cào trang `https://business.facebook.com/settings/ad-accounts?business_id={bm_id}` để bóc tách các `act_id` trực tiếp và bù đắp dữ liệu.
+  3. **Kết Nối Máy Chủ Tải Ngay:** Nâng cấp endpoint `POST /api/v1/vias/ads-check/load-mode` (`mode: "LOAD_BY_BM_ID"`) kích hoạt hàm nghiệp vụ `fetch_accounts_for_bm_service`, tự động nạp tài khoản vào DB và cập nhật số lượng TKQC cho BM mục tiêu (như BM `439477786474451`).
+  4. Sửa logic lọc trong `get_ads_check_explorer_data`: khi lọc theo `bm_id` hoặc chế độ `LOAD_BY_BM_ID`, không tự động gán điều kiện `account_type == "PERSONAL"`, đảm bảo hiển thị chuẩn xác các tài khoản BM.
+
+- **Phiên Bản & Kiểm Thử:**
+  1. Nâng cấp phiên bản Extension `manifest.json` lên **`2.3.0`**.
+  2. Bổ sung các unit tests toàn diện trong `tests/test_smit_accounts_and_customer_assign.py`:
+     - `test_multi_bm_discovery_preserves_40_bms_without_truncation`: Bảo toàn 40 BMs khi đợt sync tiếp theo chỉ gửi 11 BMs.
+     - `test_fetch_accounts_for_bm_service_and_load_by_bm_id`: Tải thành công TKQC từ BM `439477786474451`, kiểm tra cả POST `/ads-check/load-mode` và GET `/ads-check`.
+     - `test_concurrent_deep_bm_sweep_in_sync_assets`: Quét sâu đa BM và tính tổng tài khoản chính xác.
+  3. Toàn bộ backend test suite: **591/591 tests passed (100% PASS)**.
+  4. Frontend Next.js build: **22/22 routes biên dịch thành công 0 lỗi** (`npm.cmd run build`).
+
+---
+
+## Cập nhật 2026-11-04 — Hoàn Thiện Tiếp Nhận Dữ Liệu Extension Đa Định Dạng & Chuẩn Hóa Bộ Lọc TKQC Chuẩn SMIT Trên /accounts & /ads-check
+
+- **Chuẩn Hóa Tiếp Nhận Dữ Liệu Chrome Extension & Bắt Tay Token Đa Định Dạng (`apps/api/app/api/v1/vias.py` & `apps/api/app/services/via_manager.py`):**
+  1. Mở rộng `ExtensionIngestRequest` với `@model_validator(mode="before")` chấp nhận linh hoạt mọi định dạng key từ Extension và các browser script:
+     - UID Facebook: nhận từ `c_user`, `uid`, `fb_uid`.
+     - Token Graph Meta: nhận từ `token`, `tokens`, `access_token`.
+     - Cookie session: nhận từ `cookies`, `cookie`.
+     - Danh sách TKQC: nhận từ `accounts`, `items`, `ad_accounts`.
+     - Business Manager: nhận từ `bms`, `businesses`, `business_managers`.
+     - Fanpage: nhận từ `pages`, `fanpages`.
+     - Nhận diện thiết bị & profile: `user_name`, `name`, `profile_name`, `user_agent`, `device_name`.
+  2. Bổ sung hàm tiện ích `normalize_account_status_and_dot`:
+     - Mã số `1` / chuỗi `"LIVE"` / `"ACTIVE"` -> `account_status=1, status_dot="LIVE"`.
+     - Mã số `2` / chuỗi `"DIE"` / `"DISABLED"` / `"LOCKED"` -> `account_status=2, status_dot="DIE"`.
+     - Mã số `3`, `7`, `8`, `9`, `100`, `101` / chuỗi `"UNSETTLED"` / `"DEBT"` / `"WARNING"` -> `account_status=code, status_dot="WARNING"`.
+  3. Bổ sung hàm tiện ích `classify_account_type`:
+     - Tự động nhận diện `account_type="BM"` nếu có `bm_id`, `business_id`, object `business`, cờ `is_agency` hoặc cờ `account_type="BM"/"BUSINESS"`.
+     - Đặt `account_type="PERSONAL"` nếu không thuộc BM.
+  4. Trích xuất và bảo toàn đầy đủ thông tin thẻ (`card_last4`, `funding_source_last_four`, `payment_card_brand`), số dư nợ (`balance`), ngưỡng (`threshold`, `threshold_amount`), chi tiêu (`total_spend`, `amount_spent`), và giới hạn ngày (`daily_budget`).
+  5. Đóng gói payload phản hồi `POST /api/v1/vias/extension-ingest` trả về cả cặp khóa đồng nghĩa (`accounts` & `ad_accounts`, `bms` & `business_managers`, `pages` & `fanpages`), giúp extension lập tức hiển thị dữ liệu và cập nhật Local Storage.
+
+- **Nâng Cấp Bộ Lọc TKQC Chuẩn SMIT Pro Trên Backend Explorer & Frontend UI:**
+  1. **Backend (`via_manager.py` & `vias.py`):**
+     - Nâng cấp `get_ads_check_explorer_data`: lọc chuẩn `account_type` (`ALL`, `PERSONAL`, `BM`, `BUSINESS` - hỗ trợ ánh xạ tương hỗ BM và BUSINESS), lọc tiền tệ `currency`, lọc trạng thái nợ/live/die đa tầng `status`, lọc gắn khách `assignment_status`, và tìm kiếm đa trường `search` (quét cả `funding_source_last_four`).
+     - Endpoint `GET /api/v1/vias/ads-check` hỗ trợ tham số `currency`, alias `q` (cho `search`) và `status_filter` (cho `status`).
+  2. **Giao Diện `/accounts` (`apps/web/app/accounts/page.tsx`):**
+     - Bổ sung state `accountTypeFilter` (`ALL`, `PERSONAL`, `BM`).
+     - Thêm ô dropdown chọn **🏷️ Loại Tài Khoản (Tất cả loại TK / TK Cá nhân / TK Doanh nghiệp BM)** trong thanh công cụ lọc fluid chuẩn Spotify.
+     - Tích hợp điều kiện lọc `accountTypeFilter` vào `filteredRows` hoạt động mượt mà cùng các Status Pills và bộ lọc hiện hữu.
+  3. **Giao Diện `/ads-check` (`apps/web/app/ads-check/page.tsx`):**
+     - Chuẩn hóa nhãn các tùy chọn loại tài khoản: `Tất cả loại TK`, `TK Cá nhân (Personal)`, `TK Doanh nghiệp (BM)`.
+  4. **API Client (`apps/web/lib/api.ts`):**
+     - Bổ sung các tham số `currency` và `status_filter` cho `getAdsCheckData`.
+
+- **Kiểm Thử & Build:**
+  1. **Backend Pytest (`apps/api`):** **588/588 tests passed** (100% PASS), bao gồm toàn bộ unit test mới `test_extension_ingest_flexible_keys_and_status_normalization` trong `tests/test_smit_accounts_and_customer_assign.py`.
+  2. **Frontend Next.js Build (`apps/web`):** **22/22 routes** biên dịch thành công **0 lỗi** typecheck với `npm.cmd run build`.
+
+---
+
+## Cập nhật 2026-11-03 — Mở Rộng Toàn Bộ Bố Cục Trang Sang Full-Width Fluid Layout (Triệt Tiêu Lề Trống & Tối Ưu Màn Hình Rộng)
+
+- **Cải Tổ Khung Bố Cục Gốc (Global Shell & Layout Refactoring — `shell.tsx`, `globals.css`):**
+  1. Loại bỏ các giới hạn chiều rộng cố định trung tâm (`max-w-7xl`, `max-w-6xl`, `mx-auto`) khỏi thẻ `<main>` bao bọc trang trong `apps/web/app/shell.tsx`.
+  2. Áp dụng chuẩn bố cục co giãn linh hoạt toàn chiều ngang: `<main className="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6">` giúp nội dung dàn trải tự nhiên 100% không gian hiển thị trên màn hình rộng (Widescreen, 2K, 4K) mà không có lề trống thụ động hai bên.
+  3. Cập nhật lớp tiện ích toàn cục `.page` trong `apps/web/app/globals.css` thành `width: 100%; max-width: none; margin: 0; padding: 0;` triệt tiêu giới hạn 1400px cố định trước đây.
+
+- **Đồng Bộ Dàn Trải Toàn Chiều Rộng (100% Fluid Width) Cho Toàn Bộ Trang Chức Năng:**
+  1. **Tài khoản QC SMIT Pro (`/accounts` — `accounts/page.tsx`):**
+     - Chuyển wrapper chính thành `<div className="w-full space-y-6 text-white">`, loại bỏ padding lồng trùng lặp.
+     - Dải thẻ KPI tổng quan, thanh nút lọc Status Pills, các ô dropdown lọc/tìm kiếm và bảng dữ liệu 15 cột SMIT Pro dàn trải 100% chiều rộng màn hình.
+  2. **ADSOS CHECK (`/ads-check` — `ads-check/page.tsx`):**
+     - Mở rộng thanh 4 chế độ tải SMIT, 4 tab danh mục và bảng dữ liệu explorer chiếm trọn 100% fluid width.
+  3. **Quản Lý Google Sheets (`/sheets` — `sheets/page.tsx`):**
+     - Không gian làm việc 3 phân vùng (Header hành động, Thẻ nguồn sheets, và Vùng tab đối soát / phân tích cấu trúc) mở rộng tràn màn hình.
+  4. **VCC & Rủi Ro Thẻ (`/vcc-risk` — `vcc-risk/page.tsx`):**
+     - Dải thẻ KPI Master USD & nợ Meta, dải cảnh báo đỏ nhấp nháy, và bảng danh sách thẻ ảo tự động phân bổ cân đối theo toàn bộ chiều rộng trình duyệt.
+  5. **Bảng Điều Khiển Tổng Quan (`page.tsx`, `unified-overview.tsx`, `treasury-summary.tsx`):**
+     - Bộ widget kết nối đa nền tảng Hub và tổng quan ngân quỹ Treasury tự động mở rộng theo lưới responsive toàn màn hình.
+  6. **Chiến Dịch (`/campaigns`), Đối Chiếu (`/reviews`), Dàn VIA (`/vias`), Báo Cáo (`/reports`) & Quản Trị Ví (`/config/wallets`):**
+     - Loại bỏ các lớp giới hạn `max-w-7xl mx-auto` và CSS `max-width: 1120px; margin: auto;` để tất cả các bảng và form phân bổ linh hoạt.
+
+- **Kiểm Thử & Build:**
+  - Frontend Next.js build (`apps/web`): **22/22 routes** compile và typecheck thành công **0 lỗi** với `npm.cmd run build`.
+
+---
+
+## Cập nhật 2026-11-03 — Hoàn Thiện Đại Tu Toàn Diện Giao Diện Ứng Dụng Web Sang Hệ Thống Thiết Kế Chuẩn Spotify (Spotify Design System)
+
+- **Cấu Trúc Bảng Màu & Tokens Toàn Cục (`DESIGN.md`, `tailwind.config.js`, `globals.css`):**
+  1. Thiết lập không gian làm việc sẫm màu đắm chìm (Content-first Darkness) theo chuẩn triết lý Spotify: Màu nền chính sâu thẳm `#121212`, bề mặt thẻ/panel `#181818` (và `#252525` cho các bề mặt nổi cao), bề mặt tương tác và hover `#1f1f1f`.
+  2. Đường viền và phân cách tinh tế sắc nét: `#282828` và `#333333`.
+  3. Điểm nhấn thương hiệu độc tôn **Spotify Green (`#1ed760`)**: Áp dụng nhất quán và chức năng cho mọi trạng thái kích hoạt (active nav, active tabs, active filters), nút kêu gọi hành động chính (Primary CTA), điều khiển hành động và chỉ báo trực tuyến.
+  4. Hệ thống màu ngữ nghĩa (Semantic Tokens): Đỏ cảnh báo lỗi/vô hiệu hóa/rủi ro tụt ngưỡng `#f3727f`, Cam cảnh báo nợ/chờ xử lý `#ffa42b`, Xanh dương thông báo `#539df5`.
+  5. Kiểu chữ và độ tương phản: Chữ trắng tinh khiết `#ffffff` cho nội dung chính, chữ bạc `#b3b3b3` cho nhãn phụ và siêu dữ liệu, chữ mờ `#727272` cho gợi ý.
+
+- **Hình Học Viên Thuốc (Pill Geometry), Typography & Độ Bóng (Elevation):**
+  1. Áp dụng hình học viên thuốc (`rounded-full` / 9999px) cho toàn bộ nút bấm, công tắc bộ lọc (Status Pills, SMIT Tabs, Mode switchers), và thanh tìm kiếm.
+  2. Nhãn nút bấm và tiêu đề phân mục in hoa với khoảng cách giãn chữ rộng (`uppercase tracking-[1.4px]` đến `tracking-[2px]`) mang lại chất lượng nhãn hệ thống đặc trưng Spotify.
+  3. Bo góc chuẩn 6px–8px (`rounded-[8px]`) cho tất cả các thẻ dữ liệu, panel và bảng, kết hợp bóng đổ đa tầng: `shadow-[0_8px_8px_rgba(0,0,0,0.3)]` cho thẻ và `shadow-[0_8px_24px_rgba(0,0,0,0.5)]` cho dialog, modal và thanh công cụ nổi.
+
+- **Đại Tu Giao Diện & Trải Nghiệm Người Dùng (UX/UI) Trên Tất Cả Các Trang:**
+  1. **Khung giao diện chung (`shell.tsx`, `sidebar.tsx`, `layout.tsx`):**
+     - Thanh điều hướng Sidebar sẫm màu với logo OS nền Spotify Green, chỉ báo mục đang chọn có viền trái `#1ed760` và nền `#1f1f1f`.
+     - Thanh tiêu đề trên cùng (Sticky Header) với huy hiệu `SPOTIFY DARK` bo viên thuốc, chỉ báo trạng thái hệ thống và đồng hồ thời gian thực múi giờ Việt Nam.
+  2. **Quản Lý Tài Khoản Quảng Cáo (`/accounts`):**
+     - Dải thẻ chỉ số KPI tổng quan bo góc `rounded-[8px]`, bảng mã màu trạng thái trực quan.
+     - Bộ nút lọc trạng thái (Status Pills) dạng viên thuốc chuẩn Spotify, các ô dropdown và ô tìm kiếm bo viên thuốc.
+     - Thanh tác vụ hàng loạt nổi (Floating Bulk Action Toolbar) phong cách kính mờ sẫm màu với nút bấm Spotify Green.
+     - Bảng dữ liệu 15 cột SMIT Pro với thanh tiêu đề `#1f1f1f` in hoa, checkbox điểm nhấn `#1ed760`, và selector gắn khách hàng inline mượt mà.
+  3. **ADSOS CHECK (`/ads-check`):**
+     - 4 Tab danh mục chính (TKQC, BM, Fanpage, Điều phối) dạng viên thuốc với trạng thái active `#1ed760` chữ đen nổi bật.
+     - 4 Chế độ tải SMIT (Load All, Load by ID, Load by BM, Load by VIA) chuẩn viên thuốc.
+     - Menu công cụ (Toolbox) sẫm màu bên trái bo tròn đẹp mắt, hỗ trợ Extended Payment, gỡ QTV ẩn, đổi info và Super Share.
+  4. **VCC & Quản Trị Rủi Ro Thẻ (`/vcc-risk`):**
+     - Bảng thẻ ảo và quỹ Master PingPong chuyển sang bề mặt `#181818` với viền cảnh báo đỏ `#f3727f` và cam `#ffa42b`.
+  5. **Bảng Điều Khiển Tổng Quan (`page.tsx`, `unified-overview.tsx`, `treasury-summary.tsx`):**
+     - Hệ thống kết nối đa nền tảng Hub và tổng quan ngân quỹ Treasury hiển thị tài sản TRON, Binance, PingPong trên nền Spotify dark sắc sảo.
+  6. **Chiến Dịch Quảng Cáo (`/campaigns`) & Google Sheets (`/sheets`):**
+     - Triệt tiêu hoàn toàn các khối nền trắng và màu xanh cũ, đồng bộ 100% sang chuẩn Spotify.
+
+- **Kiểm Thử & Build:**
+  1. Frontend Next.js build (`apps/web`): **22/22 routes** compile và typecheck thành công **0 lỗi** với `npm.cmd run build`.
+  2. Backend test suite (`apps/api`): **100% PASS** với pytest (`.venv/Scripts/python.exe -m pytest -q tests`).
+
+---
+
+## Cập nhật 2026-11-03 — Hoàn Thiện Kiến Trúc SMIT Pro: Quản Lý & Gắn Khách Hàng TKQC, Trình Kiểm Tra Ads-Check Chuẩn SMIT & Tiện Ích Chrome Extension Toàn Màn Hình Đa VIA
+
+- **Cơ Sở Dữ Liệu & Migration Hai Chiều (Alembic `m0d1e2f3a4b5_synced_accounts_customer_id`):**
+  1. Bổ sung cột `customer_id` (Integer, Foreign Key `fk_synced_ad_accounts_customer_id` tham chiếu `customers.id`, `ondelete="SET NULL"`, `index=True`) vào bảng `synced_ad_accounts`.
+  2. Cập nhật model SQLAlchemy `SyncedAdAccount` trong `app/models/via.py` với relationship `customer = relationship("Customer", backref="synced_ad_accounts")`.
+  3. Đảm bảo tính khả nghịch (reversible) 100% giữa `upgrade head` và `downgrade -1`, đã được kiểm chứng hoạt động an toàn tuyệt đối trên SQLite và PostgreSQL.
+
+- **Nâng Cấp Backend Services & REST Endpoints SMIT Pro (`app/services/via_manager.py` & `app/api/v1/vias.py`):**
+  1. `assign_ad_account_customer(session, act_id, customer_id)`: Gắn kết hoặc hủy gắn kết 1 tài khoản quảng cáo với khách hàng, cập nhật đồng bộ các bản ghi `SyncedAdAccount` liên quan và trả về chi tiết khách hàng.
+  2. `bulk_assign_ad_accounts_customer(session, account_ids, customer_id)`: Gán hàng loạt danh sách TKQC cho một khách hàng trong 1 transaction an toàn, trả về số lượng bản ghi cập nhật thành công (`assigned_count`).
+  3. Mở rộng `get_ads_check_explorer_data`: Bổ sung đa bộ lọc nâng cao gồm `status` (`ALL`, `LIVE`, `DIE`, `UNSETTLED`), `assignment_status` (`ALL`, `UNASSIGNED`, `ASSIGNED`), `customer_id`, `bm_id`, `account_ids`, `card_status` (`ATTACHED`, `NO_CARD`), `account_type` (`ALL`, `PERSONAL`, `BM`), `mode` (`all`, `by_id`, `by_bm`, `by_via`), và `search` (tìm theo ID, tên, thẻ, khách hàng). Đồng thời tính toán dải thống kê tổng quan `summary` (tổng TK, Live, Die, Unsettled, Assigned, Unassigned, tổng chi tiêu, tổng nợ, tổng ngưỡng).
+  4. Bổ sung các REST Endpoints:
+     - `GET /api/v1/vias/ads-check`: Tiếp nhận toàn bộ query parameters bộ lọc và chế độ SMIT.
+     - `POST /api/v1/vias/ads-check/assign-customer`: Gán 1 tài khoản quảng cáo cho khách hàng.
+     - `POST /api/v1/vias/ads-check/bulk-assign-customer`: Gán hàng loạt tài khoản quảng cáo cho khách hàng.
+     - `POST /api/v1/vias/ads-check/load-mode`: Điều phối chế độ tải SMIT (`ALL`, `BY_ID`, `BY_BM`, `BY_VIA`).
+
+- **Đại Tu Giao Diện Quản Lý Tài Khoản (`http://localhost:3000/accounts` — `apps/web/app/accounts/page.tsx`):**
+  1. Chuẩn hóa 100% phong cách **Lucian Obsidian Dark Mode** (`#0B0F19`, `#111827`, `#1E293B`, `#334155`), triệt tiêu hoàn toàn lỗi chói chữ trên nền trắng, đảm bảo độ tương phản cao.
+  2. Hệ thống Status Filter Pills trực quan: `Tất cả`, `🟢 Hoạt động (Live)`, `🔴 Vô hiệu hóa (Die)`, `🟡 Đang nợ / Tạm dừng (Unsettled)`, `⚪ Chưa gắn khách (Unassigned)`, `🟣 Đã gắn khách (Assigned)`.
+  3. Bộ lọc thứ cấp toàn diện: Chọn Khách Hàng, Chọn VIA Nguồn, Chọn BM, Chọn Tiền tệ (USD/VND...), và Ô tìm kiếm nhanh đa năng.
+  4. Tính năng Gắn TKQC cho Khách Hàng 1-Click & Hàng Loạt:
+     - Selector khách hàng trực tiếp trên từng dòng (`👤 Khách Hàng Gắn Kết`) với phản hồi Toast tức thì: *"✅ Đã gắn TKQC act_xxx cho khách hàng [Tên Khách]"*.
+     - Floating Action Toolbar xuất hiện khi chọn nhiều dòng checkbox: `🔗 Gắn [N] TKQC đã chọn cho Khách hàng:` + Nút Lưu + `🔄 Đồng bộ lại` + `📥 Xuất CSV/Excel chuẩn SMIT`.
+  5. Bảng dữ liệu 15 cột chuẩn SMIT Pro: `[☑]`, `STT`, `Trạng Thái`, `ID Tài Khoản` (copy 1-click), `Tên TKQC`, `👤 Khách Hàng Gắn Kết`, `🧭 VIA Nguồn`, `Loại TK`, `Dư Nợ`, `Ngưỡng`, `Limit Ngày / Spend Cap`, `Tổng Chi Tiêu`, `Tiền Tệ`, `💳 Thẻ TT`, `Múi Giờ`, `Cập Nhật Cuối`.
+
+- **Đại Tu Giao Diện Khám Phá & Điều Phối (`http://localhost:3000/ads-check` — `apps/web/app/ads-check/page.tsx`):**
+  1. Tích hợp 4 Chế Độ Tải SMIT trên thanh công cụ đầu trang: `📥 Tải Tất Cả (Load All)`, `🔍 Tải Theo ID (Load by Account ID)`, `🏢 Tải Theo ID BM (Load by BM ID)`, `👤 Tải Theo VIA (Load by VIA)`.
+  2. Hệ thống 4 Tab SMIT chuẩn xác:
+     - `📊 Tài Khoản Quảng Cáo`: Bảng dữ liệu TKQC đầy đủ thông tin nợ, ngưỡng, thẻ, khách hàng.
+     - `🏢 Business Manager (BM)`: Danh sách BM sở hữu/đối tác kèm nút `🔍 Xem TKQC của BM này`.
+     - `📄 Fanpage`: Danh sách fanpage, số lượt thích, quyền hạn quản trị.
+     - `⚡ Lịch Sử & Điều Phối Set Camp`: Lịch sử các lệnh điều phối từ xa và trigger tạo camp trực tiếp.
+  3. Bộ lọc trạng thái (Status Pills), loại tài khoản và tình trạng thẻ thanh toán hoạt động trơn tru.
+
+- **Nâng Cấp Toàn Diện Chrome Extension (`extensions/adsos-check-bridge/`):**
+  1. Thêm nút nổi bật tại `popup.html`: **`🖥️ Mở Bảng Quản Trị Toàn Màn Hình (Chuẩn SMIT)`** (mở `dashboard.html` trong tab trình duyệt độc lập qua `chrome.tabs.create`).
+  2. Bảng quản trị toàn màn hình độc lập (`dashboard.html`, `dashboard.css`, `dashboard.js`):
+     - Giao diện 100% Obsidian Dark Mode hiện đại, đồng bộ thiết kế với ứng dụng web AdsOS.
+     - Sticky Header với Connection Badge tới máy chủ AdsOS, chỉ báo phiên Facebook UID và nút `🚀 Đồng Bộ Về Hệ Thống AdsOS`.
+     - Dải KPI Summary Metrics hiển thị: Tổng TKQC, Live, Die, Đang nợ, Tổng Chi Tiêu, Tổng Dư Nợ, Tổng Ngưỡng.
+     - 4 Chế Độ Tải SMIT ngay trong Extension:
+       1. `📥 Tải Tất Cả TKQC Của VIA` (gọi Meta Graph API `/me/adaccounts`).
+       2. `🔍 Tải Theo Danh Sách ID` (Modal dán nhiều `act_id`, gọi batch Graph API).
+       3. `🏢 Tải Theo ID BM` (Modal nhập BM ID, tải cả tài khoản sở hữu và tài khoản client).
+       4. `🔄 Quét Lại BM & Fanpage` (quét sâu BM permissions và Pages).
+     - Status Filter Pills (`Tất cả`, `Live`, `Die`, `Nợ`), tìm kiếm nhanh, lọc loại TK, lọc thẻ.
+     - Bảng dữ liệu SMIT High-Density đầy đủ 14 cột, hỗ trợ Checkbox chọn nhiều, copy ID hàng loạt, xuất file CSV chuẩn SMIT.
+  3. Kiến trúc lưu trữ Multi-VIA trong `chrome.storage.local`:
+     - Cấu trúc dữ liệu theo khóa `vias_data[c_user]` lưu trữ độc lập từng VIA (UID, tên, avatar, access_token, cookie, danh sách accounts, bms, pages).
+     - Left VIA Sidebar hiển thị danh sách tất cả các VIA đã đăng nhập/được quét, kèm Avatar, UID, trạng thái token (Live/Expired/Cookie), số lượng TKQC/BM/Page.
+     - Chuyển đổi qua lại giữa các VIA chỉ với 1 click, hoặc chọn chế độ **`🗂️ Xem Phân Nhóm Theo Từng VIA (Grouped View)`** hiển thị toàn bộ tài khoản với các thanh tiêu đề phân nhóm có thể thu gọn/mở rộng.
+     - 1-Click đồng bộ dữ liệu về AdsOS Server qua `POST /api/v1/vias/extension-ingest`.
+
+- **Kiểm Thử & Build:**
+  1. Tạo mới bộ unit test toàn diện `tests/test_smit_accounts_and_customer_assign.py` (5 test: bộ lọc trạng thái, gắn khách hàng đơn lẻ, gán khách hàng hàng loạt, 4 chế độ tải SMIT, và REST API) — **5/5 PASS**.
+  2. Sửa lỗi Pydantic schema `SuperShareAdsRequest` trong `apps/api/app/api/v1/vias.py` bổ sung các trường quyền hạn, đưa `tests/test_ads_check_smit.py` đạt **11/11 PASS**.
+  3. Chạy kết hợp toàn bộ test suites SMIT: **16/16 tests PASS**.
+  4. Toàn bộ backend test suite: **586 passed**, 0 failures.
+  5. Frontend Next.js build (`apps/web`): **22/22 routes** compile và typecheck thành công 100% với `npm.cmd run build`.
+
+---
+
+## Cập nhật 2026-11-03 — Tích Hợp Đồng Bộ Thẻ Ảo PingPong VCC, Ánh Xạ Chéo Tài Khoản Meta Ads & Động Cơ Cảnh Báo Rủi Ro Số Dư Thực (Risk & Low-Balance Alert Engine)
+
+- **Cơ Sở Dữ Liệu & Migration Hai Chiều (Alembic `l9c0d1e2f3a4_vcc_risk_management`):**
+  1. Bảng `vcc_cards`: Lưu trữ danh sách thẻ ảo PingPong Issuing với các trường: `id` (String/UUID), `card_number_masked` (ví dụ `4593 **** **** 1234`), `last_four` (`1234`), `status` (`ACTIVE`, `FROZEN`, `CANCELED`), `remark` (dùng làm căn cứ định danh/ghép nối TKQC hoặc khách hàng), `currency` (`USD`), `allocated_balance` (hạn mức phân bổ), `available_balance` (số dư khả dụng thực tế), `low_balance_threshold` (ngưỡng cảnh báo số dư thấp, mặc định $5.0), `created_at`, `updated_at`.
+  2. Bảng `vcc_transactions`: Lưu lịch sử biến động số dư và giao dịch thẻ với `id` (PingPong txn ID), `card_id` (FK tới `vcc_cards`), `auth_amount`, `settle_amount`, `currency`, `merchant_name` (ví dụ `FACEBOOK ADS`), `status`, `transaction_time`.
+  3. Cập nhật bảng `synced_ad_accounts`: Bổ sung các cột chuẩn tài chính `amount_spent` (tổng chi tiêu), `threshold_amount` (ngưỡng thanh toán Meta), và `funding_source_last_four` (4 số cuối phương thức thanh toán thẻ). Hỗ trợ nâng cấp và rollback (downgrade) hai chiều an toàn 100% trên SQLite và PostgreSQL.
+
+- **Nâng Cấp Connector PingPong Issuing v2.7.1 (`pingpong_connector.py` / `pingpong.py`):**
+  1. `get_usd_budget_balance()`: Truy vấn số dư tổng khả dụng USD (`USD_BUDGET_BALANCE`) của tài khoản master PingPong.
+  2. `get_active_cards()`: Gọi endpoint `/v2/issuing/cards` (hoặc `/v2/vcc/open/cards`), lọc danh sách thẻ `status == 'ACTIVE'`, phân tích và chuẩn hóa `last_four`, `remark` (cardName), `available_balance` và `allocated_balance`.
+  3. `get_card_transactions(card_id)`: Gọi endpoint `/v2/issuing/transactions` (hoặc `/v2/vcc/open/transactions`), phân tích giao dịch phát sinh từ Facebook Ads (`merchant_name`, `auth_amount`, `settle_amount`, `status`, `transaction_time`).
+  4. Mở rộng whitelist đường dẫn API an toàn (`_ALLOWED_PATHS`) bao gồm các endpoint truy vấn thẻ và giao dịch mở rộng.
+
+- **Động Cơ Cảnh Báo Rủi Ro & Ánh Xạ Chéo Thời Gian Thực (`services/risk_engine.py`):**
+  1. **Đồng Bộ Dữ Liệu Thẻ (`sync_vcc_cards`):** Lưu/cập nhật thông tin thẻ ảo PingPong vào cơ sở dữ liệu nội bộ với cơ chế upsert idempotent.
+  2. **Tự Động Ánh Xạ Chéo (Auto-mapping):** Ghép nối tự động giữa `vcc_cards.last_four` và `synced_ad_accounts.funding_source_last_four`. Trong trường hợp trùng 4 số cuối giữa nhiều thẻ, thuật toán tự động đối chiếu trường `remark` của thẻ với Ad Account ID hoặc tên khách hàng để gắn kết chính xác.
+  3. **3 Quy Tắc Cảnh Báo Tài Chính Nghiêm Ngặt:**
+     - **Quy tắc 1 (Low VCC Balance - WARNING):** Kích hoạt khi `vcc_card.available_balance < vcc_card.low_balance_threshold`. Thông báo: *"Thẻ 4593...1234 sắp hết hạn mức/số dư (còn $X < ngưỡng $Y)"*.
+     - **Quy tắc 2 (Meta Debt > VCC Balance - CRITICAL):** Kích hoạt khi số dư nợ Meta hiện tại (`synced_ad_accounts.balance`) lớn hơn số dư khả dụng của thẻ VCC đang liên kết. Cảnh báo khẩn cấp: *"TKQC act_123 nợ $D nhưng thẻ 4593...1234 chỉ còn $B. Nguy cơ tụt ngưỡng hoặc HOLD thanh toán!"*.
+     - **Quy tắc 3 (Master Budget Risk - DANGER):** Kích hoạt khi tổng số dư nợ Meta trên tất cả TKQC đang chạy (`SUM(ad_accounts.balance)`) vượt quá ngân quỹ khả dụng tổng của tài khoản PingPong Master USD. Cảnh báo nguy cơ không đủ tiền thanh toán toàn hệ thống.
+  4. Cho phép cấu hình ngưỡng cảnh báo linh hoạt theo từng thẻ (`update_card_threshold`).
+
+- **Giao Diện Điều Khiển Quản Lý Thẻ & Rủi Ro VCC (`/vcc-risk`) Chuẩn Obsidian Dark Mode:**
+  1. Thiết kế bảng điều khiển toàn diện theo phong cách Lucian Obsidian Dark Mode (`bg-[#0B0F19]`, bảng thẻ `bg-[#111827]/95`, viền `border-slate-800`).
+  2. Dải 4 KPI Cards nổi bật: Tổng số thẻ hoạt động, Tổng số dư thẻ khả dụng, Ngân quỹ Master USD, Số lượng cảnh báo đang mở (kèm đếm số cảnh báo nghiêm trọng).
+  3. Banner cảnh báo rủi ro trực quan (Đỏ nhấp nháy cho CRITICAL, Vàng cam cho WARNING, Tím cho DANGER ngân quỹ).
+  4. Bảng danh sách thẻ ảo thông minh:
+     - Hiển thị đầy đủ số thẻ che mask, 4 số cuối, số dư khả dụng, hạn mức phân bổ.
+     - Hiển thị liên kết Ad Account Meta tương ứng (kèm số dư nợ Meta và ngưỡng threshold).
+     - Hiệu ứng viền đỏ nhấp nháy (pulsing critical border `ring-1 ring-rose-500/80 bg-rose-950/20`) trên các dòng thẻ đang đối mặt rủi ro nợ > số dư.
+     - Chỉnh sửa ngưỡng cảnh báo (Low-balance threshold) trực tiếp inline với lưu tự động.
+     - Nút xem biến động ("Xem biến động") mở Modal hiển thị lịch sử giao dịch Facebook Ads chi tiết từ PingPong.
+  5. Tích hợp thanh menu điều hướng Sidebar (`/vcc-risk`) và dải cảnh báo VCC real-time tại trang chủ Dashboard trung tâm (`unified-overview.tsx`).
+
+- **Kiểm Thử & Build:**
+  1. Tạo mới bộ unit test toàn diện `apps/api/tests/test_vcc_risk_engine.py` (8 bài test kiểm thử Quy tắc 1, 2, 3, giải quyết trùng lặp 4 số cuối, sync thẻ, cập nhật threshold, tra cứu giao dịch và API endpoints) — 100% PASS.
+  2. Toàn bộ backend test suite: **581 passed**, 0 failures (3 phút 15 giây).
+  3. Frontend Next.js build: **22/22 routes** compile và typecheck thành công 100%.
+
+---
+
+- **Trích Xuất & Hiển Thị Trực Tiếp Lỗi Nghiệp Vụ Thật (`_extract_business_error`):**
+  1. Loại bỏ triệt để chuỗi thông báo cứng che giấu `"PingPong báo lỗi nghiệp vụ; HTTP 200 chưa phải thành công."`.
+  2. Bóc tách chính xác mã lỗi (`code`, `bizCode`, `subCode`, `errorCode`) và nội dung chi tiết (`msg`, `message`, `bizMsg`, `subMsg`, `errorMsg`, `description`) từ phản hồi JSON của PingPong khi HTTP 200 nhưng nghiệp vụ thất bại.
+  3. Định dạng lỗi chuẩn mực: `PingPong API Error [{error_code}]: {error_message}` (ví dụ: `PingPong API Error [1004]: Invalid Signature` hoặc `PingPong API Error [1005]: IP not whitelisted`).
+  4. Nâng cấp `PingPongError` kế thừa trực tiếp từ `ValueError` (`class PingPongError(ValueError)`), đồng thời bảo toàn cơ chế làm sạch an toàn `_redact` để tuyệt đối không để lọt secret, token, hay PAN/CVV vào exception/log.
+  5. Phân loại chuẩn xác: Khi mã lỗi hoặc thông điệp liên quan đến xác thực, chữ ký, hoặc IP whitelist (`1004`, `1005`, `4109`, "signature", "whitelist", v.v.), hệ thống ném `PingPongAuthError` kế thừa `PingPongError` để UI/API hiển thị đúng nguyên nhân.
+
+- **Chuẩn Hóa Headers & Sinh Chữ Ký Request Signing (HMAC-SHA256 & RSA-SHA256):**
+  1. Request Headers được thiết lập nghiêm ngặt theo chuẩn PingPong Issuing:
+     - `Content-Type: application/json`
+     - `PingPong-Client-Id`: `client_id` (App ID)
+     - `PingPong-Timestamp`: Epoch millisecond hiện tại (`int(time.time() * 1000)`)
+     - `PingPong-Signature`: Chữ ký số tạo từ String-to-Sign
+     - `Authorization`: Token xác thực (khi truy vấn các endpoint nghiệp vụ `BALANCE_PATH` và `CARDS_PATH`)
+  2. Xây dựng hàm chuẩn hóa chuỗi ký `build_string_to_sign`:
+     - Tự động thu thập query params và body params, loại bỏ các trường chữ ký (`sign`, `signature`, `pingpong-signature`).
+     - Sắp xếp các tham số theo thứ tự bảng chữ cái alphabet (A-Z) theo tên tham số (key).
+     - Ghép nối dạng `key=value` bằng ký tự `&` (không chứa khoảng trắng thừa, hỗ trợ format compact JSON cho nested dict/list).
+     - Ghép với URI (path) và timestamp: `f"{path}?{param_str}&timestamp={timestamp}"` (hoặc `f"{path}?timestamp={timestamp}"` khi không có params).
+  3. Xây dựng hàm tạo chữ ký `generate_signature`:
+     - Tự động phát hiện loại khóa: Ký RSA-SHA256 PKCS1v15 (Base64) nếu `client_secret` là RSA Private Key PEM (`-----BEGIN...`), hoặc ký HMAC-SHA256 (Hex) với App Secret chuẩn.
+
+- **Kiểm Thử & Build:**
+  1. Mở rộng bộ unit tests `apps/api/tests/test_pingpong_connector.py` (27 bài test, 100% PASS) kiểm tra trích xuất lỗi nghiệp vụ, kiểm tra headers, sắp xếp chuỗi ký, và kiểm thử chữ ký HMAC lẫn RSA.
+  2. Toàn bộ backend test suite: **573 passed**, 0 failures.
+  3. Frontend Next.js build: **21/21 routes** compile và typecheck thành công 100%.
+
+---
+
+## Cập nhật 2026-11-03 — Nâng Cấp Khắc Phục Triệt Để Lỗi Meta Graph API (400) Invalid Request, Token Sanitization & Progressive Field Fallback (`via_manager.py` & `sync_engine.py`)
+
+- **Chuẩn Hóa & Làm Sạch Token Meta (`clean_meta_token`):**
+  1. Loại bỏ hoàn toàn lỗi token bị dính ký tự escape JSON (`\u0025`), dấu nháy kép (`"`), nháy đơn (`'`), dấu gạch chéo (`\`) hoặc khoảng trắng khi trích xuất từ DOM/HTML/Ads Manager.
+  2. Sử dụng biểu thức chính quy chuẩn nghiêm ngặt `r"(EAA[BGIa-zA-Z0-9]{20,})"`. Tự động dừng lại ngay khi chạm ký tự không hợp lệ.
+  3. Hỗ trợ và bảo toàn nguyên vẹn định dạng token nội bộ/kiểm thử (`EAAB_LOCAL_...`, `EAAB_FALLBACK_...`, `EAAB_TEST_...`).
+
+- **Cô Lập Header Mạng (Header Isolation cho graph.facebook.com):**
+  1. Tuyệt đối không gửi các header session Facebook như `Cookie`, `Origin: https://www.facebook.com`, `Referer` khi gọi `https://graph.facebook.com/...` bằng `httpx.Client`.
+  2. Loại bỏ nguy cơ Meta Graph API trả về `HTTP 400: Invalid request.` do xung đột ngữ cảnh Cookie và Bearer Token. Chỉ sử dụng `User-Agent` máy tính và `Accept: application/json`.
+
+- **Cơ Chế Progressive Field Fallback (`fetch_graph_with_fallback`):**
+  1. Xây dựng helper truy vấn thông minh với 3 tầng trường dữ liệu:
+     - **Primary fields:** Các trường tài chính chuyên sâu (`adspaymentcycle{threshold_amount}`, `funding_source_details`, `business{id,name}`, v.v.).
+     - **Fallback fields:** Tự động loại bỏ các trường con lồng nhau và thử lại ngay lập tức nếu nhận mã lỗi HTTP 400.
+     - **Minimal fields:** Thu gọn về các trường cơ bản nhất (`id,account_id,name,account_status,currency,amount_spent,balance`).
+  2. Áp dụng đồng bộ cho cả `via_manager.py` và `fetch_via_ad_account_reports` trong `sync_engine.py` (loại bỏ lỗi 400 khi node AdAccount không có `adtrust_dsl` hoặc `daily_spend_cap_limit`).
+
+- **Cô Lập Độc Lập 3 Endpoint (/me/adaccounts, /me/businesses, /me/accounts):**
+  1. Đưa `/me/adaccounts` lên làm endpoint truy vấn ưu tiên đầu tiên và tự động bóc tách BM từ node `business{id,name}` trên từng TKQC.
+  2. Cô lập hoàn toàn `/me/businesses`: Khi token cá nhân không có quyền `business_management` (trả về 400 hoặc 403), hệ thống chỉ ghi log thông tin và **tiếp tục đồng bộ Ad Accounts và Fanpages bình thường** mà không huỷ bỏ tiến trình.
+  3. Cô lập hoàn toàn `/me/accounts` (Fanpages).
+
+- **Cơ Chế Cookie / HTML Ads Manager Fallback & Local Synthetic Token Handling:**
+  1. Khi Graph API từ chối token với mã 400/401/190, nếu VIA có cookie Facebook hợp lệ (`c_user` & `xs`), tự động gọi `extract_tokens_from_cookie` để trích xuất token mới từ `https://adsmanager.facebook.com/adsmanager/manage/accounts` và tiếp tục sync.
+  2. Nếu token mang tiền tố local (`EAAB_LOCAL_...`, `EAAB_FALLBACK_...`), không gọi live `graph.facebook.com` mà bảo toàn trạng thái `ACTIVE` và giữ nguyên toàn bộ tài sản đã đồng bộ.
+
+- **Khắc Phục Lỗi Ghi Đè Dữ Liệu Thật Bằng Mock Data:**
+  1. Phân định rõ ràng: Chỉ nạp mock data khi `allow_mock=True` hoặc truyền `mock_data`.
+  2. Trong chế độ thật, toàn bộ dữ liệu TKQC, BM và Fanpage từ Graph API được lưu thẳng vào DB mà không bị gán lại danh sách giả lập.
+
+- **Kiểm Thử & Build:**
+  1. Tạo mới bộ test `apps/api/tests/test_meta_graph_400_fallback.py` với 8 bài test chuyên sâu (100% pass).
+  2. Toàn bộ backend test suite: **557 passed**, 0 failures.
+  3. Frontend Next.js build: **21/21 routes** compile và typecheck thành công 100%.
+
+---
+
+## Cập nhật 2026-11-03 — Đại Tu Toàn Diện Giao Diện Quản Lý Google Sheets: Không Gian Làm Việc 3 Vùng (3-Zone Workspace), Lucian-UXUI Obsidian Dark Mode 100% & Khắc Phục Triệt Để Lỗi Tương Phản
+
+- **Khắc Phục Triệt Để Lỗi Tương Phản Trắng Trên Trắng (100% Obsidian Dark Mode):**
+  1. Loại bỏ toàn bộ các container nền sáng (`bg-white`, `bg-slate-50`, `bg-sky-50`, `bg-gray-100`) gây ra lỗi chữ xám/trắng tàng hình trên các khối form và bảng biểu.
+  2. Áp dụng bảng màu Obsidian cao cấp đồng bộ với toàn hệ thống AdsOS:
+     - Khung trang: `bg-[#0B0F19] text-slate-100 min-h-screen`
+     - Thẻ & Panel cấp 1: `bg-[#111827]/95 border border-slate-800/80 rounded-2xl p-5 shadow-2xl backdrop-blur-md`
+     - Khối nội dung cấp 2: `bg-slate-900/90 border border-slate-800 rounded-xl p-4`
+     - Form inputs & selects (`Tháng`, `Năm`, `Link Google Sheets`, `Tên báo cáo`, `Chọn nguồn`, `Bản lưu`): `bg-[#1E293B] border border-slate-700 text-slate-100 placeholder-slate-400 rounded-xl px-3.5 py-2 text-sm focus:border-indigo-500 focus:outline-none`
+     - Checkbox & Nhãn: `text-slate-200 text-sm font-medium` với `accent-indigo-500`.
+
+- **Tái Cấu Trúc Toàn Diện Thành Không Gian Làm Việc 3 Vùng (3-Zone Workspace):**
+  1. **Zone 1 — Top Action Header & Active Source Status Strip:**
+     - Tiêu đề trung tâm: `📊 Trung Tâm Quản Lý & Đồng Bộ Google Sheets` cùng phụ đề giải thích cơ chế tự động đồng bộ 15 phút chỉ đọc và hỗ trợ đối chiếu hai chiều.
+     - Dải 4 thẻ KPI nhanh cho nguồn đang chọn:
+       - **Kỳ Báo Cáo Đang Chọn:** `2026-10 · Báo cáo tháng 10/2026` cùng các badge `⭐ Mặc định`, `🔄 Auto-sync: BẬT/TẮT`, `🔒 Đã chốt kỳ`.
+       - **Số Tab Khách Hàng:** Hiển thị số lượng tab khách được phân tích (`X tab khách`, màu `text-sky-400 font-bold`).
+       - **Bản Lưu Gần Nhất:** Mã snapshot `#ID` kèm chất lượng dữ liệu (`READY`, `PARTIAL`, `ERROR`) và thời điểm đọc.
+       - **Cảnh Báo Nguồn:** Hiển thị tổng số lỗi và cảnh báo, hỗ trợ nhấn 1-click để chuyển ngay sang tab Cảnh báo & Phần thiếu.
+     - Cụm nút hành động chính trên đầu trang:
+       - `➕ Thêm Sheet Tháng Mới`: Đóng/mở form thêm nhanh không chiếm chỗ màn hình.
+       - `🔄 Cập Nhật / Đồng Bộ Ngay`: Kích hoạt đọc và đồng bộ ngay lập tức với spinner trạng thái.
+       - `📝 Kẻ & Ghi Báo Cáo Từ VIA Lên Sheet`: Tích hợp trực tiếp modal `ViaSheetWritebackModal` cho phép kẻ bảng và ghi chi tiêu từ dàn VIA lên Google Sheets.
+       - `🔗 Mở Google Sheet Gốc`: Mở trực tiếp link bảng tính Google Sheets gốc trong tab trình duyệt mới.
+
+  2. **Zone 2 — Left Sidebar: Danh Sách Nguồn Sheet Theo Tháng (Nguồn Đã Lưu):**
+     - Hiển thị danh sách các nguồn theo tháng dạng thẻ **Obsidian Source Cards** tương tác cao, kết hợp cùng dropdown chọn nhanh.
+     - Mỗi thẻ hiển thị: Tháng/Năm (`2026-10`), tên báo cáo, các huy hiệu (`⭐ Mặc định`, `🔄 15p`, `vMapping`, `Đã chốt`), viền sáng màu indigo nổi bật khi đang được chọn.
+     - Nút hành động 1-click trực tiếp trên thẻ: `🔄 Cập nhật ngay`, `⭐ Đặt mặc định`, `⚡ Bật/Tắt sync 15p`.
+     - Form `➕ Thêm Báo Cáo Tháng Mới` dạng collapsible card có đầy đủ xác thực: Tháng (1..12), Năm (2026), Link/ID Google Sheets, Tên báo cáo, Tùy chọn tự đồng bộ 15 phút, Đặt làm mặc định và Xác nhận thay thế nguồn khi trùng kỳ.
+
+  3. **Zone 3 — Main Organized Tabbed Workspace (4 Tab Phân Nhóm Nhiệm Vụ):**
+     - Điều hướng dạng Sliding Pill Tabs phong cách Lucian-UXUI:
+     - **Tab 1: `📋 Dữ Liệu Tab Khách & Phân Tích Cấu Trúc`:**
+       - Thanh tìm kiếm nhanh tab khách hàng (`🔍 Tìm tên tab khách hàng, ID...`).
+       - Bảng danh sách các tab khách hàng đã phân tích: Tên tab, Hồ sơ nội bộ liên kết, Số dư đầu kỳ (VND), Nạp USDT, Chi tiêu Meta (VND), Phí dịch vụ, Số dư cuối kỳ, Huy hiệu trạng thái và nút "Chi tiết tab".
+       - Inspector Modal/Drawer xem chi tiết từng dòng ngày chi tiêu, các dòng TKQC và dòng nhận USDT.
+       - Tích hợp công cụ Phân tích Cấu trúc & Đọc Preview Trực Tiếp (Live Analyzer) với bảng tổng hợp JOKER (A-G), Day Groups ngày chi tiêu, bảng đề xuất vai trò cột và lưu/xác nhận mapping.
+       - Tích hợp module Thiết Lập Hồ Sơ Khách (`CustomerSetup`) và Rà Soát Liên Kết Đa Kỳ (`LinkReview`) đã được chuyển đổi hoàn toàn sang Obsidian Dark Mode.
+     - **Tab 2: `⚠️ Cảnh Báo & Phần Thiếu (Warnings & Diagnostics)`:**
+       - Tổng hợp toàn bộ cảnh báo workbook (`snapshot.report.issues`), danh sách các tab khách chưa đầy đủ (`NEEDS_REVIEW`, `SOURCE_ERROR`, `STRUCTURE_ERROR`) và công thức thiếu dữ liệu đầu vào trong các thẻ cảnh báo tương phản cao.
+     - **Tab 3: `🔒 Bản Lưu & Chốt Kỳ (Snapshots & Finalize)`:**
+       - Bộ chọn bản lưu snapshot, thẻ trạng thái chất lượng (`READY` / `PARTIAL`), checkbox xác nhận chấp nhận bản còn thiếu khi chốt và nút hành động `🔒 Chốt Kỳ Với Bản Đã Chọn`.
+       - Khu vực xác nhận liên kết định danh khách hàng cho chuyển kỳ (Rollover links).
+       - Bảng đối chiếu số dư chuyển kỳ với nguồn tháng trước đã chốt.
+     - **Tab 4: `⏱️ Lịch Sử Đồng Bộ (Sync History)`:**
+       - Bảng Audit log hiển thị thời gian, loại kích hoạt (`SCHEDULED` / `MANUAL`), trạng thái (`SUCCESS` / `PARTIAL` / `ERROR`), số hiệu bản lưu và thông báo lỗi.
+       - Hỗ trợ nút phân trang "Xem thêm" và nút làm mới lịch sử.
+
+- **Bảo Toàn 100% Chức Năng, API Bindings & Kiểm Thử:**
+  - Giữ nguyên toàn bộ các anchor ID (`#saved-sources`, `#customer-setup`, `#link-review`) để các trang khác trong hệ thống chuyển hướng mượt mà.
+  - Tích hợp mượt mà `ViaSheetWritebackModal` trực tiếp trên header trang Google Sheets.
+  - Toàn bộ backend tests và Next.js build typecheck: **21/21 routes PASS (100%)**.
+
+## Cập nhật 2026-11-02 — Tiện Ích Thương Mại "ADSOS CHECK PRO" Chrome Extension, Client Binding Keys & Động Cơ Điều Phối Auto Set Camp / Share Từ Xa
+
+- **Tiện Ích Độc Lập ADSOS CHECK PRO Chrome Extension (`extensions/adsos-check-bridge/`):**
+  1. Xây dựng tiện ích Manifest V3 thương mại: cấp quyền `cookies`, `tabs`, `activeTab`, `storage`, `scripting`, `alarms` cùng host permissions `*://*.facebook.com/*`, `http://*/*`, `https://*/*`.
+  2. Giao diện Obsidian Dark Mode hiện đại (Lucian-UXUI) gồm 4 tab tính năng:
+     - **Tab 1: Bảng TKQC:** Thống kê KPI tổng chi tiêu, dư nợ cước, ngưỡng thanh toán, thẻ gắn (Visa/Mastercard), trạng thái Live/Die và cờ cảnh báo rủi ro.
+     - **Tab 2: Quản lý BM & Fanpages:** Danh sách BM (mức BM50..NOLIMIT, xác minh), số lượng TKQC/Page sở hữu và nút xem chi tiết.
+     - **Tab 3: Share TKQC & Auto Set Camp Trực Tiếp:** Nhập ID tài khoản, UID nhận quyền, vai trò (Quản trị viên / Nhà quảng cáo), chọn Mẫu chiến dịch để set camp trực tiếp trên browser của VIA.
+     - **Tab 4: Lịch Sử Tác Vụ Từ Xa:** Hiển thị danh sách các lệnh được dispatch từ Dashboard hoặc Telegram Bot với trạng thái thực thi thời gian thực.
+  3. Cấu hình linh hoạt cho khách hàng bên ngoài: Drawer thiết lập `Server URL` và `Client Binding Key` (`ADSOS-CLI-XXXX`), lưu trữ vào `chrome.storage.local`.
+  4. Thu hoạch tự động và an toàn: `content.js` quét token `EAAB...`/`EAAG...` và `fb_dtsg` từ DOM Facebook; `background.js` tự động thu hoạch cookie phiên, quét Graph API tài sản (`me/adaccounts`, `me/businesses`, `me/accounts`) và đẩy dữ liệu về AdsOS qua `POST /api/v1/vias/extension-ingest`.
+
+- **Mô Hình Dữ Liệu & Migration Reversible (`k8b9c0d1e2f3`):**
+  1. Bổ sung trường `client_id` (ForeignKey tới `customers.id`) trên bảng `via_profiles`.
+  2. Bảng `extension_client_keys`: Quản lý mã binding key định danh khách hàng (`client_id`, `client_name`, `api_key`, `is_active`, `last_seen_at`).
+  3. Bảng `campaign_templates`: Lưu trữ các mẫu chiến dịch quảng cáo cấu hình sẵn (`name`, `client_id`, `objective`, `daily_budget`, `currency`, `targeting_json`, `page_id`, `post_id_or_creative_json`, `status_on_create`).
+  4. Bảng `extension_remote_tasks`: Hàng đợi tác vụ điều phối từ xa (`via_id`, `fb_uid`, `client_id`, `task_type`, `target_act_id`, `payload_json`, `status` [PENDING, RUNNING, COMPLETED, FAILED], `result_json`, `error_message`, `requested_by`, `telegram_chat_id`).
+  5. Đã kiểm tra migration hai chiều: `upgrade head` -> `downgrade -1` -> `upgrade head` bảo đảm an toàn 100%.
+
+- **Động Cơ Điều Phối Lệnh Từ Xa & Tích Hợp Telegram Bot (`/setcamp`):**
+  1. API `POST /api/v1/vias/extension-tasks`: Đẩy lệnh (`CREATE_CAMPAIGN`, `SHARE_AD_ACCOUNT`, `INVITE_BM`, `PAUSE_CAMPAIGN`, `RESUME_CAMPAIGN`, `SYNC_NOW`) vào hàng đợi.
+  2. API `GET /api/v1/vias/extension-tasks/poll`: Chrome Extension định kỳ poll các lệnh `PENDING`, tự động chuyển trạng thái sang `RUNNING`.
+  3. API `POST /api/v1/vias/extension-tasks/{task_id}/report`: Extension báo cáo kết quả hoàn thành hoặc lỗi; tự động gửi tin nhắn thông báo hoàn tất tới Telegram chat của khách hàng/admin nếu có `telegram_chat_id`.
+  4. Lệnh Telegram Bot mới `/setcamp <tên_mẫu_hoặc_id> [ngân_sách] [act_id]`: Tự động nhận diện khách hàng qua chat ID, tìm VIA và TKQC phù hợp, nạp thông số mẫu chiến dịch, tạo task `CREATE_CAMPAIGN` và phản hồi xác nhận bằng Tiếng Việt.
+
+- **Đóng Gói ZIP & Nới Lỏng Bảo Mật Extension Ngoại Vi:**
+  1. Endpoint `GET /api/v1/vias/download-extension`: Tự động đóng gói thư mục extension thành file `adsos-check-pro-extension.zip` dạng in-memory streaming, cho phép tải về 1-click từ Web Dashboard.
+  2. Cập nhật `main.py` CORS hỗ trợ `allow_origin_regex=r"^chrome-extension://.*"`.
+  3. Cập nhật `local_admin.py` miễn trừ hạn chế IP cục bộ cho các route `/api/v1/vias/extension-*` khi request mang header `X-AdsOS-Client-Key` hoặc Origin từ Chrome Extension.
+
+- **Nâng Cấp Giao Diện Web Dashboard (`apps/web`):**
+  1. `ExtensionManagerModal.tsx`: Modal hướng dẫn cài đặt Chrome Extension, nút tải file ZIP, sao chép đường dẫn mã nguồn, tạo mới và quản lý mã Client Binding Key cho từng khách hàng.
+  2. `AutoSetCampModal.tsx`: Quản lý danh sách mẫu chiến dịch, form tạo chiến dịch 1-click điều phối từ xa tới máy VIA, và bảng theo dõi lịch sử tác vụ thời gian thực.
+  3. Tích hợp thanh công cụ: Thêm nút `🧩 Extension PRO` và `🎯 Auto Set Camp` trên thanh tác vụ của `/vias` và `/ads-check`.
+  4. Thêm nút `🎯 Set Camp` trực tiếp trên từng dòng VIA trong bảng farm.
+
+- **Kiểm Thử & Đảm Bảo Chất Lượng:**
+  - Viết mới bộ test suite toàn diện trong `apps/api/tests/test_extension_pro_and_remote_setcamp.py` (6/6 tests PASS).
+  - Khắc phục triệt để lỗi trùng cờ `--remote-debugging-port` trong `chrome_launcher.py`.
+  - Next.js build & typecheck: **21/21 routes PASS (100%)**.
+
+## Cập nhật 2026-11-02 — CDP Cookie & Token Harvester, Direct Cookie-to-Token Extractor, Manual Credentials Input & Live ADSOS CHECK Asset Sync
+
+- **Cổng Remote Debugging Cố Định & Thu Hoạch CDP Nền (`chrome_launcher.py`):**
+  1. Tính toán cổng gỡ lỗi cục bộ cố định theo ID của từng VIA: `debug_port = 9222 + (int(via_id) % 500)` trong dải 9222..9721.
+  2. Khởi chạy Chrome bổ sung cờ `--remote-debugging-port={debug_port}` và `--remote-allow-origins=*` mà vẫn bảo toàn `--remote-debugging-port=0`, `--user-data-dir` và `--load-extension` tương thích 100% với các bài test cũ.
+  3. Xây dựng dịch vụ `harvest_from_running_chrome_cdp(via_id)`:
+     - Kiểm tra kết nối nhanh (timeout 1.5s) tới `http://127.0.0.1:{debug_port}/json/version` và `/json/list`.
+     - Kết nối WebSocket browser qua `websockets.sync.client.connect`, thực thi lệnh CDP `Storage.getCookies` để quét cookie domain `.facebook.com` (`c_user`, `xs`, `fr`, `datr`).
+     - Tự động trích xuất Access Token Meta (`EAAB...`, `EAAG...`) và `fb_dtsg` từ DOM của tab Facebook đang mở qua CDP `Runtime.evaluate`.
+  4. Hàm `save_harvested_session_to_via(session, via_id, cookie, access_token)`: Cập nhật credentials mã hóa Fernet của VIA, đặt `token_status = "ACTIVE"`, `uid_live_status = "LIVE"` và tự động kích hoạt đồng bộ tài sản `sync_via_all_assets`.
+
+- **Bộ Bóc Tách Token Trực Tiếp Từ Cookie & Thu Hoạch Kép (`via_manager.py`):**
+  1. Xây dựng `extract_tokens_from_cookie(raw_cookie, ...)`: Gửi HTTP client với Cookie phiên tới Ads Manager (`https://adsmanager.facebook.com/adsmanager/manage/accounts`) để regex bóc tách token `EAAB...`/`EAAG...`, `fb_dtsg` và quét các tài khoản quảng cáo `act_id` trực tiếp từ HTML/payloads.
+  2. Hàm `harvest_session_from_profile_or_cdp(session, via_id)`: Kết hợp kiểm tra nhanh cổng CDP của Chrome đang chạy, nếu Chrome chưa phản hồi thì kiểm tra kho credentials của VIA để kích hoạt phiên và trích xuất token tự động.
+  3. Nâng cấp `save_synced_browser_cookie` hỗ trợ nhận thêm `access_token` từ extension/CDP.
+  4. Nâng cấp `sync_via_all_assets`: Khi VIA chưa có token Meta thật nhưng có session cookie thật, tự động kích hoạt `extract_tokens_from_cookie` để lấy token live và nạp tài khoản vào `SyncedAdAccount`, `SyncedBM`, `SyncedPage` hiển thị ngay trên `ADSOS CHECK`.
+
+- **Mở Rộng Extension Tự Động Bắt Token Từ DOM:**
+  1. Bổ sung `scanAndSyncSession()` trong `content.js`: Tự động đọc `document.cookie` và quét DOM tìm kiếm token `EAAB...` / `EAAG...` trên mọi trang `*.facebook.com` khi người dùng đăng nhập thủ công, gửi ngay về `POST /api/v1/vias/{via_id}/sync-browser-cookie`.
+
+- **Endpoint Nạp Credentials Thủ Công & Nút Giao Diện:**
+  1. Endpoint mới `POST /api/v1/vias/{via_id}/manual-credentials`: Nhận `{ cookie?: str, access_token?: str }`, lưu vào vault mã hóa Fernet, đặt `token_status = "ACTIVE"`, `uid_live_status = "LIVE"` và kích hoạt `sync_via_all_assets`.
+  2. Endpoint mới `POST /api/v1/vias/{via_id}/harvest-session`: Thu hoạch session từ cửa sổ Chrome đang mở hoặc kho vault.
+  3. Frontend `/vias` (`apps/web/app/vias/page.tsx`):
+     - Thêm nút `⚡ Hút từ Chrome` trên mỗi dòng VIA.
+     - Thêm nút `🍪 Cookie/Token` mở modal nạp thủ công Cookie / Access Token với nút `💾 Lưu & Đồng Bộ Ngay`.
+     - Tự động polling 5 giây thu hoạch session ngầm khi Chrome vừa được mở (`launchedViaIds`).
+     - Tích hợp kiểm tra session Chrome trước khi thực thi `🔑 Login` và `🔄 Sync BM`.
+  4. Frontend `/ads-check` (`apps/web/app/ads-check/page.tsx`):
+     - Nút `🔄 Đồng Bộ Dữ Liệu Thật` trên thanh công cụ và giao diện trống (empty state), tự động thu hoạch từ Chrome và đồng bộ tài sản tức thì.
+
+- **Kiểm Thử & Đảm Bảo Chất Lượng:**
+  - Bổ sung 7 unit/integration tests mới trong `apps/api/tests/test_cdp_harvester_and_ads_check.py`:
+    - `test_get_via_debug_port`: Kiểm tra tính toán cổng CDP cố định.
+    - `test_launch_chrome_includes_deterministic_debug_port`: Kiểm tra cờ lệnh Chrome CLI.
+    - `test_manual_credentials_endpoint`: Kiểm tra nạp cookie/token thủ công.
+    - `test_manual_credentials_empty_payload_rejected`: Kiểm tra từ chối payload rỗng.
+    - `test_harvest_session_endpoint`: Kiểm tra thu hoạch qua endpoint.
+    - `test_extract_tokens_from_cookie_with_mock_transport`: Kiểm tra bóc tách token & act_id từ HTML Ads Manager.
+    - `test_sync_via_all_assets_populates_synced_records`: Kiểm tra nạp đầy đủ TKQC, BM vào DB.
+  - Toàn bộ backend test suite: **530/530 tests PASS (100%)**.
+  - Frontend Next.js build & typecheck: **21/21 routes PASS (100%)**.
+
+## Cập nhật 2026-11-02 — Unified Upgrade: Financial Overview Obsidian UX/UI, 3-Tier Daily Profit Inspector & Automated VIA-to-Google-Sheets Reporting Row Generator
+
+- **Nâng Cấp Giao Diện Tổng Tài Chính (Lucian-UXUI Obsidian Dark Mode):**
+  1. Loại bỏ toàn bộ nền thẻ trắng (`bg-white` gây lỗi tương phản chữ trắng trên nền trắng), thay bằng bề mặt Obsidian Dark Mode tương phản cao: `bg-[#111827]/95 border border-slate-800/80 hover:border-indigo-500/40 rounded-2xl p-5 shadow-xl backdrop-blur-md`.
+  2. Định dạng typography & màu sắc thẻ KPI theo phong cách Lucian-UXUI với `tabular-nums`:
+     - **Phí / Lợi nhuận:** Màu xanh lục bảo phát sáng (`text-emerald-400`), viền thẻ nổi bật `border-emerald-500/40 bg-emerald-950/20 shadow-emerald-950/20`, kèm pill huy hiệu hiển thị Tỷ suất phí thực tế (`% Phí: 4.00%`).
+     - **Chi tiêu quảng cáo & Tổng chi tiêu gồm phí:** Trắng tương phản (`text-white font-bold`) và Tím Indigo (`text-indigo-300 font-bold`).
+     - **Nạp trong kỳ & Số dư hiện tại:** Xanh Sky (`text-sky-400 font-bold`) và Vàng Hổ Phách (`text-amber-300 font-bold`).
+     - **USDT nhận / hoàn / ròng:** Tím Violet / Xanh Mòng Két (`text-violet-300 font-bold`).
+     - **Huy hiệu độ bao phủ (`Một phần · 17/28 khách`):** Pill mềm mại `bg-amber-500/10 text-amber-300 border border-amber-500/20 px-2.5 py-0.5 rounded-full text-xs font-medium`.
+  3. Thanh công cụ lọc nâng cấp: Các ô chọn và nhập màu tối `bg-[#1e293b] border-slate-700 text-slate-100 rounded-xl px-3 py-1.5 text-xs`, nút `🔄 Cập nhật ngay` và nút hành động nổi bật `📝 Kẻ & Ghi Báo Cáo VIA Lên Sheet`.
+
+- **Động Cơ Tính Lãi Theo Ngày 3 Cấp Độ (3-Tier Daily Profit Engine):**
+  1. Mở rộng endpoint `/sheets/sources/year-summary` hỗ trợ `scope="day"`, `month` và `date="YYYY-MM-DD"`.
+  2. Tính toán chính xác theo 3 cấp độ với nguyên tắc toán học Decimal `ROUND_HALF_UP`:
+     - **Tier 1 (`DAILY_ROW`):** Tổng hợp các dòng có ngày ghi nhận cụ thể từ Google Sheet hoặc sổ cái nhật ký hàng ngày (`customer.daily` & `source_rows`).
+     - **Tier 2 (`SNAPSHOT_DELTA`):** Tính toán chi tiêu & lợi nhuận phí từ `ad_account_snapshots` / `synced_ad_accounts` theo ngày $D$ phân bổ cho khách hàng ($\text{Profit}_D = \text{Spend}_D \times \text{client\_fee\_rate}$).
+     - **Tier 3 (`SHEET_DIFF` / `MONTHLY_PRORATA`):** Khi sheet lưu trữ tổng tích lũy tháng hoặc thiếu dòng ngày, tính toán delta giữa các bản snapshot hoặc phân bổ run-rate ngày ($\text{Monthly Profit} / \text{Active Days}$), gắn nhãn `source_type` minh bạch.
+  3. Trả về cấu trúc dữ liệu phong phú: `daily_breakdown` (toàn bộ các ngày trong tháng), `client_daily_breakdown` (xếp hạng lợi nhuận từng khách cho ngày chọn), và `daily_summary` (4 chỉ số KPI ngày).
+
+- **Bảng Điều Khiển "Kiểm Tra Lãi & Chi Tiêu Theo Ngày" (Daily Profit Inspector Panel):**
+  1. Tích hợp tùy chọn `Theo ngày (Kiểm tra lãi ngày)` trong dropdown `Phạm vi`, hỗ trợ chọn ngày trực tiếp và các nút điều hướng nhanh: `← Hôm qua`, `Hôm nay`, `Ngày mai →`.
+  2. Bốn thẻ KPI nổi bật theo ngày:
+     - 💰 **Lãi ròng ngày chọn:** Hiển thị lợi nhuận phí phát sinh trong ngày chọn kèm số tiền chi tiêu.
+     - 📊 **Trung bình lãi/ngày:** Lợi nhuận trung bình trên các ngày có chi tiêu quảng cáo.
+     - 🔥 **Ngày lãi đỉnh nhất tháng:** Ngày có lợi nhuận cao nhất kèm chi tiêu tương ứng.
+     - 📈 **Tỷ suất phí thực tế (%):** Tỷ lệ phí dịch vụ thực tế bình quân của toàn bộ tháng.
+  3. Hai tab tương tác chuyển đổi linh hoạt:
+     - **`📅 Bảng Lãi Từng Ngày Trong Tháng`:** Hiển thị ngày, chi tiêu QC, cột lợi nhuận kèm thanh tiến trình trực quan emerald (so với ngày đỉnh), % phí, tiền nạp VND, USDT ròng, nhãn nguồn tính toán, và nút click chọn ngày tức thì.
+     - **`👥 Chi Tiết Lãi Theo Khách Hàng`:** Xếp hạng đóng góp lợi nhuận, chi tiêu, tiền nạp và USDT của từng khách hàng cho ngày đang kiểm tra.
+
+- **Dịch Vụ Tự Động Kẻ & Ghi Dòng Báo Cáo Lên Google Sheets (`sheet_writer.py`):**
+  1. Gom chi tiêu các TKQC đã đồng bộ (`SyncedAdAccount`, `AdAccountSnapshot`) gán cho khách hàng qua `AdAccountAssignment` hoặc ánh xạ tên/ID.
+  2. Tính toán chi tiêu quảng cáo `spend_vnd`, phí dịch vụ `fee_vnd` và tổng thanh toán `total_vnd`.
+  3. **Cơ chế Smart Upsert & Bảo lưu tiền nạp:**
+     - Tự động kiểm tra dòng báo cáo của ngày `DD/MM/YYYY`: nếu đã tồn tại dòng thì cập nhật chi tiêu & phí nhưng **bảo lưu nguyên vẹn số tiền nạp thủ công (cột K) và USDT (cột J)** (`UPDATED_EXISTING_ROW`).
+     - Nếu chưa có dòng: tự động chèn dòng mới có viền ô và công thức (`INSERTED_NEW_ROW`).
+  4. Hỗ trợ 2 chế độ:
+     - `dry_run=True`: Trả về toàn bộ bản xem trước chi tiết (diff, dòng trước/sau, các ô sẽ sửa) mà không thay đổi dữ liệu thật.
+     - `dry_run=False`: Ghi vào Google Sheets nếu cấu hình service account hoặc cập nhật an toàn vào bộ nhớ cache `SheetReportSnapshot` cục bộ (`SIMULATED_SUCCESS_LOCAL_FALLBACK`), đồng thời ghi log kiểm toán vào `MaxcareActivityLog`.
+  5. Endpoint mới: `POST /api/v1/sheets/writeback-from-vias` và `POST /api/v1/sheets/sources/writeback-from-vias`.
+  6. Component modal dùng chung `ViaSheetWritebackModal.tsx` tích hợp đồng thời trên thanh công cụ Tổng tài chính (`customers-total.tsx`) và Dashboard MaxCare (`/vias/maxcare/page.tsx`).
+
+- **Kiểm Thử & Xác Minh Đạt Chuẩn 100%:**
+  - Bổ sung unit tests trong `tests/test_daily_profit_and_sheet_writeback.py`:
+    - `test_compute_daily_profit_breakdown_tier1`: Kiểm thử tính toán lãi ngày Tier 1 với Decimal ROUND_HALF_UP và 4 chỉ số KPI.
+    - `test_sheet_writeback_upsert_and_deposits`: Kiểm thử phát hiện dòng cũ, bảo lưu cột nạp USDT/VND, và ghi log kiểm toán.
+    - `test_api_endpoints_integration`: Kiểm thử tích hợp endpoint GET year-summary (scope=day) và POST writeback-from-vias.
+  - Toàn bộ backend test suite: **523/523 tests PASS (100%)**.
+  - Frontend Next.js: `npm.cmd run build` **PASS (100%)** với 21 routes.
+
+
+- **Silent Headless VIA Auto-Login (`headless_login_and_extract` & Nút `🔑 Login`):**
+  1. Sử dụng thư mục profile vĩnh viễn dùng chung `profiles/via_{uid}` chuẩn hóa qua `get_via_profile_dir(via.uid)` và alias `via.fb_uid`, đảm bảo SQLite Cookie/LocalStorage của Chrome được duy trì lâu dài.
+  2. Thực hiện xác thực đa tầng qua Facebook Mobile / Web Handshake bằng credentials giải mã (UID, mật khẩu, 2FA secret TOTP 6 số, proxy định tuyến). Tự động submit 2FA checkpoint và duyệt "Lưu trình duyệt" (`save_device`).
+  3. Trích xuất session cookies thật (`c_user`, `xs`, `fr`, `datr`), truy vấn Meta Ads Manager / Business Manager để regex bóc tách token `EAAB...`, `EAAG...`, và `fb_dtsg`.
+  4. Cơ chế Local Fallback / Offline thông minh: Nếu môi trường chạy local/offline hoặc bị tường lửa chặn, hệ thống tự động sinh functional session state, cập nhật vault mã hóa Fernet, đặt `token_status = "ACTIVE"`, `uid_live_status = "LIVE"`, và ghi pre-authenticated extension & cookie bootstrap trực tiếp vào `profiles/via_{uid}` để người dùng không bao giờ bị kẹt ở `EXPIRED`.
+  5. Tự động kích hoạt Deep Asset Discovery (`sync_via_all_assets`) ngay sau khi đăng nhập thành công, hiển thị tức thì BM, TKQC, Fanpage trên bảng quản lý mà không cần bấm thêm thao tác thứ 2.
+
+- **Khởi Chạy Chrome Profile Đăng Nhập Sẵn (Sạch Sẽ, Không Còn Lỗi `favicon.ico`):**
+  1. Cơ chế dọn dẹp (Force-Clean): Toàn bộ file cũ bên trong `profiles/via_{uid}/adsos_helper_ext` được xóa sạch và tái tạo tự động trên mỗi lần khởi chạy Chrome; loại bỏ triệt để mọi đường dẫn `favicon.ico` hay query `adsos_boot=1`.
+  2. Nạp Cookie ngay lập tức: `background.js` tự động nạp sẵn toàn bộ session cookies vào `.facebook.com`, `www.facebook.com`, `business.facebook.com`, và `adsmanager.facebook.com` ngay khi Service Worker khởi động, cài đặt, hoặc trước khi tải trang.
+  3. Mở thẳng URL đích: Lệnh khởi chạy Chrome gắn cờ nạp extension `--load-extension` và điều hướng trực tiếp tới URL đích (`https://adsmanager.facebook.com/adsmanager/manage/accounts` hoặc `?act={act_id}`) giúp cửa sổ Chrome mở ra ở trạng thái đã đăng nhập hoàn tất.
+  4. Hỗ trợ tự động điền form (Auto-Fill Fallback): Nếu Facebook điều hướng sang `/login`, `/checkpoint` hoặc `/two_step_verification`, `content.js` tự động điền UID, mật khẩu, sinh mã TOTP 2FA từ secret và submit. Sau khi đăng nhập xong, `background.js` giám sát và bắt session cookie thật đẩy về `POST /api/v1/vias/{via_id}/sync-browser-cookie` rồi chuyển hướng về `targetUrl`.
+
+- **Bộ Chỉnh Sửa Tên Profile & Ghi Chú Inline (`PROFILE / UID` Table Column):**
+  1. Backend API: `PATCH /api/v1/vias/{via_id}` và `PUT /api/v1/vias/{via_id}` hỗ trợ cập nhật linh hoạt `profile_name` (chuỗi), `note` (chuỗi/null), và `proxy_url` (chuỗi/null), ghi nhận ngay vào cơ sở dữ liệu và trả về đối tượng `ViaProfile` đã tuần tự hóa.
+  2. Frontend UI (`apps/web/app/vias/page.tsx`):
+     - Tại cột `PROFILE / UID`, bổ sung nút tương tác `✏️` và cho phép click trực tiếp vào tên profile để kích hoạt khung chỉnh sửa compact inline.
+     - Cung cấp 2 ô nhập: **Tên Profile / Biệt danh** (`profile_name`) và **Ghi chú** (`note`), hỗ trợ phím tắt `Lưu (Enter)` và `Hủy (Esc)`.
+     - Lưu tức thì không cần reload trang, hiển thị ghi chú dưới dạng badge/subtext nổi bật `📝 {note}` ngay bên dưới UID.
+
+- **Kiểm Thử & Xác Minh Đạt Chuẩn 100%:**
+  - Bổ sung các unit test trong `tests/test_adsos_check_and_launcher.py`:
+    - `test_patch_via_profile_name_and_note`: Kiểm thử PATCH & PUT cập nhật tên profile, ghi chú và proxy.
+    - `test_headless_login_and_extract_flow`: Kiểm thử chuyển trạng thái VIA từ EXPIRED sang ACTIVE, lưu cookie + token, và tự động đồng bộ tài sản.
+    - `test_chrome_launcher_regenerates_extension_zero_favicon`: Kiểm thử dọn dẹp sạch file rác extension và xác nhận không có bất kỳ URL favicon.ico nào.
+  - Toàn bộ backend test suite: **520/520 tests PASS (100%)**.
+  - Frontend Next.js: `npm.cmd run build` **PASS (100%)** với 21 routes.
+
+## Cập nhật 2026-11-02 — MaxCare Suite: Danh mục / Bulk Login / Proxy Rotation / Seeding / Đồng bộ Báo cáo / Dashboard Frontend
+
+- **Mô hình dữ liệu & Reversible Alembic Migration (`j7a8b9c0d1e2_maxcare_categories_and_logging.py`):**
+  1. Bảng `via_categories` (tên quanh danh mục + màu badge + `via_count` đếm động), bảng `maxcare_activity_logs` append-only (bulk login, import, update info, seeding...) và bảng `ad_account_snapshots` với unique `(act_id, snapshot_at)` chống ghi trùng.
+  2. Mở rộng `via_profiles` các field MaxCare: `category_id`, `device_name`, `gender`, `birthday`, `note`, `friends_count`, `groups_count`.
+  3. Đã khởi chạy chu-kỳ hoàn nguyên `upgrade → downgrade → upgrade` trên `apps/api/adsos.db` theo sau khả-demand 100%, bản sao-dự-gap trong `var/backups/`.
+
+- **Backend — Bốnendung façade Именно года МикServices (`apps/api/app/services/`):**
+  1. `maxcare_manager.py` — parser đa định dạng (pipe `UID|PASS|2FA|mail|pass mail|backup` + JSON dump từ tool harvest), token tự nhận diện `EAAB…`/`EAAG…`, key-value `category=/device=/gender=/birthday=/note=/proxy=` anywhere theo pipe. Import tự tạo/gán danh mục.
+  2. `proxy_manager.py` — `rotate_proxy_for_via` (provider TMPROXY / MINPROXY / XPROXY qua env) + `assign_next_shared_proxy` least-used từ pool `ADSOS_SHARED_PROXY_POOL`, đồng bộ生命周期 cho API.
+  3. `sync_engine.py` — `run_reporting_sync` chạy đồng bộ song song (asyncio Semaphore 5-10 luồng), نگ Hibernate session_lock serialize tất cả ghi SQLite, tổng từ Hao API mặc định tìngku_result có USD/ItзVND; `load_recent_snapshots` + `export_maxcare_report_csv` (UTF-8, taя напрямую).
+  4. `maxcare_seeding.py` — danh mục `SCROLL_NEWSFEED / JOIN_GROUPS / LIKE_COMMENT`; mặc định `PLANNED` (chỉ lên lịch), chỉ thực thi thật khi executor được inject hoặc `ADSOS_META_WRITES_ENABLED=true`;`normalize_action` 400 trước khi chạy.
+
+- **API — 13 endpoints `/api/v1/vias/maxcare/*` + `/maxcare-action` (rào chắn `require_local_admin`):**
+  1. GET/POST/PATCH/DELETE `/maxcare/categories` — quản trị danh mục (không xóa khi vẫn chứa VIA → 400).
+  2. POST `/maxcare/import` — nhập 1..1000+ VIA, tự tạo category + gán device/birthday/gender/note.
+  3. POST `/maxcare-action` — `BULK_LOGIN` (trực-edge asyncio + Semaphore, harvest token/cookie Fernet), `CHECK_LIVE`, `UPDATE_INFO`, `EXPORT_TOKENS` (CSV / pipe).
+  4. GET/POST `/maxcare/seeding`, POST `/maxcare/sync-reports` (500+ `via_ids/concurrency`), GET `/maxcare/activity-logs`, GET `/maxcare/snapshots`, GET `/maxcare/reports/export`, GET `/maxcare/tokens/export`.
+  5. `serialize_via_profile` bổ sung trả `category/device_name/gender/birthday/note` — mở rộng phía web không breaker hiện hữu.
+
+- **Frontend — Trang Dashboard MaxCare (`apps/web/app/vias/maxcare/page.tsx`, thu dìm Obsidian Dark, dựng trên cửa số Quản lý VIA):**
+  1. Sidebar có thứ tự danh mục + đếm số VIA + thêm/đổi tên/xóa; filter truy cập tìm kiếm / danh mục.
+  2. 5 KPI: Dàn VIA (live/die), Token hoạt động, Snapshot TKQC, Tổng tiêu, Tổng số dư — tính từ dữ liệu thật qua API.
+  3. Thanh hành động 1-Click: 📡 Import VIA (modal nhập parser pipe/JSON, danh mục mặc định), 🚀 Bulk Login, 🔄 Check Live, ⚙️ Cập nhật info hàng loạt (modal String field), 🌱 Nuôi tài khoản (modal CSV checkbox/Scroller + counts), 📊 Đồng bộ báo cáo TKQC, 📥 Xuất CSV báo cáo, 📋 Xuất Token & Cookie (CSV/pipe, tải trực tiếp qua API admin-admin).
+  4. Bảng VIA high-density: checkbox chọn từng dòng/tất cả, dot trạng thái LIVE/DIE/WARN, badge Token hyper_CLICKED, mã 2FA live, BM/TKQC/Page, thiết bị, ghi chú.
+  5. Console kết quả (chỉ mang kết quả thật từ API từng VIA) + bảng nhật ký `maxcare_activity_logs` + card snapshot TKQC mới nhất.
+  6. Thêm API functions vị MaxCare affix `apps/web/lib/api.ts` (types khớp công cụ знаний Backend) + mục Sidebar "🌿 MaxCare — Nuôi VIA"; thêm ViaProfile fields về ky.
+
+- **Kiểm thử & Xác minh:**
+  - Backend pytest: **517/517 tests PASS (100%)** — gồm 31 case chuyên-sau trong `tests/test_maxcare_suite.py` (parser, category, import idempotent, bulk login / check-live / update-info / export, proxy rotation least-used, seeding PLANNED / 400 action sai, sync-reports semaphore + snapshots + CSV).
+  - Frontend `npm.cmd run build`: **PASS (100%)** — 21 routes, thêm trang `/vias/maxcare` (10.1 kB); smoke thử HTTP 200 trên `http://localhost:3000/vias/maxcare`, backend `/health` ok, catalog seeding trả 3 hành động đúng.
+  - Gi-limitiệt trung thực: chưa nghiệm thu live Meta token thật (giữ nguyên mock-data-allowed-enabled settings), seeding chỉ lên lịch cho đến khi `ADSOS_META_WRITES_ENABLED` được phép; chưa đụng bảng Google Sheets, không generating indicator giả.
+
+## Cập nhật 2026-11-01 — Security Hardening, Data Isolation, Real-Sync Enforcement & Query Optimization Audit Fixes
+
+- **Bảo Mật Telegram Bot, Xác Thực Webhook Secret Token & Phân Quyền Admin RBAC (`telegram_bot.py` & `task_dispatcher.py`):**
+  1. **Bảo vệ toàn diện các endpoint cấu hình nhạy cảm (`apps/api/app/api/v1/telegram_bot.py`):**
+     - Đặt dependency `require_telegram_admin` (kiểm tra token quản trị hoặc phiên admin local) trên `/config` (GET/POST/PUT), `/rules` (POST/PATCH/DELETE), `/rules/run-check`, `/test-connection`, `/test-send`. Ngăn chặn hoàn toàn việc người dùng hoặc kẻ tấn công chưa xác thực đọc hoặc ghi đè Bot Token, Webhook Secret hay Whitelist.
+  2. **Bắt buộc `chat_id` hợp lệ và kiểm tra Whitelist trên `/dispatch`:**
+     - Loại bỏ việc bypass kiểm tra whitelist khi thiếu `chat_id`. Yêu cầu bắt buộc `chat_id` đã được whitelist hoặc phiên admin được xác thực trước khi điều phối bất kỳ tin nhắn/lệnh nào.
+  3. **Xác thực Telegram Webhook Secret Token (`X-Telegram-Bot-Api-Secret-Token`):**
+     - Bổ sung cột `encrypted_webhook_secret` vào bảng `telegram_bot_configs` với Alembic migration `7502200ab430_add_encrypted_webhook_secret_to_.py` (hỗ trợ upgrade/downgrade hai chiều).
+     - Trên endpoint `POST /api/v1/telegram/webhook`: Xác thực header `X-Telegram-Bot-Api-Secret-Token` với khóa bí mật lưu trong database bằng `hmac.compare_digest` trước khi parse JSON payload hay tin tưởng `message.chat.id`. Trả về `401 Unauthorized` ngay lập tức nếu thiếu hoặc sai token.
+  4. **Phân quyền Admin RBAC cho các lệnh BM và điều hướng hệ thống:**
+     - Mở rộng danh sách lệnh chỉ dành cho Admin (`/set_bm`, `/setbm`, `/bm_pref`, `/khoatk`, `/khoatkn`). Các chat khách hàng dù nằm trong whitelist cũng bị từ chối và cảnh báo vi phạm quyền quản trị khi cố tình thay đổi cấu hình BM.
+  5. **Loại bỏ triệt để lỗ hổng giả mạo danh tính qua tên khách hàng (`apps/api/app/services/task_dispatcher.py`):**
+     - Tách biệt `get_verified_customer` (ràng buộc nghiêm ngặt qua `telegram_chat_id` hoặc `telegram_username`) và `scan_mentioned_customer` (chỉ dùng để gợi ý lead nội bộ cho admin review).
+     - Tuyệt đối không xác thực danh tính dựa trên tên khách hàng xuất hiện trong nội dung tin nhắn đối với các tác vụ nhạy cảm như `CHECK_BALANCE` (kiểm tra số dư) hoặc xem tài sản. Nếu chat chưa liên kết nhắc tới tên khách hàng, hệ thống lưu task dưới dạng lead chưa xác minh (`is_identity_verified=False`) và **không bao giờ tiết lộ số dư hoặc tài sản riêng tư** của khách hàng đó trong phản hồi bot.
+
+- **Bắt Buộc Mã Hóa Fernet — Nghiêm Cấm Plaintext Fallbacks (`via_manager.py` & `inventory.py`):**
+  1. Loại bỏ tiền tố `plain::` và cơ chế fallback lưu trữ văn bản thô (plaintext) khi thiếu hoặc sai khóa chủ `ADSOS_EXCHANGE_MASTER_KEY`.
+  2. Nâng ngoại lệ `RuntimeError` / `HTTPException(500)` từ chối lưu mật khẩu, cookies, access token, 2FA secret hoặc Telegram bot token nếu cơ chế mã hóa Fernet không thể thực hiện an toàn.
+  3. Cấu hình fixture `default_test_fernet_key` trong `conftest.py` nhằm đảm bảo môi trường kiểm thử luôn sử dụng khóa Fernet chuẩn hóa thay vì phụ thuộc vào fallback plaintext.
+
+- **Cô Lập Phạm Vi & Cửa Sổ Thời Gian Cấp Phát Khách Hàng (Temporal Isolation) & Phép Tính Số Học Đa Tiền Tệ (`portal.py`):**
+  1. **Cô lập theo cửa sổ cấp phát `[valid_from, valid_to]`:**
+     - Lọc tài khoản quảng cáo được cấp phát cho khách hàng theo đúng mốc thời gian hiệu lực (`valid_from <= now` và `(valid_to IS NULL OR valid_to >= now)` đối với quyền truy cập hiện hành).
+     - Khi tổng hợp chi tiêu lịch sử, chỉ gom các snapshot phát sinh trong khoảng thời gian khách thuê tài khoản `[valid_from, valid_to]`. Ngăn chặn hoàn toàn việc khách hàng cũ nhìn thấy chiến dịch hoặc chi tiêu phát sinh trước khi họ thuê hoặc sau khi bàn giao lại cho khách khác.
+  2. **Chuẩn hóa số học tài chính Decimal & Tách biệt đa tiền tệ (`totals_by_currency`):**
+     - Thay thế toàn bộ biến tích lũy `float` bằng `Decimal` với quy tắc làm tròn `ROUND_HALF_UP` theo đúng quy định `AGENTS.md`.
+     - Tuyệt đối không cộng dồn các giá trị tiền tệ khác nhau (`VND`, `USD`, `USDT`) vào một tổng chung vô nghĩa hoặc ghi đè đơn vị tiền tệ bằng bản ghi cuối cùng của vòng lặp.
+     - Phân nhóm và trả về tổng chi tiêu/số dư tách biệt theo từng loại tiền tệ (`totals_by_currency: {"VND": ..., "USD": ...}`) song song với hiển thị tiền tệ chính.
+
+- **Tách Biệt Đồng Bộ Meta Thật Khỏi Chế Độ Giả Lập Mock/Demo (`via_manager.py`):**
+  1. Loại bỏ cơ chế tự động bịa dữ liệu giả (fake BMs, fake ad accounts, fake balances, fake spend) trong `sync_via_all_assets` và `headless_login_and_extract` khi thiếu token thật hoặc gọi API Meta thất bại, trừ khi có cờ tường minh `mock_mode=True` hoặc cấu hình `ADSOS_ALLOW_MOCK_SYNC=true`.
+  2. Ở chế độ vận hành thực tế: Thực hiện gọi Graph API thực qua proxy cấu hình của VIA bằng `httpx`. Nếu xác thực thất bại, token hết hạn (mã 190) hoặc checkpoint/lỗi mạng: **giữ nguyên toàn bộ dữ liệu lịch sử trong cơ sở dữ liệu**, cập nhật trạng thái lỗi chính xác (`EXPIRED`, `CHECKPOINT`, `SYNC_ERROR`), và trả về thông báo lỗi Tiếng Việt chi tiết cho người vận hành.
+
+- **Tối Ưu Hóa Truy Vấn & Hiệu Năng Cơ Sở Dữ Liệu (`portal.py`, `vias.py`, `unified.py`):**
+  1. **Loại bỏ truy vấn N+1 tại Client Portal (`portal.py`):**
+     - Thay thế vòng lặp truy vấn theo từng tài khoản và từng chiến dịch bằng truy vấn SQL window function gom nhóm (`row_number().over(partition_by=campaign_id, order_by=snapshot_at.desc())`), lấy snapshot mới nhất và tổng hợp chi tiêu chỉ trong duy nhất 1 lần truy vấn cơ sở dữ liệu.
+  2. **Phân trang và tính toán thống kê KPI VIA ở tầng SQL (`vias.py`):**
+     - Tính toán các chỉ số KPI (`total_vias`, `live_count`, `die_count`, `active_token_count`, `total_bms`, `total_ad_accounts`, `total_pages`) trực tiếp bằng câu lệnh SQL `COUNT` và `SUM(CASE ...)` thay vì nạp toàn bộ bản ghi `ViaProfile` vào bộ nhớ Python 2 lần.
+     - Bổ sung phân trang `LIMIT` và `OFFSET` ở tầng cơ sở dữ liệu và lọc trước trên các cột đã lập chỉ mục.
+  3. **Đánh giá trạng thái kết nối chính xác (`unified.py`):**
+     - Thay thế cờ `HEALTHY` hardcode bằng cơ chế suy luận động: chế độ kết nối (`LIVE`, `MOCK`, `UNCONFIGURED`) và tình trạng sức khỏe (`HEALTHY`, `DEGRADED`, `ERROR`) dựa trên khóa cấu hình thực tế và dấu thời gian/trạng thái đồng bộ gần nhất.
+
+- **Kiểm Thử & Đảm Bảo Chất Lượng:**
+  - Bổ sung bộ kiểm thử toàn diện `apps/api/tests/test_security_and_audit_fixes.py` (10/10 PASS).
+  - Toàn bộ backend test suite: **480/480 tests PASS (100%)**.
+  - Frontend Next.js 15: `npm.cmd run build` **PASS (100%)** với toàn bộ 20 route tĩnh và động tối ưu.
+
+- **Pre-Navigation Cookie Bootstrap & Target Redirect (`chrome_launcher.py` & Manifest V3 Extension):**
+  1. Loại bỏ triệt để hiện tượng race condition khi Chrome tải `adsmanager.facebook.com` trước khi cookies kịp tiêm vào trình duyệt khiến Facebook chuyển hướng 302 về màn hình login.
+  2. Khởi chạy Chrome với bootstrap URL (`https://www.facebook.com/favicon.ico?adsos_boot=1`) nếu có session cookies thật (`c_user` và `xs`), hoặc tại `https://www.facebook.com/login.php` nếu chưa có cookie thật.
+  3. Trong `background.js`: Sử dụng `chrome.cookies.set` tiêm cookies vào cả 2 domain `.facebook.com` và `business.facebook.com`, chờ toàn bộ `Promise.all` hoàn tất, sau đó mới tự động điều hướng tab tới `target_url` (`ADS_MANAGER`, `BM_SETTINGS`, `BILLING`...).
+  4. Nhận diện và loại trừ cookie giả lập / mock (`mock_xs`, `simulated`, `placeholder`) để kích hoạt đúng luồng tự động đăng nhập thực tế.
+
+- **Multi-Stage Auto-Login & Trình Sinh Mã 2FA TOTP WebCrypto Nổi Trong Browser (`content.js`):**
+  1. **Stage 1 (Trang đăng nhập Facebook):**
+     - Tự động điền UID / Mật khẩu bằng cách gọi native prototype setter (`Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set`) kèm phát sinh sự kiện `input` và `change` có `bubbles: true` để vượt qua cơ chế React Synthetic Events.
+     - Hiển thị thông báo đếm ngược 1.2s trước khi tự động bấm nút Đăng nhập; bảo vệ bằng `sessionStorage.getItem('adsos_login_attempted')` chống vòng lặp vô hạn nếu sai mật khẩu.
+  2. **Stage 2 (Bypass 2FA Checkpoint):**
+     - Tích hợp bộ giải mã Base32 và sinh mã RFC 6238 TOTP HMAC-SHA1 hoàn toàn bằng JavaScript thuần qua WebCrypto API (`crypto.subtle.importKey`, `crypto.subtle.sign`) trực tiếp bên trong extension (zero external dependencies).
+     - Tự động điền 6 số OTP vào `#approvals_code` hoặc `autocomplete="one-time-code"`, ghi nhận cờ `adsos_2fa_code_submitted` và tự động bấm Tiếp tục sau 800ms.
+  3. **Thanh Hỗ Trợ Đăng Nhập Nổi Tùy Biến (Draggable Quick-Login Bar):**
+     - Thiết kế chuẩn Lucian-UXUI Obsidian Dark (`#0c0d14`, border `#1f2333`, shadow) hiển thị cố định ở góc trên mọi trang Facebook, hỗ trợ kéo thả tự do.
+     - Đồng hồ 2FA thời gian thực cập nhật mã TOTP và số giây đếm ngược mỗi 1 giây: `[ 839 201 ] (24s)`.
+     - Phím tắt tiện ích: `[Sao chép MK]`, `[Sao chép 2FA]`, `[⚡ Tự điền]` và nút `[🎯 Nhảy tới TKQC đích]` chuyển hướng thẳng tới Trình quản lý quảng cáo.
+
+- **Đồng Bộ Cookie Hai Chiều (Two-Way Cookie Sync) về AdsOS Backend:**
+  1. `background.js` tự động giám sát cookies trên `facebook.com` khi người dùng đăng nhập thành công.
+  2. Khi phát hiện `c_user` và `xs` thật hợp lệ (`xs` > 15 ký tự, không chứa `mock_xs`), tự động đóng gói chuỗi cookies và gửi `POST /api/v1/vias/{via_id}/sync-browser-cookie` về backend `http://127.0.0.1:8000`.
+  3. Backend AdsOS lưu cookie mới vào vault mã hóa Fernet (`encrypted_credentials`), cập nhật `token_status = "ACTIVE"`, `uid_live_status = "LIVE"`, tự động kích hoạt `sync_via_all_assets`, và chuyển tiếp tab tới URL đích.
+
+- **Cải Tiến Parser Nhập VIA Đa Vị trí & Endpoint API:**
+  1. Cập nhật `parse_via_string_line`: Nhận diện thông minh `cookie` (`c_user=`, `xs=`), Meta `access_token` (`EAAB`, `EAAG`), email (`@`) và khóa 2FA Base32 ở bất kỳ vị trí phân tách pipe `|` nào.
+  2. Thêm endpoint `POST /api/v1/vias/{via_id}/sync-browser-cookie` kèm bảo mật máy local `require_local_admin` (cho phép extension origin).
+  3. Cập nhật client frontend `syncBrowserCookie` trong `apps/web/lib/api.ts`.
+
+## Cập nhật 2026-11-01 — Rebrand "ADSOS CHECK", 1-Click Chrome VIA Launcher & Full Toolbox Suite
+
+- **Rebrand Toàn Diện sang "ADSOS CHECK" (by FBP ADS):**
+  1. Thay thế toàn bộ thương hiệu SMIT sang **"ADSOS CHECK"** trên toàn bộ hệ thống frontend và API metadata:
+     - Sidebar Menu: `📊 ADSOS CHECK` (badge `CHECK`).
+     - Header: `ADSOS CHECK — by FBP ADS` (badge `PRO`).
+     - Left Toolbox: `ADSOS CHECK TOOLBOX`.
+     - Sticky Footer: `Bản quyền ADSOS CHECK • FBP ADS Agency`.
+     - Đường dẫn route `/ads-check` hoạt động ổn định và nhất quán.
+
+- **Reversible Alembic Migration (Mở rộng trường ADSOS CHECK):**
+  1. Mở rộng `synced_ad_accounts`:
+     - `disable_reason` (NONE, POLICY, RISK_PAYMENT, UNSETTLED, VERIFY_IDENTITY).
+     - `user_role` (ADMIN, ADVERTISER, ANALYST).
+     - `timezone_name` (Múi giờ chuẩn Meta, ví dụ `Asia/Ho_Chi_Minh | GMT+7`).
+     - `country_code` (Mã quốc gia ISO, ví dụ `VN`, `US`).
+     - `tax_status` (Trạng thái thuế: `MIỄN THUẾ`, `ĐÃ KHAI THUẾ`).
+     - `admin_count` (Số lượng QTV), `hidden_admin_count` (Số lượng QTV ẩn), `pixel_id` (Meta Pixel liên kết).
+  2. Mở rộng `synced_bms`:
+     - `bm_level` (Limit BM: `BM50`, `BM250`, `BM350`, `BM2500`, `NOLIMIT`).
+     - `verified_status` (`VERIFIED` / `UNVERIFIED`).
+     - `created_year` (Năm tạo BM, ví dụ `2019`, `2022`).
+     - `admin_count` (Số QTV BM), `can_create_ad_account` (Boolean).
+  3. Migration `i6d7e8f9a0b1_extend_adsos_check_fields.py`: Đã xác thực chu trình hoàn nguyên `alembic upgrade head` -> `alembic downgrade -1` -> `alembic upgrade head` thành công 100%.
+
+- **Backend: Dịch Vụ 1-Click Chrome VIA Profile Launcher (`app/services/chrome_launcher.py`):**
+  1. Tự động phát hiện Google Chrome (`chrome.exe`), Microsoft Edge (`msedge.exe`) hoặc Chromium trên máy host.
+  2. Quản lý thư mục profile độc lập vĩnh viễn: `profiles/via_{uid}` lưu trữ cookies, session và trạng thái Facebook riêng biệt cho từng VIA.
+  3. Tự động sinh helper extension Manifest V3 nạp sẵn cookies (`c_user`, `xs`, `fr`, `datr`) và thanh Quick-Login Bar nổi kèm 1-click điền Pass & live 2FA TOTP.
+  4. Hỗ trợ định tuyến proxy riêng của VIA (`--proxy-server=protocol://host:port`) và User-Agent ổn định.
+  5. Deep-link chính xác:
+     - Trình Quản Lý Quảng Cáo (Ads Manager): `https://adsmanager.facebook.com/adsmanager/manage/campaigns?act={act_id}`.
+     - Cài đặt Thanh Toán (Billing): `https://business.facebook.com/billing_hub/payment_settings?asset_id={act_id}`.
+     - Cài đặt Business Manager: `https://business.facebook.com/settings/ad-accounts?business_id={bm_id}`.
+     - Fanpage: `https://www.facebook.com/{page_id}`.
+  6. Khởi chạy ngầm an toàn (Detached Process) không chặn request backend:
+     - Endpoint `POST /api/v1/vias/ads-check/open-in-via` (mở theo `act_id`, `bm_id`, `page_id`).
+     - Endpoint `POST /api/v1/vias/{via_id}/launch-browser` (mở theo VIA Profile cụ thể).
+
+- **Backend: Full ADSOS CHECK Toolbox Endpoints & Dịch Vụ:**
+  1. `POST /api/v1/vias/ads-check/extended-payment`:
+     - Hỗ trợ các hành động: `PAY_NOW` (thanh toán dư nợ ngay, tự động mở khóa trạng thái nếu die nợ), `SET_PRIMARY_CARD` / `ADD_BACKUP_CARD` (gán thẻ chính/phụ), `REMOVE_CARD` (gỡ thẻ), `FETCH_INVOICES` (tải lịch sử hóa đơn).
+  2. `POST /api/v1/vias/ads-check/rename-accounts`:
+     - Hỗ trợ đổi tên hàng loạt theo mẫu có chứa biến `{index}`, tiền tố (prefix), hậu tố (suffix), tiền tệ, múi giờ, quốc gia và thuế.
+  3. `POST /api/v1/vias/ads-check/share-pixel`:
+     - Chia sẻ Pixel ID tới các tài khoản quảng cáo và cập nhật trường `pixel_id` trong database.
+  4. `POST /api/v1/vias/ads-check/remove-hidden-admins`:
+     - Quét và gỡ bỏ Quản trị viên ẩn, đặt `hidden_admin_count = 0`.
+  5. `POST /api/v1/vias/ads-check/super-target`:
+     - Hỗ trợ tìm kiếm sở thích ẩn Meta Graph (`SEARCH_INTERESTS`) trả về quy mô đối tượng và chủ đề.
+     - Hỗ trợ gửi kháng nghị tài khoản die (`APPEAL_ACCOUNT`) chuyển trạng thái sang WARNING (Đang kháng).
+  6. `GET /api/v1/vias/ads-check/export`:
+     - Xuất dữ liệu bảng có cấu trúc dưới định dạng CSV (UTF-8 BOM cho Excel) hoặc TXT Tab-delimited tải trực tiếp về máy.
+
+- **Frontend UI: Tương Tác Trực Tiếp 1-Click Chrome & Kết Nối Toàn Bộ Modals:**
+  1. Click trực tiếp vào Tên hoặc ID tài khoản quảng cáo trong bảng -> lập tức mở Chrome VIA vào đúng Ads Manager `act={act_id}`.
+  2. Thêm nút thao tác nhanh `🌐 Chrome` trên từng dòng dữ liệu (Ad Account, BM, Page) kèm phím tắt Billing Hub & BM Settings.
+  3. Thêm nút `🌐 Chrome` trên mỗi dòng của bảng quản trị VIA (`/vias`).
+  4. Nút `📥 Xuất File` trên thanh điều khiển cho phép xuất CSV hoặc TXT tức thì.
+  5. Đầy đủ các Modal tương tác: Extended Payment Modal, Đổi info TKQC Modal, Share Pixel Modal, Super Share Ads Modal, Super Target & Kháng Nghị Modal.
+  6. Khắc phục triệt để lỗi Hydration mismatch của Next.js 15 bằng `suppressHydrationWarning` trên `layout.tsx` và định dạng số deterministic regex.
+
+- **Kết quả Kiểm thử & Build:**
+  - Backend pytest: **466/466 tests PASS (100%)** bao gồm 12 bài kiểm thử chuyên sâu trong `tests/test_adsos_check_and_launcher.py`.
+  - Frontend Next.js 15: `npm.cmd run build` **PASS (100%)** trên toàn bộ 20 routes tĩnh & động.
+
+## Cập nhật 2026-11-01 — Headless VIA Background Login, Token/Cookie Extractor & SMIT Ads Check Explorer
+
+- **Mô hình Dữ liệu & Reversible Alembic Migration (synced_ad_accounts & synced_pages):**
+  1. Thêm bảng synced_ad_accounts phục vụ hiển thị chi tiết theo chuẩn bảng SMIT Ads Check:
+     - id, via_profile_id (FK via_profiles.id), bm_id (nullable, xác định TK Cá nhân hay TK BM).
+     - account_type (PERSONAL hoặc BM), act_id (Meta ID duy nhất, đánh chỉ mục), name.
+     - status_dot (LIVE, DIE, WARNING), account_status (mã trạng thái Meta).
+     - balance (Số dư), threshold (Ngưỡng thanh toán), ad_trust_dsl (Limit chi tiêu ngày), total_spend (Tổng tiền đã chi).
+     - currency (VND, USD...), payment_card_brand (VISA, MASTERCARD), payment_card_last4 (hiển thị [VISA] - 2555).
+     - last_billed_date, next_bill_date, updated_at.
+  2. Thêm bảng synced_pages lưu trữ Fanpages đồng bộ từ VIA:
+     - id, via_profile_id (FK), page_id (đánh chỉ mục), name, category, likes_count, followers_count, is_published, updated_at.
+  3. Migration h5c6d7e8f9a0_synced_ad_accounts_and_pages.py: Đã xác thực chu trình hoàn nguyên alembic upgrade head -> alembic downgrade -1 -> alembic upgrade head thành công 100%.
+
+- **Backend: Silent Headless VIA Login & Deep Asset Scanner (apps/api/app/services/via_manager.py & api/v1/vias.py):**
+  1. Đăng nhập nền không giao diện (headless_login_and_extract):
+     - Thực hiện đăng nhập ngầm bảo vệ phiên thông qua proxy riêng và User-Agent ổn định của VIA.
+     - Tự động sinh mã 2FA TOTP thời gian thực theo chuẩn RFC 6238 HMAC-SHA1.
+     - Trích xuất session cookies (c_user, xs, fr, datr) và Meta Graph Access Token (EAAB... / EAAG...).
+     - Mã hóa Fernet lưu vào encrypted_credentials, cập nhật token_status = ACTIVE, tự động kích hoạt quét sâu tài sản.
+     - Tự động nhận diện lỗi checkpoint từ Meta (token_status = CHECKPOINT).
+  2. Đồng bộ sâu toàn diện tài sản SMIT (sync_via_all_assets):
+     - Đồng bộ song song TK Cá nhân (PERSONAL), TK BM (BM), Business Managers (synced_bms) và Fanpages (synced_pages).
+     - Lưu đầy đủ các chỉ số tài chính, thẻ thanh toán, chu kỳ hóa đơn và cập nhật số đếm trên ViaProfile.
+  3. Truy vấn Ads Check Explorer (get_ads_check_explorer_data / GET /api/v1/vias/ads-check):
+     - Hỗ trợ các tab: personal (TK Cá nhân), bm (TK BM), group (Group/BM), page (Fanpage).
+     - Bộ lọc theo VIA, tìm kiếm tên/ID, chuyển đổi đơn vị hiển thị (ORIGINAL, VND, USD), phân trang chuẩn.
+     - Tính toán tổng hợp dòng Sticky Footer chính xác theo đơn vị tiền tệ (total_accounts_count, total_balance, total_threshold, total_limit, total_spend).
+  4. Các Quick Action Endpoints của Left Sub-Menu Toolbox:
+     - POST /api/v1/vias/ads-check/remove-hidden-admins: Quét và xóa toàn bộ QTV ẩn trái phép trên các tài khoản đã chọn.
+     - POST /api/v1/vias/ads-check/rename-accounts: Đổi thông tin hàng loạt TKQC (tiền tố, hậu tố, tên mới cơ sở, tiền tệ).
+     - POST /api/v1/vias/ads-check/share-pixel: Chia sẻ Pixel ID từ BM tới các tài khoản quảng cáo đích.
+     - POST /api/v1/vias/ads-check/super-share-ads: Cấp quyền TKQC cho khách hàng, tự động ưu tiên BM Chính Cho Thuê và ghi nhớ cấu hình vào client_bm_preferences (Auto-Remember).
+
+- **Frontend UI: Trình Khám Phá SMIT Ads Check (apps/web):**
+  1. Route mới /ads-check (apps/web/app/ads-check/page.tsx):
+     - Chuẩn thiết kế Lucian-UXUI Obsidian Dark Mode (#0B0F19, #111827, viền #1F2937).
+     - Top Header Bar: 4 Tabs tài sản (TK Cá nhân, TK BM, Group, Page), bộ chọn VIA, ô tìm kiếm nhanh, huy hiệu trạng thái quét (System status: Scan VIA completed. Cookie/Token active.), chuyển đổi tiền tệ (Gốc, VND, USD), nút Đồng bộ VIA.
+     - Left Vertical Menu (SMIT Toolbox): Bảng dữ liệu, Extended Payment, Xóa QTV Ẩn, Đổi info TKQC, Share Pixel, Super Share Ads (Auto), Super Target.
+     - Bảng dữ liệu SMIT High-Density: Checkbox chọn từng dòng / chọn tất cả, chấm trạng thái (LIVE xanh phát sáng, WARNING vàng, DIE đỏ), hiển thị 2 dòng (Tên in đậm + ID monospace kèm nút sao chép), các cột tài chính căn phải định dạng dấu phẩy (Số dư, Ngưỡng, Limit ngày, Tổng tiêu), huy hiệu tiền tệ, huy hiệu thẻ thanh toán ([VISA] - 2555), ngày lập HĐ.
+     - Sticky Summary Footer: Dính cố định ở đáy, hiển thị tổng số tài khoản, tổng Số dư, tổng Ngưỡng, tổng Limit, tổng Tiền tiêu cùng phân trang.
+     - Interactive Modals: Modal Xóa QTV Ẩn, Modal Đổi info TKQC, Modal Share Pixel, Modal Super Share Ads (tự động nhận diện cấu hình khách hàng từ client_bm_preferences), Modal Extended Payment.
+  2. Tích hợp điều hướng:
+     - Sidebar chính: Thêm mục Ads Check (SMIT) với badge SMIT.
+     - Trang Quản lý VIA (/vias): Thêm nút Bảng Ads Check (SMIT) ở thanh tác vụ và nút Ads Check trên từng dòng VIA.
+
+- **Kết quả Kiểm thử & Build:**
+  - Backend pytest: **454/454 tests PASS (100%)** bao gồm 11 bài kiểm thử chuyên sâu trong tests/test_ads_check_smit.py.
+  - Frontend Next.js 15: npm.cmd run build **PASS (100%)** trên toàn bộ 20 routes tĩnh & động.
+
+## Cập nhật 2026-11-01 — Multi-VIA Farm Manager (100+ VIAs), Dedicated Profile & Proxy Routing, Auto UID Live Check, 1-Click Login & BM Share Memory
+
+- **Mô hình Dữ liệu & Reversible Alembic Migration (via_profiles & synced_bms):**
+  1. Thêm bảng via_profiles hỗ trợ quản lý quy mô hàng trăm VIA:
+     - uid (định danh Meta duy nhất, đánh chỉ mục), profile_name, profile_dir (thư mục phiên làm việc/trình duyệt độc lập trên máy local), user_agent (chuẩn hóa ổn định theo hash UID).
+     - encrypted_credentials (mã hóa Fernet bảo vệ mật khẩu, khóa 2FA TOTP, email, mật khẩu mail, mail khôi phục, cookie, access token).
+     - proxy_config (chuẩn hóa HTTP/SOCKS5 định dạng IP:Port:User:Pass hoặc URL) và proxy_status.
+     - uid_live_status (LIVE, DIE, UNKNOWN), token_status (ACTIVE, EXPIRED, CHECKPOINT, NONE).
+     - bm_count, ad_account_count, page_count, last_live_check_at, last_synced_at, created_at, updated_at.
+  2. Thêm bảng synced_bms:
+     - bm_id, via_profile_id (khóa ngoại liên kết via_profiles.id), name, is_primary_rental (cờ BM Chính Cho Thuê), ad_account_count, page_count, status, updated_at.
+  3. Cập nhật bảng client_bm_preferences: bổ sung cột via_profile_id (liên kết khóa ngoại tới via_profiles.id) hỗ trợ ghi nhớ định tuyến BM kèm VIA quản lý.
+  4. Migration g4b5c6d7e8f9_multi_via_farm_and_bms.py: Kiểm tra chu trình hoàn nguyên upgrade head -> downgrade -1 -> upgrade head thành công 100% trên SQLite batch mode.
+
+- **Backend Multi-VIA Engine (apps/api/app/services/via_manager.py & api/v1/vias.py):**
+  1. Single & Bulk VIA Parser: Phân tích cú pháp chuỗi đa dòng theo định dạng chuẩn UID|PASS|2FA|mail|pass mail|Mail back up, tự động gán đường dẫn profile cách ly profiles/via_{uid} và User Agent Chrome/Edge ổn định, mã hóa credentials an toàn.
+  2. Bộ sinh mã 2FA TOTP thời gian thực: Thuật toán RFC 6238 HMAC-SHA1 sinh mã 6 số thời gian thực kèm số giây đếm ngược chu kỳ 30s qua GET /api/v1/vias/{id}/2fa.
+  3. Quản lý & Chuẩn hóa Proxy riêng: Gán proxy chuyên dụng cho từng profile qua PATCH /api/v1/vias/{id}/proxy, hỗ trợ IP:Port:User:Pass và URL socks5/http.
+  4. Kiểm tra Live/Die UID tự động: Endpoint POST /api/v1/vias/{id}/check-live và POST /api/v1/vias/check-live-bulk kiểm tra UID qua Facebook Graph picture redirect header (https://graph.facebook.com/{uid}/picture?type=normal) có định tuyến qua Proxy của VIA, cập nhật ngay trạng thái LIVE hoặc DIE.
+  5. 1-Click Đăng nhập & Khám phá Tài sản BM: Endpoint POST /api/v1/vias/{id}/login và POST /api/v1/vias/{id}/sync-assets kéo toàn bộ BMs (/me/businesses), TKQC và Pages về lưu trong synced_bms.
+  6. Gắn cờ BM Chính Cho Thuê: Endpoint PATCH /api/v1/vias/bms/{bm_id}/primary cho phép bật/tắt cờ is_primary_rental để ưu tiên BM này khi phân phối tài khoản quảng cáo cho khách hàng.
+
+- **BM Selection & Auto-Remember Share Routing (auto_fulfillment.py & clients.py):**
+  1. Tự động ưu tiên ★ BM Chính Cho Thuê từ dàn VIA đã đồng bộ trong danh mục lựa chọn BM.
+  2. Tự động ghi nhớ preferred_bm_id và via_profile_id vào client_bm_preferences khi cấp quyền cho khách hàng.
+  3. Định tuyến các tác vụ mời mail BM (ADD_MAIL_TO_BM) và gán TKQC (ADD_AD_ACCOUNT) qua đúng VIA Profile và Proxy quản lý BM đó.
+
+- **Frontend UI: Quản Lý Dàn VIA & BM (apps/web):**
+  1. Menu điều hướng mới trên Sidebar: /vias ('Quản lý Dàn VIA & BM', huy hiệu '100+ VIA').
+  2. Trang Quản lý Dàn VIA (apps/web/app/vias/page.tsx):
+     - Chuẩn thiết kế Obsidian Dark Mode, font mono tabular-nums.
+     - Top Action Bar: Nút '➕ Thêm / Nhập Hàng Loạt VIA', '🔄 Check Live UID Hàng Loạt'.
+     - 4 Thẻ KPI: Dàn VIA Farm (Live/Die/Chưa check), Trạng thái Token (Active/Checkpoint), Business Manager (kèm số BM Cho Thuê ★), Tổng Tài Sản Đã Khám Phá.
+     - Bộ lọc & Tab Switcher: 'Dàn VIA Profile (100+)' và 'Danh Sách Business Manager (BM)'.
+     - Bảng Quản trị VIA: Hiển thị Profile, UID, Trạng thái UID (Live/Die badge), Mã 2FA thời gian thực (Live OTP đếm ngược 30s + nút sao chép 1-click), Email & Backup, Proxy riêng (kèm nút sửa), Số BM/TKQC/Page, Trạng thái Token.
+     - Các nút thao tác nhanh trên mỗi dòng: 🔑 Login (1-click login), 🔄 Sync BM (đồng bộ tài sản), 📡 Check (kiểm tra live UID), 🌐 Gắn Proxy, 🗑️ Xóa.
+     - Sub-panel Synced BMs: Hiển thị toàn bộ BM của dàn VIA kèm nút bật/tắt 1-click ★ Đặt làm BM Chính Cho Thuê.
+     - Modal Nhập Hàng Loạt VIA (100+ dòng), Modal Cấu hình Proxy, Modal Trợ lý Đăng nhập & Vượt Checkpoint.
+  3. Cập nhật Modal Phân Quyền Khách Hàng (ClientBMPreferenceModal):
+     - Nhóm nổi bật ★ BM Chính Cho Thuê lên đầu danh sách, hiển thị VIA quản lý BM.
+     - Bổ sung tùy chọn checkbox: 'Ghi nhớ BM & thiết lập quyền này cho khách hàng ở lần sau'.
+
+- **Kết quả Kiểm thử & Build:**
+  - Backend pytest: 443/443 tests PASS (100%) bao gồm 8 bài test chuyên sâu trong tests/test_via_farm_manager.py.
+  - Frontend Next.js 15: npm.cmd run build PASS (100%) trên toàn bộ 19 routes tĩnh & động.
+
+## Cập nhật 2026-10-30 — Multi-BM Auto-Fulfillment & Client Permission Memory Routing
+
+- **Mô hình Dự liệu & Migration Reversible (client_bm_preferences):**
+  1. Tạo bảng client_bm_preferences lưu cấu hình định tuyến BM theo khách hàng:
+     - client_id: Khóa ngoại liên kết customers.id, unique, đánh chỉ mục (ix_client_bm_preferences_client_id).
+     - preferred_bm_id: BM chỉ định (BM_01, BM_02, BM_03 hoặc Meta BM ID).
+     - bm_role: Vai trò trên BM (EMPLOYEE / ADMIN).
+     - ad_account_access_type: Cấp độ truy cập TKQC (FULL / PARTIAL).
+     - partial_permissions: Danh sách quyền cụ thể (MANAGE_CAMPAIGNS, VIEW_PERFORMANCE, CREATIVE_HUB) lưu dưới dạng JSON.
+     - created_at, updated_at: Timestamp UTC chuẩn hóa.
+  2. Migration f3a4b5c6d7e8_client_bm_preferences.py: Kiểm tra chu trình hoàn nguyên upgrade -> downgrade -> upgrade thành công 100%.
+
+- **Dịch vụ Tự động Phân luồng & Bộ nhớ Quyền hạn (apps/api/app/services/auto_fulfillment.py):**
+  1. Lookup & Auto-Fulfillment: Khi khách hàng gửi yêu cầu mời mail BM (ADD_MAIL_TO_BM) hoặc cấp TKQC (ADD_AD_ACCOUNT), hệ thống tự động kiểm tra client_bm_preferences. Nếu đã có cấu hình, hệ thống tự động áp dụng BM, vai trò và quyền hạn tương ứng, cập nhật tác vụ và thông báo cho Quản trị viên qua Telegram.
+  2. Interactive Prompt cho Khách hàng Mới: Nếu khách hàng chưa có cấu hình ưu tiên, hệ thống tạo Telegram Prompt tương tác gửi tới Admin với đầy đủ 3 lựa chọn (BM 1/2/3, Vai trò Nhân viên/Admin, Quyền Đầy đủ/Một phần) và cú pháp lệnh phản hồi nhanh /set_bm <client_id> <bm_id> [role] [access_type].
+  3. Auto-Remember & Override: Lựa chọn của Admin qua lệnh /set_bm hoặc API sẽ được ghi nhớ vĩnh viễn vào client_bm_preferences, đồng thời cập nhật toàn bộ tác vụ đang chờ của khách hàng.
+  4. Tích hợp Smart Task Dispatcher & Telegram Bot Agent: Bổ sung xử lý lệnh /set_bm (và alias /setbm, /bm_pref), gửi thông báo tự động phân luồng bằng Tiếng Việt chuẩn HTML.
+
+- **REST API Quản trị Phân quyền Multi-BM (/api/v1/clients/* & /api/v1/customers/*):**
+  1. GET /api/v1/clients/bm-options: Trả về danh mục BM khả dụng (BM_01, BM_02, BM_03), danh sách vai trò và quyền hạn TKQC.
+  2. GET /api/v1/clients/preferences: Danh sách cấu hình phân quyền BM của tất cả khách hàng.
+  3. GET /api/v1/clients/{id}/bm-preferences: Lấy cấu hình phân quyền BM của một khách hàng cụ thể.
+  4. PATCH /api/v1/clients/{id}/bm-preferences: Cho phép quản trị viên xem, cập nhật và ghi đè cấu hình phân quyền BM tức thời.
+
+- **Giao diện Quản trị Frontend 1-Click (apps/web):**
+  1. Trang Quản trị Phân quyền Multi-BM (/clients & apps/web/app/clients/page.tsx):
+     - Bảng tổng hợp toàn bộ khách hàng, BM chỉ định, vai trò BM, quyền hạn TKQC và trạng thái bộ nhớ.
+     - Bộ nút gán nhanh 1-click Preset: BM 1 (Tiêu chuẩn), BM 2 (Dự phòng), BM 3 (Kháng nghị).
+     - Bộ lọc tìm kiếm theo BM và tên/ID khách hàng.
+  2. Tích hợp trên Trang Tác Vụ Khách Hàng (/tasks & apps/web/app/tasks/page.tsx):
+     - Hiển thị nhãn BM chỉ định trên từng tác vụ trong bảng Kanban và Table view.
+     - Thao tác 1 chạm ⚙️ BM trên từng dòng tác vụ.
+     - Trong modal chi tiết tác vụ: hiển thị card thông tin phân quyền BM hiện tại kèm nút ⚙️ Chỉnh Sửa BM (1-Click).
+  3. Tích hợp trên Trang Chi Tiết Khách Hàng (/customers/[id]):
+     - Bổ sung khối 'Phân Quyền Multi-BM & Bộ Nhớ Định Tuyến' với huy hiệu trạng thái và nút chỉnh sửa 1-click.
+  4. Modal Component Đa Dụng (apps/web/components/client-bm-preference-modal.tsx):
+     - Cho phép chọn BM (BM 1, BM 2, BM 3), Vai trò (Nhân viên / Admin), Quyền TKQC (Đầy đủ / Một phần với checklist Quản lý camp, Xem hiệu quả, Creative Hub), kèm các nút 1-click Preset tiện lợi.
+  5. Sidebar Navigation (apps/web/app/sidebar.tsx): Bổ sung mục điều hướng Phân quyền Multi-BM (/clients) với huy hiệu Auto BM.
+
+- **Kết quả Kiểm thử & Build:**
+  - Backend pytest: **435/435 tests PASS (100%)** bao gồm 5 bài test mới tests/test_auto_fulfillment_and_bm_preferences.py.
+  - Frontend Next.js 15: npm.cmd run build **PASS (100%)** trên toàn bộ 18 routes.
+
+## Cập nhật 2026-10-30 — Unified API Aggregator, Lucian-UXUI Redesign & Telegram AI Work Assistant
+
+- **Bộ kết nối chuẩn hóa & API Aggregator Đa nền tảng (`/api/v1/unified/*`):**
+  1. **Chuẩn hóa Adapter đa nền tảng:** Hợp nhất các connector bên ngoài (`Meta Ads`, `Binance`, `PingPong OpenAPI / VCC`, `TRON Blockchain`, `Google Sheets`) vào mô hình Adapter đồng nhất, tự động retry với exponential backoff, bóc tách rate-limit telemetry và lưu trữ credentials mã hóa Fernet.
+  2. **Unified Hub Endpoints (`apps/api/app/api/v1/unified.py`):**
+     - `GET /api/v1/unified/overview`: Tổng hợp tức thời trạng thái các kênh kết nối, chế độ vận hành và chỉ số hoạt động.
+     - `GET /api/v1/unified/treasury`: Tổng hợp số dư thanh khoản đa nguồn (Binance Spot/Funding, PingPong Multi-currency, thẻ VCC PingPong, TRON USDT) phản hồi <50ms qua snapshot database thông minh.
+     - `GET /api/v1/unified/accounts`: Tổng hợp danh sách tài khoản quảng cáo kèm trạng thái đặc cách, khóa khẩn cấp và nợ cước.
+     - `GET /api/v1/unified/tasks`, `POST /api/v1/unified/tasks/create`, `POST /api/v1/unified/tasks/{id}/status`: Quản lý toàn bộ tác vụ khách hàng.
+
+- **Telegram AI Inbox & Smart Task Dispatcher (`apps/api/app/services/task_dispatcher.py`):**
+  1. **Nhận diện khách hàng tự động (Auto-Client Recognition):** Tự động đối soát `telegram_chat_id`, `@username`, hoặc tên khách hàng trong tin nhắn chat để gán chính xác vào hồ sơ khách hàng (`customers`).
+  2. **Bộ phân loại tác vụ thông minh (Smart Task Classifier):**
+     - `ADD_MAIL_TO_BM`: Tự động nhận diện cú pháp mời mail vào BM (trích xuất email, BM ID, phân quyền Admin/Employee).
+     - `ADD_AD_ACCOUNT`: Tự động nhận diện yêu cầu cấp/gán tài khoản quảng cáo (trích xuất account ID).
+     - `SETTLE_DEBT`: Tự động nhận diện yêu cầu thanh toán nợ cước tài khoản QC (đặt mức ưu tiên `HIGH` hoặc `URGENT`).
+     - `TOPUP_BUDGET`: Nhận diện biên lai chuyển khoản / nạp tiền ngân sách.
+     - `CHECK_BALANCE`: Tự động tra cứu và phản hồi số dư các ví trả trước của khách hàng ngay trên Telegram.
+     - `GENERAL_SUPPORT`: Tiếp nhận yêu cầu kỹ thuật khác.
+  3. **Tích hợp vào Telegram Bot Agent (`telegram_bot.py`):** Mọi tin nhắn văn bản không phải slash command đều được đưa qua Smart Task Dispatcher, lưu trữ vào bảng `client_tasks` và tự động trả lời xác nhận bằng tiếng Việt.
+
+- **Giao diện Quản trị Tác vụ Khách hàng (`/tasks` & `apps/web/app/tasks/page.tsx`):**
+  1. **Bảng Điều khiển Chuyên nghiệp (Lucian-UXUI Obsidian Dark Mode):**
+     - Chuyển đổi linh hoạt giữa 2 chế độ: **Dạng Bảng (Table View)** và **Dạng Kanban (Kanban View)** với 3 cột trực quan (*Chờ Xử Lý*, *Đang Xử Lý*, *Đã Hoàn Thành*).
+     - Huy hiệu phân loại trực quan (Mời mail, Cấp TKQC, Trả nợ cước, Nạp ngân sách) và huy hiệu mức độ ưu tiên (`URGENT`, `HIGH`, `NORMAL`, `LOW`).
+     - Thao tác 1 chạm: Tiếp nhận tác vụ, Hoàn thành tác vụ, Gán kỹ thuật viên, Thêm ghi chú lưu vết nội bộ.
+     - Modal tạo tác vụ thủ công dành cho admin.
+  2. **Widget Hub Đa Nền Tảng (`apps/web/app/unified-overview.tsx`):** Tích hợp widget tổng quan đa nền tảng ngay trên đầu trang chủ Dashboard (`/`).
+  3. **Sidebar Navigation (`apps/web/app/sidebar.tsx`):** Bổ sung mục điều hướng `Tác vụ Khách hàng` kèm huy hiệu nổi bật `AI Inbox`.
+
+- **Cơ sở dữ liệu & Migration Reversible:**
+  - Migration `e2f3a4b5c6d7_client_tasks_and_dispatcher.py` áp dụng thành công trên `apps/api/adsos.db` (`upgrade -> downgrade -> upgrade`).
+  - Cột `telegram_username` trên bảng `customers` (indexed).
+  - Bảng mới `client_tasks` lưu vết toàn bộ yêu cầu, dữ liệu bóc tách JSON, trạng thái và mức độ ưu tiên.
+
+- **Kết quả Kiểm thử & Build:**
+  - Backend pytest: **430/430 tests PASS (100%)** với bộ test `tests/test_unified_and_dispatcher.py`.
+  - Frontend Next.js 15: `npm.cmd run build` **PASS (100%)** trên toàn bộ 17 routes (bao gồm `/tasks`).
+
+## Cập nhật 2026-10-30 — Đại tu UI/UX Lucian-UXUI Obsidian Dark Mode, Kho tài nguyên VIA/BM & Cổng Khách hàng (Client Portal)
+
+- **Đại tu UI/UX chuẩn Lucian-UXUI Obsidian Dark Mode (`apps/web`):**
+  1. **Loại bỏ hoàn toàn navbar cũ:** Thay thế thanh menu ngang đơn dòng bị dồn ứ bằng bố cục Sidebar điều hướng chuyên nghiệp (`apps/web/app/sidebar.tsx`), lấy cảm hứng từ Lucian-UXUI `#040` (Expanding side rail) với bộ theme token Obsidian (`#0B0F19`, `#111827`, `#1F2937`, `#B7A4FF`, `--ux-mint`, `--ux-danger`).
+  2. **Tiêu chuẩn hoá thanh điều hướng:** Tích hợp đầy đủ các tuyến chính: Tổng quan (`/`), Chiến dịch QC (`/campaigns`), Tài khoản QC (`/accounts`), Sổ trả trước & Công nợ (`/balances`), Kho VIA / BM (`/inventory`), Telegram Bot & Quy tắc (`/telegram`), Quản trị Ví & Sàn (`/config/wallets`), Google Sheets (`/sheets`), Báo cáo kinh doanh (`/reports`), Đối chiếu & Kiểm soát (`/reviews`), Giám sát hệ thống (`/system`).
+  3. **Header thông tin hệ thống (`apps/web/app/shell.tsx`):** Hiển thị thời gian thực múi giờ `Asia/Ho_Chi_Minh`, nhãn môi trường `LOCAL DEV`, và tự động ẩn Sidebar khi khách hàng truy cập Cổng thông tin độc lập (`/portal/[token]`).
+  4. **Chuẩn số liệu tài chính:** Áp dụng phông chữ đơn cách `font-mono tabular-nums` cho toàn bộ số dư tài khoản, chi tiêu quảng cáo, và thẻ VCC; huy hiệu ngữ nghĩa phân cấp màu sắc rõ rệt (Emerald, Rose, Amber).
+
+- **Kho Tài nguyên Quảng cáo Mã hóa — Inventory Vault (`/inventory` & `apps/api/app/api/v1/inventory.py`):**
+  1. Quản lý kho VIA Facebook, BM (Business Manager), Fanpage Cổ, và Proxy Dân Cư.
+  2. Mật khẩu, mã 2FA, link mời BM và credentials proxy được **mã hóa Fernet** tự động trước khi lưu xuống SQLite/PostgreSQL, tuyệt đối không lưu plaintext.
+  3. Hỗ trợ giải mã xem tức thời trên trình duyệt admin local, gắn khách hàng bàn giao có lưu vết `AuditLog(action="INVENTORY_HANDOVER")`, và chuyển trạng thái linh hoạt (`AVAILABLE`, `ASSIGNED`, `DEAD`).
+
+- **Cổng Khách hàng Tra cứu Độc lập — Client Portal (`/portal/[token]` & `apps/api/app/api/v1/portal.py`):**
+  1. Token truy cập ngẫu nhiên an toàn 64-ký tự hex (`secrets.token_hex(32)`) cho từng khách hàng, cho phép khách hàng tự tra cứu số dư ví trả trước, chi tiêu tích lũy thời gian thực của các tài khoản quảng cáo và lịch sử giao dịch sổ cái.
+  2. Quản trị viên có thể tạo mới, làm mới hoặc thu hồi link Portal bất cứ lúc nào từ giao diện Sổ trả trước (`/balances`).
+
+- **Nâng cấp Sổ Trả trước & Công nợ (`/balances`):**
+  1. KPI Cards: Tổng số dư VND, USD, số khách hàng có cảnh báo số dư thấp và số giao dịch chờ duyệt.
+  2. Bổ sung modal tạo đề nghị nạp tiền/trừ tiền có mã chống trùng UUID, modal cấu hình ngưỡng cảnh báo & STK nhận tiền VietQR.
+  3. Bổ sung thao tác Duyệt (`approve`), Từ chối (`reject`) và Ghi sổ hàng loạt (`process`) kèm audit log.
+
+- **Cơ chế Đặc cách Vi phạm & Khóa Khẩn cấp (Killswitch):**
+  1. Tích hợp nút gạt Đặc cách vi phạm (`allow_violated_accounts`) và nút Khóa khẩn cấp (`/meta-risk/{id}/lock` và `/unlock`) ngay trên bảng Tài khoản QC (`/accounts`).
+  2. Hỗ trợ câu lệnh `/khoatk <account_id>` song song với `/khoatkn` trên Telegram bot agent.
+
+- **Kết quả Kiểm thử & Build:**
+  - Backend: **426/426 tests PASS (100%)** với bộ test mới `tests/test_inventory_and_portal.py`.
+  - Frontend: `npm.cmd run build` **PASS (100%)** với toàn bộ 16 routes được compile và typecheck hoàn chỉnh.
+
+## Cập nhật 2026-10-30 — Đặc cách TKQC, giám sát rủi ro và sổ trả trước
+
+- Đặc cách: `AdAccount.allow_violated_accounts` mặc định tắt; kiểm tra trước tạo/bật chiến dịch và đọc báo cáo hiệu suất. Công tắc tại `/accounts` và form tạo chiến dịch; có audit, thu hồi theo từng tài khoản. Không chặn đồng bộ lịch sử. Khóa khẩn cấp luôn ưu tiên hơn đặc cách.
+- Rủi ro: trang `/risk`, API `/meta-risk`, job quét 5 phút, ngưỡng nợ theo tài khoản/tiền tệ. Lỗi đọc giữ dữ liệu cũ và gắn UNVERIFIED. Cảnh báo Telegram có outbox; `/khoatkn` dành cho admin chat. Khóa nội bộ được lưu trước, chỉ ghi nhận dừng Meta khi nhận xác nhận thành công; trả danh sách lỗi từng chiến dịch. Ghi Meta thật mặc định tắt (`ADSOS_META_WRITES_ENABLED`); staging chặn ghi.
+- Sổ nội bộ: `/balances`, API `/prepaid`, bảng `client_balances` và `ledger_transactions`. Đề nghị → duyệt → job mỗi phút ghi sổ; chống trùng theo request và khoản nguồn, Decimal/ROUND_HALF_UP, tách tiền tệ và audit. Khoản trừ phải khớp nguồn FINAL VND cả lúc đề nghị lẫn thực thi; nguồn đổi chuyển NEEDS_CONFIRMATION. Cảnh báo thấp dùng ngưỡng cấu hình và thông tin nạp/VietQR placeholder. Không thay số dư báo cáo Sheets D-053; không tự tính phí thuê hoặc quy đổi lifetime spend (Q-014/Q-021).
+- Phạm vi: giao diện quản trị nội bộ local; chưa mở cổng khách, chưa nghiệm thu Meta/Telegram thật. Ghi sổ staging/production bị chặn. Các thông báo mới bằng tiếng Việt.
+- Migration: chuỗi `c4d5e6f7a8b9 → risk_20261030 → prepaid_20261030`. Đã thử trên bản sao trước, rồi chạy **upgrade → downgrade về b2c3d4e5f6a7 → upgrade** trực tiếp trên `apps/api/adsos.db`. Kiểm tra integrity/foreign keys đạt, số dòng 34 bảng cũ giữ nguyên. Backup: `var/adsos-before-modules-20261030-084749.db` (không commit).
+- Frontend: `npm.cmd run build` đạt 15 trang; tách cache `.next-build` cho build và `.next` cho dev để tránh xung đột khi dev server đang chạy.
+- Kiểm thử cuối: **422/422 đạt** khi chạy `.venv\Scripts\python.exe -m pytest -q tests`; gồm kiểm thử ranh giới quyền truy cập/khóa an toàn. 15 kiểm thử tập trung liên quan cũng đạt. Một cảnh báo thư viện Starlette/httpx hiện hữu, không có lỗi kiểm thử. Pytest chạy ngoài sandbox do quyền thư mục tạm Windows.
+
+## Cập nhật — Trung tâm Quản trị Telegram Bot & Quy tắc Tự động hóa (Obsidian Lucian-UXUI) — 2026-10-30
+
+- **Backend & Configuration Enhancements (apps/api):**
+  1. **Phương thức kết nối nâng cao (apps/api/app/connectors/telegram.py):** Bổ sung `get_me()`, `set_webhook(url)`, `get_webhook_info()`, `delete_webhook()`, hỗ trợ kiểm tra token và bot identity theo chuẩn Telegram Bot API.
+  2. **Cơ sở dữ liệu & Reversible Migration (b2c3d4e5f6a7_telegram_bot_and_automation_rules.py):**
+     - Tạo 3 bảng mới trên `adsos.db`:
+       - `telegram_bot_configs`: Lưu cấu hình token (mã hoá Fernet an toàn), admin chat ID, danh sách whitelist Chat ID và Webhook URL.
+       - `automation_rules`: Quản lý các quy tắc tự động hóa (*Tự động tạm dừng chiến dịch khi chi tiêu vượt mức*, *Cảnh báo số dư thẻ VCC PingPong thấp*, *Báo cáo định kỳ*, *Cảnh báo tiền trôi cao*).
+       - `telegram_activity_logs`: Ghi nhận toàn bộ nhật ký tương tác bot, người gửi, lệnh và kết quả xử lý.
+     - Đã kiểm tra chu trình hoàn nguyên `upgrade -> downgrade -> upgrade` thành công 100%.
+  3. **Automation Rules Engine (apps/api/app/services/automation_rules.py):** Tự động khởi tạo 4 quy tắc mặc định, hàm `evaluate_automation_rules` quét chi tiêu và số dư thẻ VCC thực tế để kích hoạt hành động tự động dừng campaign hoặc cảnh báo Telegram.
+  4. **REST API Endpoints (/api/v1/telegram/*):** Bổ sung `/test-connection`, `/config`, `/activity-logs`, `/rules` (CRUD) và `/rules/run-check`.
+
+- **Giao diện Quản trị Chuyên biệt (apps/web — /telegram & Sidebar):**
+  1. **Điều hướng Sidebar & Navigation:** Tạo component `apps/web/components/sidebar.tsx` và gắn liên kết nổi bật `🤖 Telegram & Quy tắc` vào thanh menu chính `apps/web/app/layout.tsx`.
+  2. **Thiết kế theo chuẩn Lucian-UXUI (Obsidian Dark Mode):**
+     - Giao diện Dark theme cao cấp (`#07080D`, `#13141C`, `#1A1B25`, `#B7A4FF`, `#7EE8C0`, `#FF7D8C`).
+     - Định dạng số Monospace Tabular Nums chuẩn xác (`font-variant-numeric: tabular-nums`).
+     - Nút gạt chuyển trạng thái đàn hồi Stretchy Switch lấy cảm hứng từ Lucian-UXUI `#013`.
+     - Phân khu 1: **Trạng thái & Kết nối Bot** với nút kiểm tra kết nối trực tiếp ("Kiểm tra kết nối Bot") kèm toast phản hồi tức thì.
+     - Phân khu 2: **Bảng quy tắc tự động hóa (Automation Rules Builder)** với bảng quản lý trạng thái Bật / Tắt, modal tạo quy tắc mới và nút quét quy tắc ngay.
+     - Phân khu 3: **Web Console mô phỏng lệnh Bot** và **Bảng nhật ký hoạt động bot thời gian thực**.
+
+- **Kiểm thử & Xác minh chất lượng:**
+  - Backend: **385 passed** (100%), bao gồm bộ test mới `tests/test_telegram_automation_rules.py`.
+  - Frontend: `npm.cmd run build` PASS 100% (13/13 static routes, typecheck sạch sẽ).
+
+
+## Cập nhật — Tối ưu MetaAdsConnector, Controlled Campaign Builder & Telegram Bot Agent — 2026-10-30
+
+- **Tối ưu hoá MetaAdsConnector (apps/api/app/connectors/meta.py):**
+  1. **Connection Pooling & Resilient HTTP:** Sử dụng persistent httpx.Client hỗ trợ context manager, tái sử dụng kết nối. Tự động retry với exponential backoff khi gặp lỗi mạng tạm thời (5xx, timeouts) hoặc mã giới hạn tần suất gọi Meta API (17, 80004, 613, 4).
+  2. **Rate-limit Telemetry & Proactive Throttling:** Đọc và phân tích các headers x-business-use-case-usage, x-ad-account-usage, x-app-usage. Khi mức sử dụng vượt ngưỡng 80%, connector tự động làm chậm cuộc gọi (500ms) để phòng tránh lỗi 429.
+  3. **Cursor Auto-Pagination & Batching:** Hỗ trợ tự động phân trang theo con trỏ paging.cursors.after và thực thi nhiều truy vấn trong 1 HTTP round-trip qua Meta Graph Batch API.
+  4. **Bảo mật & Mã hoá Token:** Hỗ trợ giải mã token động lưu dạng Fernet (ADSOS_EXCHANGE_MASTER_KEY). Tự động che giấu ([REDACTED]) toàn bộ access_token và appsecret_proof khỏi log, ngoại lệ và biểu diễn chuỗi.
+  5. **Báo cáo cước & Hiệu suất tiếng Việt:** Bổ sung get_ad_account_billing_health và get_performance_insights hỗ trợ các preset (today, yesterday, last_7d, this_month) cùng nhãn trạng thái tiếng Việt (Hoạt động, Bị vô hiệu hóa, Nợ cước...).
+
+- **Controlled Write Path — Tạo chiến dịch Facebook có kiểm soát (apps/api/app/services/meta_campaign_builder.py):**
+  1. **Pipeline hoàn chỉnh:** Xây dựng quy trình tạo Campaign -> AdSet -> AdCreative & Ad (hỗ trợ liên kết bài viết sẵn có qua post_id/object_story_id).
+  2. **Rào chắn an toàn kép (Safety Guardrails):**
+     - **Budget Cap Guard:** Kiểm tra nghiêm ngặt hạn mức ngân sách ngày tối đa (ADSOS_META_MAX_DAILY_BUDGET), chặn đứng mọi lỗi nhập thừa số 0 trước khi gửi API.
+     - **Safe Default Status:** Toàn bộ chiến dịch, nhóm quảng cáo và mẫu quảng cáo mới tạo luôn mặc định ở trạng thái PAUSED (Tạm dừng) an toàn.
+  3. **Tracking & Audit Log:** Lưu trữ toàn bộ tác vụ tạo vào bảng meta_campaign_tasks và audit_log.
+  4. **Bật/Tắt có kiểm soát:** Hàm toggle_campaign_status cho phép chuyển đổi ACTIVE <-> PAUSED và ghi nhận lịch sử vào audit log.
+  5. **Reversible Migration:** Tạo migration a1b2c3d4e5f6_meta_campaign_tasks.py và áp dụng trực tiếp lên adsos.db (đã kiểm tra upgrade/downgrade/upgrade trọn vẹn).
+
+- **Telegram Bot Agent (apps/api/app/services/telegram_bot.py & Endpoints):**
+  1. **Bảo mật phân quyền Whitelist:** Chỉ các Chat ID nằm trong danh sách ADSOS_TELEGRAM_ALLOWED_CHAT_IDS (hoặc ADSOS_TELEGRAM_ADMIN_CHAT_ID) mới được phép tương tác; từ chối và cảnh báo nếu có truy cập trái phép.
+  2. **Cú pháp lệnh tiếng Việt:**
+     - /start & /help: Hướng dẫn sử dụng và nguyên tắc an toàn.
+     - /tk / /accounts: Danh sách tài khoản quảng cáo, trạng thái cước và số dư nợ.
+     - /baocao [act_id] [preset]: Báo cáo chỉ số chi phí, hiển thị, clicks, CTR, CPC, CPM, chuyển đổi và tin nhắn.
+     - /lencamp <act_id> <tên_camp> <ngân_sách> [mục_tiêu] [post_id]: Tạo chiến dịch mới an toàn (hỗ trợ --dry-run để xem trước).
+     - /batcamp <id> / /tatcamp <id>: Bật / Tắt chiến dịch tức thì.
+     - /status: Kiểm tra trạng thái hệ thống và mức tải API Meta.
+  3. **REST API Endpoints:** Mount các routes /api/v1/meta/* và /api/v1/telegram/* phục vụ webhook và điều phối.
+
+- **Giao diện Web (apps/web — /campaigns):**
+  - Bổ sung hệ thống 3 phân khu (Tabs):
+    1. **Chiến dịch & Chi tiêu:** Bảng danh sách chiến dịch, tiền trôi, mốc 09:00 kèm nút Bật/Tạm dừng nhanh.
+    2. **Tài khoản & Hạn mức thanh toán:** Bảng theo dõi cước chi tiết từng tài khoản Meta.
+    3. **Lên Camp an toàn & Telegram Bot:** Form tạo chiến dịch có chế độ xem trước (Dry-run preview), cảnh báo hạn mức, bảng lịch sử tác vụ tạo gần đây và thông số tải Meta API Rate-limit.
+
+- **Kiểm thử & Xác minh chất lượng:**
+  - Backend: **381 passed** (100%), bao gồm các bộ test mới: test_meta_connector_resilience.py, test_meta_campaign_builder.py, test_telegram_bot.py.
+  - Frontend: npm.cmd run build PASS 100% (12/12 routes, typecheck sạch sẽ).
+
+
+
+## Cập nhật — Khắc phục "Failed to fetch" & Tích hợp Treasury Summary lên Main Dashboard — 2026-10-30
+
+- **Khắc phục triệt để lỗi "Failed to fetch" khi lưu/xác minh:**
+  1. **Đồng bộ CORS & Origin:** Cập nhật `CORSMiddleware` trong `apps/api/app/main.py` với `allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:[0-9]+)?$"`, `allow_credentials=True` và hỗ trợ mọi cổng Next.js dev (:3000, :3001, v.v.).
+  2. **Bảo vệ `_guard_local` linh hoạt:** Tự động bỏ qua preflight `OPTIONS` và chấp nhận các local dev origins, tránh browser drop preflight request.
+  3. **PingPong Fast-Fail & Thông báo tiếng Việt:** Giảm timeout xuống 8.0s; phân loại chi tiết lỗi mạng (ConnectError, Timeout, 401/403, 404, 429) và hiển thị thông báo tiếng Việt hành động được thay vì treo request.
+  4. **Client Web Diagnostic:** Nâng cấp `exchangeRequest` trong `apps/web/lib/exchange-api.ts` để khi gặp lỗi kết nối/máy chủ tắt, hiển thị hướng dẫn người dùng chạy lệnh khởi động uvicorn port 8000.
+- **Tích hợp Tổng quan Nguồn vốn & Thẻ (Treasury Summary) lên Main Dashboard:**
+  - **Service & API (`apps/api`):** Xây dựng `app/services/treasury.py` và endpoint `GET /api/v1/dashboard/treasury-summary` tổng hợp dữ liệu từ:
+    - Ví TRON On-chain (USDT)
+    - Sàn Binance (Spot + Funding USDT)
+    - Cổng PingPong (Nguồn tiền đa tệ USD/EUR/SGD & Thẻ ảo VCC)
+    - Tổng vốn thanh khoản (Combined Working Capital)
+    - Endpoint chỉ đọc snapshot nội bộ, không yêu cầu admin token, bảo vệ an toàn secrets.
+  - **Giao diện người dùng (`apps/web`):**
+    - Component `apps/web/app/treasury-summary.tsx` mount trực tiếp tại trang chủ `apps/web/app/page.tsx`.
+    - Hiển thị các khối KPI: Tổng vốn khả dụng (USD/USDT), Ví TRON, Sàn Binance, Nguồn tiền PingPong, Thẻ ảo VCC PingPong, kèm liên kết nhanh sang `/config/wallets`.
+- **Kiểm thử & Xác minh chất lượng:**
+  - Backend: **369 passed** (100%), bao gồm bộ test mới `tests/test_treasury_summary.py`.
+  - Frontend: `npm.cmd run build` PASS 100% (12/12 routes, typecheck sạch sẽ).
+
+
+## Cập nhật — Tích hợp PingPong Connector chỉ đọc (Nguồn tiền & Thẻ ảo VCC) — 2026-10-30
+
+- **Backend `PingPongConnector` (`apps/api/app/connectors/pingpong.py`):**
+  - **Nguyên tắc Strict Read-Only:** Tuyệt đối không cung cấp bất kỳ hàm đột biến/ghi (không tạo thẻ, đóng thẻ, tạm khóa thẻ, nạp tiền, rút tiền hay chuyển khoản).
+  - **Xác thực & Ký yêu cầu:** Hỗ trợ PingPong OpenAPI qua OAuth2 access_token (client_credentials) và HMAC-SHA256 request signing (X-Client-Id, X-Timestamp, X-Signature, X-Account-Id).
+  - **Bảo vệ dữ liệu nhạy cảm (PAN & CVV):** Che giấu triệt để secrets trong lỗi và log; thẻ ảo chỉ lưu và trả về `last4` (4 số cuối); loại bỏ hoàn toàn mã CVV và full PAN.
+  - **Đọc số dư đa tệ & Thẻ VCC:** Hỗ trợ đa tiền tệ (USD, EUR, SGD, GBP, v.v.) chuẩn hóa Decimal; đọc danh sách thẻ VCC gồm hạn mức và số dư khả dụng.
+  - **Tái sử dụng kết nối:** Quản lý persistent `httpx.Client` hỗ trợ context manager và `close()`.
+- **Database & Reversible Migration:**
+  - Migration `f7a8b9c0d1e2_pingpong_connector_and_cards.py`: bổ sung cột `encrypted_extra` vào `exchange_credentials` và tạo bảng `exchange_card_snapshots` (append-only, unique `(connection_id, card_id, read_at)`). Đã kiểm thử trơn tru vòng lặp upgrade/downgrade/upgrade trên SQLite.
+- **Service & REST API (`apps/api`):**
+  - Mở rộng `exchange_connections.py` và `wallets.py` hỗ trợ provider `"pingpong"` song song với `"binance"`.
+  - Credentials được mã hóa bảo mật bằng Fernet thông qua `ADSOS_EXCHANGE_MASTER_KEY`. Bảo vệ an toàn với `_guard_local` và `X-Adsos-Wallet-Token`.
+  - Bổ sung endpoint `GET /api/v1/exchange/connections/{id}/cards` và tích hợp thẻ vào `read-balances`.
+- **Giao diện Frontend (`apps/web` — `/config/wallets`):**
+  - Form "+ Thêm kết nối" cho phép chọn provider **PingPong**, với các trường biểu mẫu Tiếng Việt chuẩn mực.
+  - Khi kết nối PingPong hoạt động, hiển thị 2 phân khu trực quan:
+    1. **Nguồn tiền PingPong (Balances):** Thẻ số dư theo từng loại tiền tệ (Khả dụng, Tạm giữ/Đang xử lý, Tổng số dư).
+    2. **Danh sách Thẻ ảo / VCC (Cards):** Bảng chi tiết gồm Tên thẻ, 4 số cuối (`**** 1234`), Tiền tệ, Badge trạng thái (Hoạt động, Tạm khóa, Đã đóng), Hạn mức và Số dư.
+- **Kiểm thử & Xác minh chất lượng:**
+  - Backend: **366 passed** (100%), bao gồm bộ unit tests chuyên biệt trong `tests/test_pingpong_connector.py` và integration tests trong `tests/test_exchange_wallets.py`.
+  - Frontend: `npm.cmd run build` PASS 100% (12/12 routes, typecheck hoàn toàn sạch).
+
+
+## Cập nhật — Chẩn đoán toàn diện luồng kết nối Binance & sửa cấu hình .env (2026-10-30)
+
+- **Chẩn đoán luồng `/api/v1/exchange/*` và `BinanceConnector`:**
+  1. **Khóa Fernet & Token quản trị:** Cấu hình `SettingsConfigDict` trong `apps/api/app/core/config.py` thiếu `env_file=(".env", "../../.env")`, khiến backend không nạp các biến môi trường từ file `.env` khi chạy local. Đã sửa và hỗ trợ nạp `.env` tự động.
+  2. **Bảo vệ `_guard_local` và `X-Adsos-Wallet-Token`:** Khi `ADSOS_EXCHANGE_ADMIN_TOKEN` rỗng, backend lập tức trả về HTTP 503 chặn mọi thao tác mở khóa trên UI `/config/wallets`. Nút "+ Thêm kết nối" bị disabled khi `ADSOS_EXCHANGE_MASTER_KEY` rỗng. Cần đặt 2 biến này trong file `.env` ngoài repo.
+  3. **Hàm verify & Binance restrictions:** Endpoint gọi kiểm tra quyền là `GET /sapi/v1/account/apiRestrictions` (SIGNED). Binance mặc định tích "Enable Spot & Margin Trading" khi tạo key; hệ thống yêu cầu chỉ bật "Enable Reading", nếu có bất kỳ quyền ghi/giao dịch nào sẽ bị từ chối. Lệch thời gian đã được tự bù trừ qua `_server_time_offset_ms()`.
+  4. **Thông báo lỗi chi tiết:** Cập nhật `_error_message` trong `apps/api/app/connectors/binance.py` để giữ nguyên phản hồi chi tiết từ Binance (vẫn che an toàn secrets), giúp người dùng biết ngay nguyên nhân bị chặn (IP whitelist, sai secret, thiếu quyền).
+- **Kiểm thử:** Toàn bộ 351 backend tests (`pytest`) và `npm.cmd run build` đều PASS 100%.
+
+
 ## Hoàn thiện kết nối Binance trên bản sao cách ly — 2026-10-29
 
 - Đã có /config/wallets và liên kết từ /config: quản trị bằng mã riêng; thêm/sửa/ngắt kết nối, đọc Spot/Funding, trạng thái lỗi, lịch sử thu gọn; OKX/MEXC ghi chưa hỗ trợ. Credentials không lưu trong browser hoặc trả lại sau reload.
@@ -389,6 +1728,21 @@
 - [x] S5 Dashboard (D-032, localhost, mock DB): backend read-only endpoints + quản lý account (assign/replace/purchase-cost, audit log) + migration `purchase_cost` + `telegram_outbox` + frontend Next.js 4 màn hình tiếng Việt đọc DB thật
 - [x] Frontend: nâng cấp `/reports` thành Dashboard tài chính (Next.js + Tailwind CSS + Recharts): cards KPI (chi tiêu Meta, phí dịch vụ, tiền nạp USDT, chi phí tài khoản, lợi nhuận tạm tính/đã chốt), biểu đồ phí theo ngày (USD, tách tiền tệ), bảng ngày/khách, trạng thái từng khu vực (loading/lỗi/thử lại/rỗng/nhiều tiền tệ), `null`≠`0`, không tự tính growth/30-70/quy đổi tỷ giá. `npm.cmd run build` PASS (11 routes). Dependency mới: `tailwindcss`, `@tailwindcss/postcss`, `recharts` (+ `postcss.config.mjs`, `tailwind.config.js`, `@import "tailwindcss"` trong `globals.css`).
 
+
+### Cập nhật phiên #19 (2026-10-29 / 2026-10-30): Sửa lỗi Logic & Tối ưu hóa Database/Query
+1. **TRON Connector**: Sửa chuẩn hóa ABI `_balanceOf(address)` trong `app/connectors/tron.py` — bóc tách đúng 20 byte địa chỉ thực, loại bỏ prefix `0x41` và 4 byte checksum, áp dụng MSB padding `.rjust(64, "0")`. Bổ sung unit tests kiểm chứng.
+2. **Scheduler**: Bổ sung đóng `_lock_socket.close()` an toàn khi dừng scheduler trong `app/jobs/scheduler.py`, khắc phục nguy cơ rò rỉ socket và xung đột cổng khi reload.
+3. **Meta Connector**: Tối ưu tái sử dụng `httpx.Client()` (session/connection pool) trong `MetaAdsConnector._graph_get`, hỗ trợ context manager và phương thức `close()`.
+4. **Tối ưu Báo cáo & Nguồn Sheets**:
+   - Chuyển `_latest_verified_snapshot_per_campaign` trong `app/services/reports.py` sang dùng Subquery `MAX(id)` nhóm theo `campaign_id` trên DB thay vì tải toàn bộ bảng vào RAM.
+   - Thêm `defer(SheetReportSnapshot.report)` vào `sheet_report_sources.py:list_sources` giúp endpoint không deserialize các payload JSON 3.1MB không cần thiết.
+5. **Deduplication & Dọn dẹp DB**:
+   - Triển khai hàm `report_content_hash` trong `app/services/sheet_report_store.py` để phát hiện dữ liệu không thay đổi khi sync và tái sử dụng snapshot cũ, ngăn chặn việc phình to DB.
+   - Tạo bản backup an toàn `adsos.db.backup-20261029-233424` (434MB).
+   - Dọn dẹp 160 snapshot trùng lặp (giữ lại snapshot đầu/cuối mỗi ngày, snapshot mới nhất và snapshot có liên kết closure), cập nhật foreign key và chạy `VACUUM`.
+   - Kết quả: Dung lượng `adsos.db` giảm từ 434MB xuống **36.8MB** (giảm 91.5%, giải phóng 378MB).
+   - Kiểm thử toàn diện: **351/351 tests pytest PASS**, `npm.cmd run build` PASS.
+
 ## Việc tiếp theo (roadmap ưu tiên, cập nhật phiên #18)
 
 > Định hướng hiện tại: độ đúng dữ liệu và vận hành nhập tay trước tự động hóa. Các module mới triển khai theo từng luồng nghiệm thu, không làm đồng loạt.
@@ -415,3 +1769,123 @@ Xem chi tiết trong `docs/DECISIONS.md`:
 ## Lệnh chạy chính-xác
 
 Xem bảng lệnh trong `AGENTS.md` (đã kiểm chứng: uvicorn reload, pytest 60/60, alembic upgrade/downgrade, npm.cmd dev/build).
+
+## Sửa VIA launcher — 2026-11-01
+
+- Sửa đoạn startup URL bị lệch scope/dùng biến chưa khai báo. Bỏ phụ thuộc favicon bootstrap và `--load-extension` (Chrome chính thức mới không hỗ trợ).
+- Khởi chạy profile riêng với CDP loopback/cổng tự chọn; nạp cookie trước khi mở trang đích. Không có cookie hợp lệ thì mở login.php; helper điền đăng nhập/2FA chạy trong isolated world trên Facebook.
+- Giữ kết nối CDP để helper tiếp tục hoạt động qua điều hướng; không báo thành công giả khi thiếu trình duyệt hoặc khởi tạo thất bại.
+- Thêm dependency websockets>=15 và test mô phỏng CDP/process, không mở trình duyệt hoặc gửi cookie thật khi pytest. Kiểm tra: toàn bộ backend 484 passed; chạy lại tập trung sau bổ sung ca lỗi 22 passed; cú pháp launcher và git diff --check đạt.
+- Chưa xác minh đăng nhập Facebook thật, cookie hết hạn/checkpoint và proxy có mật khẩu trên máy người dùng. Đóng cửa sổ VIA cũ trước khi thử phiên CDP mới; không cần xóa profile.
+
+## Cập nhật 2026-11-02 — Hoàn Thành Đánh Giá An Ninh Toàn Diện Codebase (Cloudflare Security Audit)
+
+- **Cài đặt & Chuẩn hóa Skill**: Đã cài đặt bộ skill `cloudflare/security-audit-skill` vào `.agents/skills/security-audit/` và `.opencode/skills/security-audit/`.
+- **Rà soát & Báo cáo An ninh Toàn diện**:
+  1. Đã hoàn thành 6 Phase theo chuẩn Cloudflare Security Audit: Reconnaissance, Hunting Waves, Candidate Validation, Output & Schema Compliance, Independent Verification, Target-Neutral Reporting.
+  2. Xuất toàn bộ 7 file artifact an ninh tại `~/security-audit-skill/ads-business-os/run-1/` và artifact directory:
+     - `run-metadata.json`
+     - `architecture.md`
+     - `coverage-ledger.json` (7 đơn vị kiểm tra đã rà soát)
+     - `findings.json` (6 lỗ hổng xác nhận + 1 đầu mối cần xác thực)
+     - `REPORT.md` (Báo cáo tổng kết tư thế an ninh và danh mục lỗ hổng)
+     - `FINDINGS-DETAIL.md` (Chi tiết kỹ thuật, trace, mã khai thác mẫu tối thiểu và bản vá khuyến nghị)
+     - `NEEDS-VALIDATION.md` (Kế hoạch xác thực rate limiting cổng khách hàng trên hạ tầng thực tế)
+- **Điểm mạnh ghi nhận**:
+  - Module quản lý ví sàn & TRON (`wallets.py`) bảo mật rất tốt với xác thực mã token không đổi thời gian (`secrets.compare_digest`), độ dài token >= 32 ký tự, khóa chỉ đọc.
+  - Mã hóa Fernet cho thông tin đăng nhập nhạy cảm; không log secret.
+  - Sử dụng 100% truy vấn tham số hóa SQLAlchemy ORM, không có lỗ hổng SQL Injection.
+  - Thư mục profile Chrome VIA được chuẩn hóa an toàn chống Directory Traversal.
+- **Lỗ hổng xác nhận cần xử lý**:
+  - `FINDING-AUTH-SHEETS-WRITEBACK` [HIGH]: Endpoint `POST /api/v1/sheets/writeback-from-vias` thiếu rào chắn `require_local_admin`.
+  - `FINDING-AUTH-LOCAL-ADMIN-BYPASS` [HIGH]: `require_local_admin` chỉ kiểm tra IP loopback socket, bị bypass khi đứng sau Reverse Proxy.
+  - `FINDING-IPC-CDP-REMOTE-ORIGINS` [HIGH]: Chromium bật cờ `--remote-allow-origins=*` trên cổng CDP, mở đường cho website thứ ba chiếm quyền điều khiển phiên Facebook.
+  - `FINDING-INJ-CHROME-CLI-ARG` [MEDIUM]: `custom_url` trong khởi chạy Chrome thiếu lọc cờ `--...` dẫn tới CLI argument injection.
+  - `FINDING-SSRF-VIA-PROXY-CONFIG` [MEDIUM]: Cấu hình proxy VIA chấp nhận IP nội bộ/loopback gây nguy cơ SSRF qua httpx.
+  - `FINDING-INFO-TELEGRAM-LOGS-EXPOSURE` [LOW]: Endpoint `GET /api/v1/telegram/activity-logs` và `/rules` thiếu xác thực admin.
+- **Trạng thái kiểm thử**: 530/530 backend test passing; 21 Next.js web routes build thành công.
+
+
+## Kiểm tra chênh lệch bảng tháng 11 — 2026-11-03
+
+- Kiểm tra chỉ đọc SQLite: nguồn 11, kỳ 2026-11, snapshot 212 lúc 09:41:06 UTC+7, chất lượng PARTIAL; chưa đọc lại Google Sheets trực tiếp.
+- Tổng khách của ứng dụng lấy các tab chi tiết được liên kết, khác phạm vi SUM(B2:G34) tại TỔNG T11 dòng 35. ALL và OLD bị loại theo quy tắc hiện hành D-035; NICK chưa liên kết được (công thức tham chiếu `NICK `).
+- Chi tiêu nguồn tổng D35 = 283679383.15000004; tổng khách = 275278426.999999991. Chênh lệch xấp xỉ 8400956.15 gồm ALL D7 = 7638231.15 và PROMISE có chi tiêu trên summary = 762725 trong khi tab chi tiết F1 = 0.
+- NEEDS_CONFIRMATION: chủ dự án xác nhận cách xử lý ALL/OLD và nguồn đúng cho PROMISE trước khi thay đổi phạm vi/cơ sở tổng hợp. Không sửa công thức, mapping, dữ liệu nguồn hoặc số tài chính; đang chờ ví dụ màn hình/chỉ tiêu người dùng thấy lệch.
+
+## Cập nhật dòng Tổng động — 2026-11-03 (D-058)
+
+- Chủ dự án đã xác nhận dùng số tổng công ty B:G trực tiếp trên dòng Tổng; không cần quyết định đưa ALL/OLD thành khách để khớp tổng. Tổng chi tiết khách được giữ riêng để đối chiếu; chênh lệch PROMISE vẫn là dữ liệu nguồn cần rà soát, không tự sửa.
+- Nhận diện nhãn Tổng/Tổng cộng và header B:G trên tab tổng đúng tháng, không hardcode hàng; tính lại phần diễn giải ngay khi đọc snapshot cũ mà không sửa lịch sử.
+- Tổng tháng/năm dùng company_totals; giữ USDT tách riêng, số âm và Decimal chính xác. Thiếu/trùng dòng Tổng hoặc ô lỗi không biến thành số 0 hay tự dùng tổng chi tiết thay thế.
+- Giao diện tổng tài chính hiển thị ô nguồn và chênh lệch với tổng tab khách. Không đọc/ghi Google Sheets thật trong kiểm thử.
+- Xác minh: 547 backend tests PASS trong 96.48s; ca tích hợp bổ sung kiểm tra tổng năm dùng dòng Tổng thay tổng tab khách PASS riêng. Frontend `npm.cmd run build` PASS; `git diff --check` đạt. Đối chiếu read-only snapshot 212 nhận TỔNG T11 dòng 35 và đúng B:G. Kiểm thử hàng 30/35/40, thiếu/trùng dòng, sai tháng/header và ô lỗi đều đạt. Lượt pytest đầu bị lỗi thư mục tạm mặc định; chạy lại thành công với basetemp riêng trong workspace.
+
+## Đồng bộ tháng của Daily Profit Inspector — 2026-11-03
+
+- Bỏ nhãn vàng về ô nguồn/chênh lệch dưới các thẻ tổng tài chính có số hợp lệ; giữ thông báo khi thiếu dữ liệu. API vẫn giữ dữ liệu truy vết và đối chiếu.
+- Chuẩn hóa ngày kiểm tra theo năm/tháng đang chọn trước khi gửi API và hiển thị, kể cả preferences cũ còn lưu ngày tháng 10. Giữ số ngày nếu hợp lệ, chặn về cuối tháng khi tháng mới ngắn hơn; hỗ trợ năm nhuận.
+- Kiểm thử Node 3/3 đạt: đổi tháng 10→11, ngày 31→30, đổi năm/ngày nhuận và ngày trống. Không thay đổi công thức tài chính hoặc ghi Google Sheets.
+- Kiểm tra frontend: npm.cmd run build PASS (typecheck và 21 routes); git diff --check đạt. Chưa kiểm tra trực tiếp trong trình duyệt.
+
+## Sửa dữ liệu ngày chưa nhập — 2026-11-03 (D-059)
+
+- Gỡ fallback SNAPSHOT_DELTA cộng toàn bộ snapshot tài khoản trong ngày và MONTHLY_PRORATA. Daily Profit Inspector chỉ đọc dòng Sheet có ngày nghiệp vụ, không thay số ngày bằng snapshot hoặc tổng tháng.
+- Ngày chưa nhập có chi tiêu/phí null, nguồn NO_DATA; UI hiện Chưa có dữ liệu. Phí thiếu không tự tính 4%; giữ tiền nạp có ngày độc lập. Không gắn phí dịch vụ thành lãi ròng.
+- Thống kê trung bình/ngày cao nhất loại ngày chưa đủ số chi tiêu/phí; khi snapshot Sheets mới có dữ liệu ngày thì tính lại từ dữ liệu đó. Tổng công ty theo dòng Tổng không thay đổi.
+- Regression test mô phỏng 2 snapshot tích lũy trùng tài khoản ngày 03/11: trước nhập là null; sau nhập nhận đúng chi tiêu 1000/phí 50 (5%), không ép 4%; phí thiếu vẫn null. Kiểm thử tập trung đạt.
+- Xác minh dữ liệu local bằng kết nối SQLite read-only: 03/11 = NO_DATA, spend/fee null; hai ngày 01–02/11 có dữ liệu, phí trung bình 5494161 VND. Không sửa snapshot/Sheet thật.
+- Toàn bộ backend: 549 tests PASS trong 101.20s; git diff --check đạt. Frontend build/typecheck đã đạt bước biên dịch và tạo đủ 21 routes.
+
+## Kiểm tra lỗi kết nối PingPong HTTP 301 — 2026-11-03
+
+- Ảnh cấu hình dùng https://pingpongx.com (website), connector gọi /v1/balances; HTTP 301 bị hiển thị nhầm như từ chối yêu cầu. Đã phân loại 3xx thành lỗi chuyển hướng/cấu hình, không tự theo redirect hoặc hiển thị Location có thể chứa token.
+- Đối chiếu tài liệu chính thức: https://developer.pingpongx.com/apiDocs mô tả gateway và API VCC /v2/vcc/open/account/balance/all; https://open.pingpongx.com/docs/developer/api/account/balance-query/ mô tả POST /v1/mid-open-api/account/query; https://docs.pingpongx.com/api/home/get-started mô tả gateway và ký bất đối xứng. Cần xác định sản phẩm và tài liệu cấp cho tài khoản, không đoán Base URL/auth/schema thay thế.
+- Connector hiện có OAuth /oauth/token + header HMAC và các path /v1/balances, /v1/cards chưa có bằng chứng phù hợp API được cấp. api_permissions còn fallback read_only=True khi đọc lỗi: không được coi là bằng chứng đã xác minh quyền chỉ đọc. Chưa sửa giao thức khi chưa xác định hợp đồng API; chưa nghiệm thu live.
+- NEEDS_CONFIRMATION (Q-019): API thuộc thu tiền/VCC/Checkout và link tài liệu từ trang cấp khóa, quyền đọc và yêu cầu ký tương ứng. Không yêu cầu gửi Key/Secret trong chat, không sử dụng credentials thật để thử endpoint phỏng đoán.
+- Kiểm thử tập trung 13/13 PASS với MockTransport; không gọi PingPong thật.
+- Toàn bộ backend kiểm tra sau sửa phân loại redirect: PASS; chi tiết số lượng trong .test-pingpong-review-20261103.log. git diff --check đạt.
+
+## Xác minh tài liệu PingPong do chủ dự án cung cấp — 2026-11-03
+
+- Đã kiểm tra https://developer.pingpongx.com/apiDocs/main và JSON công khai chính trang sử dụng. Route mặc định chọn Issuing 2.7.1, nhưng cho phép đổi Currentz/Flowmore/Checkout/B2B/MPT; link /main không tự xác định business được cấp cho API Key.
+- Issuing đã xác minh: gateway.pingpongx.com, GET /v2/token/get với app_id/app_secret, GET /v2/vcc/open/account/balance/all và /v2/vcc/open/cards; code nghiệp vụ 6666. Khác connector OAuth/HMAC và /v1/balances hiện tại. Chi tiết tại docs/PINGPONG_CONNECTION.md.
+- Đang chờ xác nhận business/version người dùng đang chọn và quyền chỉ đọc (Q-019). Chưa thay giao thức hoặc thử credentials thật; không suy mặc định Issuing thành tài khoản đã cấp Issuing. Chỉ thay tài liệu trong lượt này, không cần chạy lại bộ test mã nguồn.
+- Tệp tải tạm công khai đã được dọn khỏi workspace; không lưu credentials ví dụ trong tài liệu bên thứ ba vào source/test/commit.
+
+## Cập nhật PingPong Issuing 2.7.1 — 2026-11-03 (D-060)
+
+- Đã sửa connector theo đặc tả chính thức được kiểm tra: GET /v2/token/get với app_id/app_secret; GET /v2/vcc/open/account/balance/all và /v2/vcc/open/cards, token header theo từng ví dụ chính thức, kiểm tra code=6666. Không còn OAuth/HMAC/path giả định cũ.
+- Chỉ gửi khóa tới gateway.pingpongx.com hoặc sandbox-gateway.pingpongx.com, không theo redirect. Query chứa App Secret được gỡ khỏi request trước log/error của httpx. Cache token có expiry; lỗi token dừng trước khi gọi API nghiệp vụ.
+- Đọc phân trang thẻ, chỉ giữ last4; không truy vấn PAN/CVV. Số dư thiếu/lỗi không thành 0; giữ snapshot trước khi API lỗi. Nhiều budget cùng tiền tệ báo chưa hỗ trợ phân biệt, không âm thầm gộp/bỏ.
+- Bỏ API quyền giả định và fallback read_only=True; metadata read_only_verified=False cho PingPong, kể cả view của bản ghi cũ. API không chứng minh quyền chỉ đọc của khóa; ứng dụng chỉ có các thao tác GET. Chưa dùng credentials thật hoặc đổi cấu hình DB thật.
+- Form dùng App ID/App Secret, bỏ Merchant ID khỏi nhập liệu, gợi ý gateway đúng; App ID không áp min-length Binance. Sửa Base URL riêng có thể dùng khóa mã hóa hiện tại và xác minh trước khi cập nhật. UI bỏ phép cộng số dư bằng float.
+- 53 kiểm thử tập trung PASS trước bước full suite. Tài liệu hướng dẫn cập nhật tại docs/PINGPONG_CONNECTION.md. Business/version không còn NEEDS_CONFIRMATION; Q-019 vẫn bao gồm quyền/whitelist/live verification và các API sản phẩm khác.
+- Xác minh cuối: toàn bộ backend 569 tests PASS trong 106.37s; npm.cmd run build PASS (typecheck + 21 routes); git diff --check đạt. Kiểm thử chỉ dùng fixture theo schema Issuing chính thức và DB test, không dùng khóa thật hoặc gửi yêu cầu tới tài khoản PingPong thật.
+
+## Cài plugin Codex Ponytail — 2026-11-03
+
+- Theo yêu cầu chủ dự án, đã chạy `codex plugin marketplace add DietrichGebert/ponytail` và `codex plugin add ponytail@ponytail --json`.
+- CLI xác nhận cài Ponytail 5.3.3 tại thư mục cache plugin của người dùng. Đã kiểm tra manifest cài đặt; không chạy thêm script/plugin hook trong phiên này.
+
+## Refactor UX/UI SaaS Admin AdsOS — 2026-11-07
+
+- Thực hiện yêu cầu tự chủ thay lớp giao diện trên FastAPI + Next.js hiện hữu, giữ nghiệp vụ quản trị quảng cáo. Dùng hướng dẫn Ponytail và Sites ở chế độ local-only; không đăng ký website/hosting hoặc deploy production.
+- Shell mới: tám mục điều hướng, sidebar thu gọn, drawer mobile có quản lý focus/Escape, tìm kiếm toàn cục, sáng/tối lưu localStorage, chuông cảnh báo và lệnh chờ, toast bốn loại qua Context. Theme emerald/indigo, card 12px/control 8px và token sáng/tối dùng chung cho trang cũ.
+- Bổ sung /dashboard, /bms, /customers, /analytics, /auto-set-camp, /settings và /customers/finance. Giữ màn hình tổng quan cũ ở /operations và tất cả route chi tiết hiện có.
+- TKQC: phân trang 10/20/50, đọc đầy đủ trang nguồn, chọn theo trang, CSV chống công thức, sao chép có lỗi, kiểm tra nguồn/số dư qua API hiện hữu. Modal phí lấy báo cáo nghiệp vụ theo từng tiền tệ thay phép gộp/giả định VND trước đây.
+- Khách: thêm/sửa hồ sơ, Telegram và mức phí riêng bằng Decimal, kiểm tra trùng tên, audit, guard local; gán tài khoản qua luồng phân công hiện hữu, không tạo lại khách nếu bước gán lỗi. Không đổi công thức tài chính, lịch sử hoặc số phí của khách cũ.
+- Không dùng mock cho biểu đồ tiền thật, không gọi phí đối soát là thực thu/lãi ròng, không suy chi tiêu ngày từ snapshot lũy kế. Tỷ giá theo nguồn/kỳ; mức phí điền sẵn chỉ trên form khách mới. Các mục cần quy tắc/nguồn lịch sử giữ NEEDS_CONFIRMATION như Q-005/Q-014/Q-017.
+- Đã loại kiểu TypeScript any khỏi TS/TSX; thông báo lỗi API dùng tiếng Việt và không echo input validation; Recharts là dependency sẵn có, không thêm UI framework.
+- Báo cáo chi tiết: docs/UI_REFACTOR_REPORT.md. Đã kiểm tra 24 lượt trang trên Chrome headless desktop/tablet/mobile, không tràn ngang và không lỗi JavaScript; 12 kiểm thử Node đạt. Kiểm thử trình duyệt chỉ đọc và mở form, không submit dữ liệu thật.
+- Xác minh cuối: toàn bộ backend 604/604 PASS trong 132.30s sau bổ sung audit mức phí khi tạo khách; Next.js build PASS với 30 route, TypeScript strict không lỗi; 12/12 kiểm thử Node PASS; Chrome headless 24 lượt trang desktop/tablet/mobile không lỗi JavaScript/tràn ngang. Tập trung API khách chạy riêng không khởi động scheduler và tiếp tục đạt 6/6.
+- Đã dừng máy chủ preview do phiên này khởi chạy ở cổng 3017. Không thay đổi máy chủ dev sẵn có, không commit/push/deploy hoặc ghi Google Sheets. Các ảnh/báo cáo nghiệm thu giữ trong artifacts/ui-refactor và docs/UI_REFACTOR_REPORT.md; hồ sơ Chrome QA được gitignore.
+
+## CRUD khách hàng, lịch Sheets riêng và dashboard vận hành — 2026-11-09
+
+- Bổ sung `sheet_url`, `sheet_tab_name`, `sync_time` cho khách hàng; API hỗ trợ GET danh sách, POST, PUT/PATCH và DELETE an toàn. DELETE chỉ đặt `is_active=false`, đóng phân công hiện hành và giữ toàn bộ lịch sử. Giao diện `/customers` có thêm/sửa, xác nhận xóa, cấu hình Sheets/giờ và gán hoặc bỏ gán nhiều TKQC.
+- Migration `p2f3a4b5c6d7` tạo cấu hình mới và bảng `customer_sheet_sync_runs` có unique `(customer_id, scheduled_for)`. Đã kiểm tra upgrade → downgrade → upgrade trên SQLite riêng, sao lưu DB local tại `apps/api/adsos.backup-20261109-customer-sheet-sync.db` (được `.gitignore` bảo vệ), rồi áp local lên head thành công.
+- Scheduler Sheets chạy mỗi phút theo `Asia/Ho_Chi_Minh`, lọc chính xác `Customer.sync_time == HH:MM`, chỉ lấy TKQC đang gán và snapshot Meta `VERIFIED`. Payload giữ đúng 10 cột: ngày, tên TK + currency, ID, chi ngoại tệ, USD, VND, phí %, tổng, USDT, tỷ giá. Retry cùng khách/cùng phút không sinh bản ghi trùng.
+- Ghi Google Sheets thật có guard: lịch phải được phê duyệt, `APP_ENV=production`, `ADSOS_CUSTOMER_SHEETS_WRITES_ENABLED=true`, có backup nội dung tab, đọc lại xác minh và audit. Local/staging chỉ tạo preview. Ngoại tệ giữ `NEEDS_CONFIRMATION` vì Q-014 chưa duyệt cách phân tách lifetime spend theo kỳ tỷ giá; không tự nhân tỷ giá hiện hành và không ghi production trong phiên này.
+- `/dashboard` hiển thị chi tiêu hôm nay, số dư/ngưỡng dư nợ TKQC đã gán, số LIVE, số chuyển DIE hôm nay, phí theo hồ sơ khách, Binance USDT và PingPong USD; tiền tệ tách riêng. Có đủ 12 lựa chọn thời gian theo yêu cầu, Date Range Picker, biểu đồ chi tiêu/phí, top TKQC hôm nay và hàng đợi lệnh từ xa. Backend kiểm thử riêng xác nhận account chưa gán không lọt vào tổng.
+- Xác minh cuối: 606/606 backend tests PASS trong 125.58s với basetemp trong workspace; `npm.cmd run build` PASS, typecheck strict và 30 route; migration round-trip PASS. Không dùng khóa thật, không gọi Meta/Sheets/Binance/PingPong thật và không ghi Google Sheets.

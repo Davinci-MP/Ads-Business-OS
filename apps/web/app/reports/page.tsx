@@ -289,15 +289,15 @@ function ChartCard({
             <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#66707d" }} />
             <YAxis tickFormatter={(value) => fmt(value, currency)} tick={{ fontSize: 11, fill: "#66707d" }} />
             <Tooltip
-              content={({ active, payload, label }: any) => {
+              content={({ active, payload, label }) => {
                 if (!active || !payload?.length) return null;
                 return (
                   <div className="rounded-lg border border-slate-200 bg-white p-3 text-xs shadow-lg">
                     <div className="font-semibold text-slate-700 mb-2">{label}</div>
-                    {payload.map((item: any) => (
-                      <div key={item.dataKey} className="flex justify-between gap-5">
+                    {payload.map((item) => (
+                      <div key={String(item.dataKey)} className="flex justify-between gap-5">
                         <span className="text-slate-500">{item.name}</span>
-                        <span className="font-semibold text-slate-900">{fmt(item.value, currency)}</span>
+                        <span className="font-semibold text-slate-900">{fmt(typeof item.value === "number" ? item.value : null, currency)}</span>
                       </div>
                     ))}
                   </div>
@@ -548,8 +548,7 @@ export default function ReportsPage() {
   const systemMock = metaColumn?.meta_source_label === "MOCK_DATA";
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+    <div className="w-full space-y-6">
       {/* Header */}
       <div className="mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -919,7 +918,6 @@ export default function ReportsPage() {
       </>
       )}
       <WalletBalanceCard />
-      </div>
-    </main>
+    </div>
   );
 }

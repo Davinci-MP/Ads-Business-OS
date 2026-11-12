@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { fetchJson } from "../../../lib/api";
+import { fetchJson, ClientBMPreference } from "../../../lib/api";
 import CustomerSheets from "../../customer-sheets";
 import CustomerYearSummary from "../../customer-year-summary";
+import ClientBMPreferenceModal from "../../../components/client-bm-preference-modal";
 
 type CustomerReport = {
   customer: { id: number; name: string; fee_rate: string; recon_mode: string; profit_share_enabled: boolean };
@@ -32,7 +33,15 @@ export default function CustomerDetailPage() {
   const params = useParams<{ id: string }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const [report, setReport] = useState<CustomerReport | null>(null);
+  const [bmPref, setBmPref] = useState<ClientBMPreference | null>(null);
+  const [showBmModal, setShowBmModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const loadBmPref = (customerId: string) => {
+    fetchJson<ClientBMPreference>(`/clients/${customerId}/bm-preferences`)
+      .then((data) => setBmPref(data))
+      .catch(() => {});
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -42,23 +51,25 @@ export default function CustomerDetailPage() {
         else setReport(data);
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
+
+    loadBmPref(id);
   }, [id]);
 
   if (error) {
     return (
-      <main style={{ padding: 24 }}>
+      <div className="w-full space-y-4">
         <p style={{ color: "crimson" }}>Lỗi: {error}</p>
         <Link href="/reports">← Về báo cáo</Link>
-      </main>
+      </div>
     );
   }
   if (!report) {
-    return <main style={{ padding: 24 }}>Đang tải…</main>;
+    return <div className="w-full space-y-4">Đang tải…</div>;
   }
 
   const c = report.customer;
   return (
-    <main style={{ padding: 24 }}>
+    <div className="w-full space-y-6">
       <p>
         <Link href="/reports">← Báo cáo</Link>
       </p>
@@ -72,6 +83,49 @@ export default function CustomerDetailPage() {
       <p style={{ color: "#666" }}>
         Nguồn số Meta: {report.meta_source_label} · {report.fee_note}
       </p>
+
+      <div style={{ background: "#111827", border: "1px solid #1F2937", borderRadius: 12, padding: 16, margin: "16px 0", color: "#f3f4f6" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 18 }}></span>
+            <strong style={{ fontSize: 15, color: "#fff" }}>Phân Quyền Multi-BM &amp; Bộ Nhớ Định Tuyến</strong>
+            {bmPref?.is_configured ? (
+              <span style={{ fontSize: 11, background: "rgba(16, 185, 129, 0.2)", color: "#34d399", padding: "2px 8px", borderRadius: 999, border: "1px solid rgba(16, 185, 129, 0.3)" }}>
+                 Đã ghi nhớ
+              </span>
+            ) : (
+              <span style={{ fontSize: 11, background: "rgba(245, 158, 11, 0.2)", color: "#fbbf24", padding: "2px 8px", borderRadius: 999, border: "1px solid rgba(245, 158, 11, 0.3)" }}>
+                Chưa thiết lập
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowBmModal(true)}
+            style={{ background: "#9333ea", color: "#fff", border: "none", padding: "6px 14px", borderRadius: 8, cursor: "pointer", fontSize: 12, fontWeight: 600 }}
+          >
+             Chỉnh Sửa Phân Quyền (1-Click)
+          </button>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, fontSize: 12, background: "#1A2234", padding: 12, borderRadius: 8 }}>
+          <div>
+            <span style={{ color: "#9ca3af", display: "block", fontSize: 11 }}>BM Chỉ Định:</span>
+            <strong style={{ color: "#c084fc", fontSize: 13 }}>{bmPref?.bm_full_name || bmPref?.bm_name || "BM 1 (Mặc định)"}</strong>
+          </div>
+          <div>
+            <span style={{ color: "#9ca3af", display: "block", fontSize: 11 }}>Vai Trò BM:</span>
+            <strong style={{ color: "#60a5fa", fontSize: 13 }}>{bmPref?.bm_role_label || "Nhân viên (EMPLOYEE)"}</strong>
+          </div>
+          <div>
+            <span style={{ color: "#9ca3af", display: "block", fontSize: 11 }}>Quyền Hạn TKQC:</span>
+            <strong style={{ color: "#34d399", fontSize: 13 }}>{bmPref?.ad_account_access_label || "Truy cập đầy đủ (FULL)"}</strong>
+            {bmPref?.ad_account_access_type === "PARTIAL" && bmPref?.partial_permissions_labels && (
+              <div style={{ color: "#9ca3af", fontSize: 10, marginTop: 2 }}>{bmPref.partial_permissions_labels.join(", ")}</div>
+            )}
+          </div>
+        </div>
+      </div>
 
       <h2>Xếp lịch sử ad account</h2>
       <table style={{ borderCollapse: "collapse", marginBottom: 16 }}>
@@ -205,8 +259,8 @@ export default function CustomerDetailPage() {
               <td style={cell}>
                 {row.total_sheet ?? "—"}
                 <div style={{ fontSize: 12 }}>
-                  {row.baseline_confirmed ? "mapping CONFIRMED ✓" : "preview chưa chốt ✗"} ·{" "}
-                  {row.campaign_set_complete ? "đủ tập campaign ✓" : "chưa xác nhận tập ✗"}
+                  {row.baseline_confirmed ? "mapping CONFIRMED " : "preview chưa chốt "} ·{" "}
+                  {row.campaign_set_complete ? "đủ tập campaign " : "chưa xác nhận tập "}
                 </div>
               </td>
               <td style={cell}>{row.delta_account_day ?? "—"}</td>
@@ -224,6 +278,16 @@ export default function CustomerDetailPage() {
           ))}
         </tbody>
       </table>
-    </main>
+
+      {showBmModal && id && (
+        <ClientBMPreferenceModal
+          clientId={Number(id)}
+          clientName={c.name}
+          isOpen={showBmModal}
+          onClose={() => setShowBmModal(false)}
+          onSaved={() => loadBmPref(id)}
+        />
+      )}
+    </div>
   );
 }

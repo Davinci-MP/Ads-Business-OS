@@ -48,6 +48,13 @@ class ClosureCreate(BaseModel):
     acknowledge_partial: bool = False
 
 
+class SheetWritebackRequest(BaseModel):
+    report_date: str = Field(..., description="Ngày báo cáo (YYYY-MM-DD hoặc DD/MM/YYYY)")
+    client_ids: Optional[list[int]] = Field(None, description="Danh sách ID khách hàng (mặc định tất cả)")
+    dry_run: bool = Field(True, description="Chế độ xem trước (không sửa dữ liệu)")
+    auto_create_borders: bool = Field(True, description="Tự động kẻ viền và công thức")
+
+
 class CustomerLinkCreate(BaseModel):
     sheet_id: int
     customer_id: int
@@ -111,10 +118,10 @@ def _snapshot(item: SheetReportSnapshot | None, include_report: bool = False) ->
     return result
 
 
-def _serialize(session: Session, source: SheetReportSource) -> dict:
+def _serialize(session: Session, source: SheetReportSource, defer_report: bool = False) -> dict:
     last = session.scalar(select(SheetReportSyncAttempt).where(
         SheetReportSyncAttempt.source_id == source.id).order_by(SheetReportSyncAttempt.id.desc()).limit(1))
-    snapshot = latest_snapshot(session, source.id)
+    snapshot = latest_snapshot(session, source.id, defer_report=defer_report)
     closure = session.scalar(select(SheetReportClosure).where(SheetReportClosure.source_id == source.id))
     settings = session.get(SheetReportSettings, 1)
     return {
@@ -131,7 +138,7 @@ def _serialize(session: Session, source: SheetReportSource) -> dict:
 def list_sources(db: Session = Depends(get_db)) -> dict:
     items = db.scalars(select(SheetReportSource).order_by(
         SheetReportSource.period.desc(), SheetReportSource.id.desc())).all()
-    return {"sources": [_serialize(db, item) for item in items],
+    return {"sources": [_serialize(db, item, defer_report=True) for item in items],
             "scheduler_enabled": settings.sheets_scheduler_enabled,
             "scheduler": scheduler_status(),
             "schedule": "15 phút khi backend đang chạy"}
@@ -141,9 +148,12 @@ def list_sources(db: Session = Depends(get_db)) -> dict:
 def year_summary(
     year: int = Query(ge=1, le=9999),
     basis: str = Query("current", pattern=r"^(current|closed)$"),
+    scope: str = Query("month", pattern=r"^(month|year|day)$"),
+    month: Optional[str] = Query(None, pattern=r"^(0[1-9]|1[0-2])$"),
+    date: Optional[str] = Query(None, pattern=r"^\d{4}-\d{2}-\d{2}$"),
     db: Session = Depends(get_db),
 ) -> dict:
-    return build_year_summary(db, year, basis=basis)
+    return build_year_summary(db, year, basis=basis, scope=scope, month=month, date=date)
 
 
 @router.get("/customer-year-summary")
@@ -400,3 +410,22 @@ def rollover(source_id: int, previous_source_id: int = Query(...), db: Session =
             "unlinked_previous": unlinked(old_snapshot, previous_source_id),
             "unlinked_current": unlinked(new_snapshot, source_id),
             "customers": compare_rollover(db, previous_source_id, source_id)}
+
+
+@router.post("/writeback-from-vias")
+def writeback_from_vias_sources(
+    body: SheetWritebackRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    from app.services.sheet_writer import writeback_reporting_rows_to_sheets
+    try:
+        return writeback_reporting_rows_to_sheets(
+            session=db,
+            report_date_str=body.report_date,
+            client_ids=body.client_ids,
+            dry_run=body.dry_run,
+            auto_create_borders=body.auto_create_borders,
+        )
+    except Exception as exc:
+        raise HTTPException(400, str(exc)) from exc
+

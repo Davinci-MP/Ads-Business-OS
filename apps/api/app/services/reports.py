@@ -22,7 +22,7 @@ from datetime import date, datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -73,15 +73,16 @@ def _meta_source_label() -> str:
 
 def _latest_verified_snapshot_per_campaign(db: Session) -> dict[int, SpendSnapshot]:
     """Snapshot VERIFIED mới nhất mỗi campaign (không cộng trùng checkpoint)."""
-    snapshots = db.execute(
-        select(SpendSnapshot)
+    subq = (
+        select(func.max(SpendSnapshot.id))
         .where(SpendSnapshot.data_status == DATA_VERIFIED)
-        .order_by(SpendSnapshot.snapshot_at.asc())
+        .group_by(SpendSnapshot.campaign_id)
+        .scalar_subquery()
+    )
+    snapshots = db.execute(
+        select(SpendSnapshot).where(SpendSnapshot.id.in_(subq))
     ).scalars().all()
-    latest: dict[int, SpendSnapshot] = {}
-    for snapshot in snapshots:
-        latest[snapshot.campaign_id] = snapshot  # snapshot_at asc → cứ ghi đè, kết quả là mới nhất
-    return latest
+    return {snapshot.campaign_id: snapshot for snapshot in snapshots}
 
 
 def daily_spend_rows(

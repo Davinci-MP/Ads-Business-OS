@@ -40,7 +40,7 @@ ads-business-os/
 ## 2. Backend — FastAPI
 
 - **Connectors** (`connectors/`): mỗi integration một module có interface tiếp xúc ngoài.
-  - `meta.py` — Meta Marketing API (campaigns, insights).
+  - `meta.py` — Meta Marketing API chỉ đọc ở backend (campaigns, insights); thao tác ghi campaign được xếp DB để Chrome Extension thực thi theo D-064.
   - `sheets.py` — Google Sheets API v4 (S6: chỉ đọc cấu trúc/giá trị ô, preview theo sheetId và mapping theo D-024/D-028; KHÔNG có method ghi; ghi có kiểm soát ở giai đoạn sau sau phê duyệt).
   - `telegram.py` — Telegram Bot API.
   - `tron.py` — TRON API (ví chung USDT TRC20).
@@ -64,6 +64,7 @@ ads-business-os/
 | `exchange_rates` | Bảng tỷ giá config (USDT/VND, thanh toán) |
 | `sheet_mappings` | Mapping cấu trúc Google Sheets (sheet/cột → vai trò đối soát) — S6, module chỉ đọc (D-024/D-028); không đụng bảng thật |
 | `approvals` / `audit_log` | Phê duyệt + lịch sử audit cho mọi ghi tài chính |
+| `remote_via_commands` | Hàng đợi lệnh campaign cho Extension: PENDING → PROCESSING → COMPLETED/FAILED/CANCELLED; ID công khai UUID, payload và nhật ký kết quả |
 
 Tất cả bảng số mang **unique key chống ghi trùng** và **append-only** cho snapshot/flow (không update đè; ghi mốc mới).
 
@@ -74,6 +75,8 @@ Meta Marketing API ──┐                                     ┌─→ Postg
 Google Sheets ───────┼──→  apps/api (jobs + REST) ─────────┤
 Telegram Bot ────────┤                                     └─→ apps/web (Dashboard)
 TRON API (ví chung) ─┘
+
+Telegram `/setcamp` → xác thực khách/TKQC → `remote_via_commands` → Chrome Extension → Meta Graph API v26 (`PAUSED`) → báo kết quả + Telegram
 ```
 
 - Sync job chạy hằng giờ; checkpoint 09:00 giờ Việt Nam.
@@ -96,17 +99,25 @@ TRON API (ví chung) ─┘
 
 - Secrets chỉ qua biến môi trường; `.env` nằm trong `.gitignore`.
 - Google Sheets: dùng **service account** có quyền tối thiểu (reader cho staging; editor chỉ sau phê duyệt).
-- Meta: token trong env; phạm vi quyền cần cho phép `ads_read`.
+- Meta: token connector chung trong env; token OAuth riêng VIA được mã hóa Fernet trong DB theo D-063. Backend chỉ đọc; token không ghi log hoặc trả về frontend.
 - TRON: địa chỉ ví trong config DB, key ký giao dịch (nếu có) phải nằm ngoài repo.
 - Telegram: `TELEGRAM_BOT_TOKEN` từ env; webhook secret verify.
 
 ## 7. Khôi phục / Backup
+
+- VIA không tự trích token/cookie qua CDP, DOM hoặc headless browser. Cấp quyền dùng OAuth chính thức; Chrome Extension chỉ dùng token đã cấu hình để xử lý hàng đợi được cấp quyền.
 
 - DB: `pg_dump` định kỳ (job); trước mỗi migration có backup.
 - Mọi job ghi Sheets có backup dữ liệu cũ trước ghi.
 - Quy trình khôi phục được hướng dẫn từng bước trong `DEVELOPMENT_RULES.md` khi code đã có.
 
 ## 8. Định hướng kiến trúc sản phẩm — đề xuất, chưa triển khai
+
+### Phạm vi được yêu cầu ngày 2026-10-30
+
+- Đặc cách vi phạm lưu riêng theo TKQC, mặc định tắt, có audit; không làm thay đổi trạng thái Meta hoặc bỏ qua khóa khẩn cấp.
+- Giám sát rủi ro lưu kết quả kiểm tra và lỗi riêng, dùng Telegram outbox để gửi lại; không ghi trạng thái đã dừng Meta trước khi Extension báo thành công. Lệnh dừng được xếp vào `remote_via_commands`, backend không gọi Meta write API.
+- Sổ trả trước nội bộ giữ số dư theo khách và tiền tệ, giao dịch có khóa chống trùng và phê duyệt trước khi thực thi. Tách khỏi số dư báo cáo nguồn Sheets (D-053); không tự sinh tỷ giá, phí thuê hoặc phân đoạn lifetime spend chưa duyệt. Job chỉ xử lý khoản đã đủ điều kiện phê duyệt.
 
 Ưu tiên luồng nhập thủ công và đối chiếu trước khi tự động hóa. Các nội dung dưới đây mô tả ranh giới nghiệp vụ dự kiến; chưa phải thiết kế schema/API đã chốt và không được triển khai đồng loạt.
 

@@ -1021,6 +1021,67 @@ def _currency_from_cell(cell: dict[str, Any], header: str, account_currency: str
     return None
 
 
+def _company_summary_totals(report: dict[str, Any], period: str | None) -> dict[str, Any]:
+    """Read the labelled company total, never infer a row number or recalculate it."""
+    candidates = []
+    for tab in report.get("summary_tabs") or []:
+        # A workbook can contain several monthly summary tabs.
+        title_month = re.search(r"\bt\s*(\d{1,2})(?!\d)", _norm(tab.get("title")))
+        if period and title_month and int(title_month[1]) != int(period[-2:]):
+            continue
+        rows = tab.get("rows") or []
+        headers = next((r for r in rows if r.get("summary_row") == tab.get("header_row")), {})
+        cells = _source_cells(headers)
+        if not (
+            _norm(cells.get("B", {}).get("value")) in {"đa bank", "da bank", "đã bank"}
+            and _norm(cells.get("D", {}).get("value")) == "run"
+            and _norm(cells.get("E", {}).get("value")) == "phi"
+            and _norm(cells.get("F", {}).get("value")) == "tong"
+            and _norm(cells.get("G", {}).get("value")) == "con"
+        ):
+            continue
+        for row in rows:
+            if _norm(row.get("customer_label")) in {"tong", "tong cong"}:
+                candidates.append((tab, row))
+    selected = candidates[0] if len(candidates) == 1 else None
+    metrics = {}
+    for field, column in {
+        "budget_deposits_vnd": "B", "opening_balance": "C", "spend_vnd": "D",
+        "fee": "E", "billing_total": "F", "current_balance": "G",
+    }.items():
+        cell = _source_cells(selected[1]).get(column, {}) if selected else {}
+        amount = _decimal(cell.get("value"))
+        if amount is not None and not amount.is_finite():
+            amount = None
+        source = f"{selected[0]['title']}!{cell['address']}" if selected and cell.get("address") else None
+        detail = report["all_customer_totals"]["metrics"][field]
+        detail_amount = _decimal(detail.get("value"))
+        metrics[field] = {
+            "value": _decimal_text(amount) if amount is not None else None,
+            "status": "COMPLETE" if amount is not None else "PARTIAL",
+            "basis": "SUMMARY_ROW", "source": source, "formula": cell.get("formula"),
+            "complete_customers": detail["complete_customers"],
+            "total_customers": detail["total_customers"],
+            "missing_customers": detail["missing_customers"],
+            "contributions": [{"customer": selected[0]["title"], "source": source,
+                               "value": _decimal_text(amount)}] if amount is not None else [],
+            "detail_value": detail.get("value"),
+            "difference": _decimal_text(exact_decimal_sum([amount, -detail_amount]))
+            if amount is not None and detail_amount is not None else None,
+            "detail_status": detail["status"],
+        }
+    # USDT remains a separate currency, read from validated customer receipts.
+    for field in ("usdt_received", "usdt_refunded", "usdt_net"):
+        metrics[field] = report["all_customer_totals"]["metrics"][field]
+    return {
+        "period": period, "metrics": metrics,
+        "status": "READY" if selected else "NEEDS_CONFIRMATION",
+        "reason": None if selected else ("MULTIPLE_TOTAL_ROWS" if candidates else "TOTAL_ROW_NOT_FOUND"),
+        "source_sheet": selected[0]["title"] if selected else None,
+        "source_row": selected[1]["summary_row"] if selected else None,
+    }
+
+
 def enrich_sheets_report(
     report: dict[str, Any], source_period: str | None, workbook_key: str | None = None,
 ) -> dict[str, Any]:
@@ -1152,6 +1213,7 @@ def enrich_sheets_report(
         "status": "PARTIAL" if usdt_missing or not customers else "COMPLETE",
     }
     report["all_customer_totals"] = {"period": source_period, "metrics": metrics}
+    report["company_totals"] = _company_summary_totals(report, source_period)
     return report
 
 

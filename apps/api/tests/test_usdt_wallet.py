@@ -232,7 +232,8 @@ def test_trc20_list_value_still_wins_without_constant_call():
 def test_abi_parameter_matches_chain_bytes():
     from app.connectors.tron import _abi_parameter, USDT_DECIMALS
     param = _abi_parameter(ADDR_OK)
-    assert len(param) == 64 and param.startswith("41")
+    # ABI parameter cho address trong Solidity: 20 byte địa chỉ thực, đệm 24 ký tự 0 phía trước
+    assert len(param) == 64 and param.startswith("0" * 24)
     assert USDT_DECIMALS == 6
     # balanceOf của địa chỉ rỗng ABI trở uint256 0 → "0"
     from app.connectors.tron import _parse_balance_of_hex

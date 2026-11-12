@@ -42,9 +42,35 @@ def acquire_scheduler_port_lock(port: int) -> socket.socket | None:
 
 
 def build_scheduler() -> BackgroundScheduler:
+    from app.jobs.asset_sync import scheduled_asset_sync
     from app.jobs.meta_sync_job import checkpoint_9h_job, meta_sync_job
+    from app.jobs.meta_risk_job import meta_risk_job
+    from app.jobs.prepaid_job import prepaid_billing_job
+    from app.jobs.token_keepalive import auto_verify_via_tokens
 
     scheduler = BackgroundScheduler(timezone=VN_TZ)
+    scheduler.add_job(prepaid_billing_job, "interval", minutes=1, id="prepaid_billing",
+                      max_instances=1, coalesce=True, replace_existing=True)
+    scheduler.add_job(meta_risk_job, "interval", minutes=5, id="meta_risk_monitor",
+                      max_instances=1, coalesce=True, replace_existing=True)
+    scheduler.add_job(
+        auto_verify_via_tokens,
+        "interval",
+        hours=max(1, settings.via_token_keepalive_interval_hours),
+        id="via_token_keepalive",
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
+    scheduler.add_job(
+        scheduled_asset_sync,
+        "interval",
+        hours=max(1, settings.via_asset_sync_interval_hours),
+        id="via_asset_sync",
+        max_instances=1,
+        coalesce=True,
+        replace_existing=True,
+    )
     scheduler.add_job(
         meta_sync_job,
         CronTrigger(hour="*", minute=0, timezone=VN_TZ),
@@ -79,7 +105,13 @@ def start_scheduler(port_lock: bool = True) -> BackgroundScheduler | None:
 
 
 def stop_scheduler() -> None:
-    global _running_scheduler
+    global _running_scheduler, _lock_socket
     if _running_scheduler is not None:
         _running_scheduler.shutdown(wait=False)
         _running_scheduler = None
+    if _lock_socket is not None:
+        try:
+            _lock_socket.close()
+        except OSError:
+            pass
+        _lock_socket = None

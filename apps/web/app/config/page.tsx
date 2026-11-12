@@ -163,7 +163,7 @@ export default function ConfigPage() {
     iso ? new Date(iso).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" }) : "—";
 
   return (
-    <main style={{ padding: 24 }}>
+    <div className="w-full space-y-6">
       <h1>Cấu hình kết nối</h1>
       <p><a href="/config/wallets" style={{display:"inline-block",background:"#155778",color:"white",padding:"12px 18px",borderRadius:8}}>Ví &amp; tài khoản sàn — Binance</a></p>
       <p>
@@ -310,6 +310,6 @@ export default function ConfigPage() {
         Service account reader qua <code>ADSOS_GOOGLE_SERVICE_ACCOUNT_FILE</code> — chỉ đọc. Spreadsheet
         đang dùng ở màn <code>/sheets</code>.
       </p>
-    </main>
+    </div>
   );
 }

@@ -1,0 +1,973 @@
+"""Danh sách 70 quy trình tự động hóa tác nghiệp mẫu (69+ Built-in Workflow Presets)
+
+Phục vụ 4 Trụ Cột: Quản lý TKQC, Bảo mật BM, Nuôi & Kháng Page, Phân phối Pixel, Lên Camp & Boost Post, Thanh toán & Thẻ.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+BUILTIN_WORKFLOW_PRESETS: list[dict[str, Any]] = [
+    # -------------------------------------------------------------
+    # 1. Quản lý TKQC (12 presets)
+    # -------------------------------------------------------------
+    {
+        "code": "WF_ACT_RENAME_BULK",
+        "name": "Đổi tên tài khoản quảng cáo hàng loạt theo quy ước",
+        "category": "Quản lý TKQC",
+        "steps": [
+            {"action": "FETCH_ACCOUNT_METADATA", "params": {"fields": ["id", "name", "currency"]}},
+            {"action": "APPLY_NAMING_CONVENTION", "params": {"format": "[{currency}] {client_name} - {date}"}},
+            {"action": "UPDATE_ACCOUNT_NAME", "params": {"audit": True}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_ACT_CURRENCY_VND",
+        "name": "Chuyển đổi tiền tệ TKQC sang VND & múi giờ GMT+7",
+        "category": "Quản lý TKQC",
+        "steps": [
+            {"action": "CHECK_UNSETTLED_BILLS", "params": {}},
+            {"action": "UPDATE_CURRENCY_TIMEZONE", "params": {"currency": "VND", "timezone_id": 78}},
+            {"action": "LOG_AUDIT_TRAIL", "params": {"message": "Đã chuyển tiền tệ sang VND GMT+7"}},
+        ],
+        "jitter_min_ms": 1200,
+        "jitter_max_ms": 3000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_ACT_APPEAL_DISABLED",
+        "name": "Gửi kháng nghị tự động cho TKQC bị vô hiệu hóa (Disabled)",
+        "category": "Quản lý TKQC",
+        "steps": [
+            {"action": "CHECK_RESTRICTION_REASON", "params": {}},
+            {"action": "SUBMIT_ACCOUNT_APPEAL", "params": {"reason_code": "BUSINESS_COMPLIANCE", "language": "vi"}},
+            {"action": "UPDATE_LOCAL_APPEAL_STATUS", "params": {"status": "IN_REVIEW"}},
+        ],
+        "jitter_min_ms": 1500,
+        "jitter_max_ms": 3500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_ACT_CHECK_SPEND_LIMIT",
+        "name": "Kiểm tra và mở giới hạn chi tiêu ẩn (Hidden Limit / DSL)",
+        "category": "Quản lý TKQC",
+        "steps": [
+            {"action": "QUERY_GRAPH_DSL", "params": {"endpoint": "ad_trust_dsl"}},
+            {"action": "SYNC_HIDDEN_LIMIT_TO_DB", "params": {}},
+            {"action": "ALERT_IF_LIMITED", "params": {"threshold_vnd": 500000}},
+        ],
+        "jitter_min_ms": 800,
+        "jitter_max_ms": 2000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_ACT_PAUSE_ALL_CAMPS",
+        "name": "Tạm dừng khẩn cấp toàn bộ chiến dịch đang hoạt động",
+        "category": "Quản lý TKQC",
+        "steps": [
+            {"action": "GET_ACTIVE_CAMPAIGNS", "params": {}},
+            {"action": "BATCH_PAUSE_CAMPAIGNS", "params": {"status": "PAUSED"}},
+            {"action": "RECORD_RECOVERY_SNAPSHOT", "params": {}},
+        ],
+        "jitter_min_ms": 500,
+        "jitter_max_ms": 1500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_ACT_RESUME_ALL_CAMPS",
+        "name": "Khôi phục kích hoạt lại các chiến dịch đã dừng",
+        "category": "Quản lý TKQC",
+        "steps": [
+            {"action": "FETCH_RECOVERY_SNAPSHOT", "params": {}},
+            {"action": "BATCH_RESUME_CAMPAIGNS", "params": {"status": "ACTIVE"}},
+            {"action": "VERIFY_DELIVERY_STATUS", "params": {}},
+        ],
+        "jitter_min_ms": 800,
+        "jitter_max_ms": 2000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_ACT_INSPECT_LOCATION",
+        "name": "Xác minh trạng thái vị trí địa lý tài khoản (Location Verification)",
+        "category": "Quản lý TKQC",
+        "steps": [
+            {"action": "READ_ACCOUNT_LOCATION_FLAG", "params": {}},
+            {"action": "MARK_LOCATION_VERIFIED", "params": {}},
+            {"action": "NOTIFY_DISCREPANCY", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_ACT_ASSIGN_BACKUP_ADMIN",
+        "name": "Gán quản trị viên dự phòng vào tài khoản quảng cáo",
+        "category": "Quản lý TKQC",
+        "steps": [
+            {"action": "VALIDATE_TARGET_UID", "params": {}},
+            {"action": "ADD_ACCOUNT_USER", "params": {"role": 1001, "permissions": ["MANAGE"]}},
+            {"action": "VERIFY_ROLE_ASSIGNED", "params": {}},
+        ],
+        "jitter_min_ms": 1200,
+        "jitter_max_ms": 2800,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_ACT_REMOVE_DEFUNCT_ADMIN",
+        "name": "Gỡ bỏ nhân viên cũ khỏi quyền tài khoản quảng cáo",
+        "category": "Quản lý TKQC",
+        "steps": [
+            {"action": "LIST_ACCOUNT_USERS", "params": {}},
+            {"action": "FILTER_NON_ACTIVE_USERS", "params": {}},
+            {"action": "DELETE_ACCOUNT_USER", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_ACT_EXPORT_SPEND_CSV",
+        "name": "Xuất báo cáo chi tiêu và ngưỡng nợ theo định dạng SMIT",
+        "category": "Quản lý TKQC",
+        "steps": [
+            {"action": "FETCH_ACCOUNT_FINANCIALS", "params": {}},
+            {"action": "FORMAT_SMIT_CSV", "params": {}},
+            {"action": "GENERATE_DOWNLOAD_LINK", "params": {}},
+        ],
+        "jitter_min_ms": 500,
+        "jitter_max_ms": 1200,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_ACT_SET_THRESHOLD_LIMIT",
+        "name": "Cập nhật và kiểm soát ngưỡng thanh toán (Billing Threshold)",
+        "category": "Quản lý TKQC",
+        "steps": [
+            {"action": "GET_BILLING_CYCLE", "params": {}},
+            {"action": "SET_THRESHOLD_CAP", "params": {"target_amount": 20000000}},
+            {"action": "CONFIRM_PAYMENT_PROFILE", "params": {}},
+        ],
+        "jitter_min_ms": 1500,
+        "jitter_max_ms": 3000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_ACT_REFRESH_TOKEN_AUTH",
+        "name": "Làm mới và kiểm tra quyền hạn Access Token của TKQC",
+        "category": "Quản lý TKQC",
+        "steps": [
+            {"action": "CHECK_TOKEN_VALIDITY", "params": {}},
+            {"action": "TEST_READ_PERMISSIONS", "params": {"permissions": ["ads_read", "ads_management"]}},
+            {"action": "UPDATE_TOKEN_HEALTH_STATUS", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2200,
+        "is_builtin": True,
+    },
+
+    # -------------------------------------------------------------
+    # 2. Bảo mật BM (12 presets)
+    # -------------------------------------------------------------
+    {
+        "code": "WF_BM_REMOVE_HIDDEN_ADMIN",
+        "name": "Quét và gỡ bỏ toàn bộ Admin ẩn khỏi Business Manager",
+        "category": "Bảo mật BM",
+        "steps": [
+            {"action": "FETCH_BM_ADMIN_LIST", "params": {}},
+            {"action": "DETECT_HIDDEN_UNLISTED_ADMINS", "params": {}},
+            {"action": "PURGE_HIDDEN_ADMINS", "params": {"retry_on_fail": True}},
+            {"action": "UPDATE_HIDDEN_ADMIN_COUNT", "params": {"count": 0}},
+        ],
+        "jitter_min_ms": 1200,
+        "jitter_max_ms": 2800,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_BM_CREATE_INVITE_LINK",
+        "name": "Tạo đường link mời quản trị viên BM dự phòng (Invite Link)",
+        "category": "Bảo mật BM",
+        "steps": [
+            {"action": "CHECK_BM_INVITE_PERMS", "params": {}},
+            {"action": "GENERATE_BM_USER_INVITE", "params": {"role": "ADMIN", "email_prefix": "adsos_admin"}},
+            {"action": "COPY_INVITE_TOKEN_URL", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_BM_BULK_CREATE_ACCOUNTS",
+        "name": "Tạo nhanh danh sách TKQC bên trong Business Manager",
+        "category": "Bảo mật BM",
+        "steps": [
+            {"action": "CHECK_BM_CREATION_LIMIT", "params": {}},
+            {"action": "POST_NEW_AD_ACCOUNT", "params": {"currency": "VND", "timezone_id": 78}},
+            {"action": "AUTO_ASSIGN_ADMIN_TO_NEW_ACT", "params": {}},
+        ],
+        "jitter_min_ms": 2000,
+        "jitter_max_ms": 4000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_BM_ENABLE_TWO_FACTOR",
+        "name": "Kích hoạt bắt buộc xác thực 2 yếu tố (2FA) toàn bộ thành viên BM",
+        "category": "Bảo mật BM",
+        "steps": [
+            {"action": "GET_BM_SECURITY_SETTINGS", "params": {}},
+            {"action": "SET_TWO_FACTOR_REQUIRED", "params": {"requirement": "EVERYONE"}},
+            {"action": "AUDIT_COMPLIANCE", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_BM_BACKUP_ASSET_HIERARCHY",
+        "name": "Sao lưu toàn bộ cây tài sản BM (TKQC, Fanpage, Pixel, Đối tác)",
+        "category": "Bảo mật BM",
+        "steps": [
+            {"action": "FETCH_ALL_BM_ASSETS", "params": {}},
+            {"action": "SERIALIZE_ASSET_TREE", "params": {}},
+            {"action": "SAVE_BACKUP_TO_STORAGE", "params": {}},
+        ],
+        "jitter_min_ms": 800,
+        "jitter_max_ms": 2000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_BM_APPEAL_RESTRICTED",
+        "name": "Nộp đơn kháng nghị BM bị hạn chế quyền quảng cáo",
+        "category": "Bảo mật BM",
+        "steps": [
+            {"action": "GET_RESTRICTION_REASON_CODE", "params": {}},
+            {"action": "SUBMIT_BM_REVIEW_REQUEST", "params": {"appeal_text_preset": "AGENCY_STANDARD"}},
+            {"action": "TRACK_APPEAL_STATUS", "params": {}},
+        ],
+        "jitter_min_ms": 1500,
+        "jitter_max_ms": 3500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_BM_REVOKE_UNKNOWN_SYSTEM_USERS",
+        "name": "Quét và hủy bỏ token Người dùng hệ thống (System Users) lạ",
+        "category": "Bảo mật BM",
+        "steps": [
+            {"action": "LIST_SYSTEM_USERS", "params": {}},
+            {"action": "VERIFY_KNOWN_SYSTEM_USER_KEYS", "params": {}},
+            {"action": "REVOKE_ORPHANED_SYSTEM_TOKENS", "params": {}},
+        ],
+        "jitter_min_ms": 1200,
+        "jitter_max_ms": 2500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_BM_SHARE_PARTNER_BULK",
+        "name": "Chia sẻ toàn bộ TKQC trong BM sang BM đối tác khách hàng",
+        "category": "Bảo mật BM",
+        "steps": [
+            {"action": "GET_OWNED_AD_ACCOUNTS", "params": {}},
+            {"action": "SHARE_ASSET_TO_PARTNER_BM", "params": {"permitted_tasks": ["MANAGE"]}},
+            {"action": "CONFIRM_PARTNER_RECEIPT", "params": {}},
+        ],
+        "jitter_min_ms": 1500,
+        "jitter_max_ms": 3000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_BM_VERIFY_DOMAIN_BULK",
+        "name": "Đồng bộ và kiểm tra trạng thái xác minh tên miền trong BM",
+        "category": "Bảo mật BM",
+        "steps": [
+            {"action": "FETCH_BM_DOMAINS", "params": {}},
+            {"action": "TEST_DNS_TXT_RECORDS", "params": {}},
+            {"action": "TRIGGER_DOMAIN_VERIFICATION", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_BM_TRANSFER_PAGE_OWNERSHIP",
+        "name": "Chuyển giao quyền sở hữu Fanpage chính vào BM gốc",
+        "category": "Bảo mật BM",
+        "steps": [
+            {"action": "REQUEST_PAGE_OWNERSHIP", "params": {}},
+            {"action": "CONFIRM_VIA_SUPER_ADMIN", "params": {}},
+            {"action": "FINALIZE_OWNERSHIP_TRANSFER", "params": {}},
+        ],
+        "jitter_min_ms": 1500,
+        "jitter_max_ms": 3200,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_BM_RENAME_BULK",
+        "name": "Đổi tên Business Manager hàng loạt theo mã chi nhánh",
+        "category": "Bảo mật BM",
+        "steps": [
+            {"action": "GET_CURRENT_BM_NAME", "params": {}},
+            {"action": "UPDATE_BM_NAME", "params": {}},
+            {"action": "SYNC_LOCAL_BM_RECORD", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2200,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_BM_PRIMARY_RENTAL_TOGGLE",
+        "name": "Đánh dấu / Hủy cờ BM Chính Cho Thuê phục vụ Auto-Fulfillment",
+        "category": "Bảo mật BM",
+        "steps": [
+            {"action": "TOGGLE_PRIMARY_RENTAL_FLAG", "params": {}},
+            {"action": "UPDATE_CAPACITY_METRICS", "params": {}},
+            {"action": "BROADCAST_HUB_EVENT", "params": {}},
+        ],
+        "jitter_min_ms": 500,
+        "jitter_max_ms": 1200,
+        "is_builtin": True,
+    },
+
+    # -------------------------------------------------------------
+    # 3. Nuôi & Kháng Page (12 presets)
+    # -------------------------------------------------------------
+    {
+        "code": "WF_PAGE_APPEAL_UNPUBLISH",
+        "name": "Kháng nghị Fanpage bị hủy đăng / vi phạm tiêu chuẩn cộng đồng",
+        "category": "Nuôi & Kháng Page",
+        "steps": [
+            {"action": "CHECK_PAGE_RESTRICTION", "params": {}},
+            {"action": "SUBMIT_PAGE_APPEAL_FORM", "params": {"appeal_type": "UNPUBLISHED_PAGE"}},
+            {"action": "MARK_PAGE_APPEAL_STATUS", "params": {"status": "IN_REVIEW"}},
+        ],
+        "jitter_min_ms": 1500,
+        "jitter_max_ms": 3500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAGE_RENAME_BULK",
+        "name": "Đổi tên Fanpage hàng loạt theo thương hiệu chiến dịch",
+        "category": "Nuôi & Kháng Page",
+        "steps": [
+            {"action": "CHECK_PAGE_RENAME_ELIGIBILITY", "params": {}},
+            {"action": "SUBMIT_PAGE_NAME_CHANGE", "params": {}},
+            {"action": "MONITOR_RENAME_APPROVAL", "params": {}},
+        ],
+        "jitter_min_ms": 1200,
+        "jitter_max_ms": 2800,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAGE_CHECK_PUBLISH_STATUS",
+        "name": "Kiểm tra trạng thái xuất bản & tick xanh của danh sách Page",
+        "category": "Nuôi & Kháng Page",
+        "steps": [
+            {"action": "QUERY_PAGE_FIELDS", "params": {"fields": ["id", "name", "is_published", "verification_status"]}},
+            {"action": "SYNC_PAGE_STATUS_DB", "params": {}},
+            {"action": "FILTER_OFFLINE_PAGES", "params": {}},
+        ],
+        "jitter_min_ms": 800,
+        "jitter_max_ms": 2000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAGE_ASSIGN_BACKUP_ADMIN",
+        "name": "Thêm quản trị viên VIA dự phòng cho toàn bộ Fanpage",
+        "category": "Nuôi & Kháng Page",
+        "steps": [
+            {"action": "GET_PAGE_ADMINS", "params": {}},
+            {"action": "INVITE_PAGE_ADMIN", "params": {"role": "ADMIN"}},
+            {"action": "ACCEPT_PAGE_INVITE_VIA", "params": {}},
+        ],
+        "jitter_min_ms": 1200,
+        "jitter_max_ms": 3000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAGE_PURGE_LEAVED_ADMINS",
+        "name": "Xóa toàn bộ quản trị viên cũ / nick bị checkpoint khỏi Page",
+        "category": "Nuôi & Kháng Page",
+        "steps": [
+            {"action": "SCAN_PAGE_ROLES", "params": {}},
+            {"action": "CHECK_LIVE_ROLE_USERS", "params": {}},
+            {"action": "REMOVE_DEAD_PAGE_ADMINS", "params": {}},
+        ],
+        "jitter_min_ms": 1500,
+        "jitter_max_ms": 3200,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAGE_AUTO_SEED_POST",
+        "name": "Đăng bài tự động và tương tác mồi cho Page mới",
+        "category": "Nuôi & Kháng Page",
+        "steps": [
+            {"action": "LOAD_POST_CREATIVE_TEMPLATE", "params": {}},
+            {"action": "POST_CONTENT_TO_FEED", "params": {}},
+            {"action": "TRIGGER_SEEDING_LIKE_SHARE", "params": {"count": 10}},
+        ],
+        "jitter_min_ms": 2000,
+        "jitter_max_ms": 4500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAGE_UPDATE_AVATAR_COVER",
+        "name": "Cập nhật ảnh đại diện và ảnh bìa đồng bộ thương hiệu",
+        "category": "Nuôi & Kháng Page",
+        "steps": [
+            {"action": "UPLOAD_AVATAR_IMAGE", "params": {}},
+            {"action": "UPLOAD_COVER_IMAGE", "params": {}},
+            {"action": "SET_PAGE_PICTURES", "params": {}},
+        ],
+        "jitter_min_ms": 1500,
+        "jitter_max_ms": 3000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAGE_ENABLE_MESSENGER_GREETING",
+        "name": "Cài đặt tin nhắn chào mừng & kịch bản Chatbot tự động",
+        "category": "Nuôi & Kháng Page",
+        "steps": [
+            {"action": "SET_GET_STARTED_BUTTON", "params": {}},
+            {"action": "CONFIGURE_PERSISTENT_MENU", "params": {}},
+            {"action": "SAVE_GREETING_MESSAGE", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAGE_SYNC_INSTAGRAM_LINK",
+        "name": "Liên kết và đồng bộ tài khoản Instagram Chuyên nghiệp",
+        "category": "Nuôi & Kháng Page",
+        "steps": [
+            {"action": "CONNECT_INSTAGRAM_ACCOUNT", "params": {}},
+            {"action": "VERIFY_INSTAGRAM_SYNC", "params": {}},
+            {"action": "ENABLE_CROSS_POSTING", "params": {}},
+        ],
+        "jitter_min_ms": 1200,
+        "jitter_max_ms": 2600,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAGE_HIDE_NEGATIVE_COMMENTS",
+        "name": "Tự động ẩn và lọc các bình luận chứa từ khóa tiêu cực",
+        "category": "Nuôi & Kháng Page",
+        "steps": [
+            {"action": "LOAD_KEYWORD_BLACKLIST", "params": {}},
+            {"action": "SET_PAGE_MODERATION_LIST", "params": {}},
+            {"action": "ENABLE_PROFANITY_FILTER", "params": {"level": "STRONG"}},
+        ],
+        "jitter_min_ms": 800,
+        "jitter_max_ms": 1800,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAGE_MERGE_PAGES_REQUEST",
+        "name": "Gửi yêu cầu gộp hai trang Fanpage trùng lặp",
+        "category": "Nuôi & Kháng Page",
+        "steps": [
+            {"action": "VERIFY_PAGES_MATCH_NAMES", "params": {}},
+            {"action": "SUBMIT_PAGE_MERGE_REQ", "params": {}},
+            {"action": "RECORD_MERGE_TRANSACTION", "params": {}},
+        ],
+        "jitter_min_ms": 1800,
+        "jitter_max_ms": 3800,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAGE_VERIFY_WHATSAPP_PHONE",
+        "name": "Đồng bộ nút WhatsApp Business và xác thực hotline",
+        "category": "Nuôi & Kháng Page",
+        "steps": [
+            {"action": "LINK_WHATSAPP_NUMBER", "params": {}},
+            {"action": "SUBMIT_WHATSAPP_OTP", "params": {}},
+            {"action": "SET_CALL_TO_ACTION_WHATSAPP", "params": {}},
+        ],
+        "jitter_min_ms": 1200,
+        "jitter_max_ms": 2500,
+        "is_builtin": True,
+    },
+
+    # -------------------------------------------------------------
+    # 4. Phân phối Pixel (11 presets)
+    # -------------------------------------------------------------
+    {
+        "code": "WF_PIXEL_SHARE_BULK_ACCOUNTS",
+        "name": "Chia sẻ Pixel hàng loạt sang nhiều TKQC trong và ngoài BM",
+        "category": "Phân phối Pixel",
+        "steps": [
+            {"action": "FETCH_PIXEL_METADATA", "params": {}},
+            {"action": "BATCH_SHARE_PIXEL_ACCOUNTS", "params": {"permitted_tasks": ["ANALYZE", "ADVERTISE"]}},
+            {"action": "VERIFY_PIXEL_ATTACHMENT", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2400,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PIXEL_CHECK_EVENT_HEALTH",
+        "name": "Kiểm tra sức khỏe sự kiện Pixel (Purchase, Lead, PageView)",
+        "category": "Phân phối Pixel",
+        "steps": [
+            {"action": "QUERY_PIXEL_STATS", "params": {"aggregation": "LAST_24_HOURS"}},
+            {"action": "VERIFY_CONVERSIONS_API_SYNC", "params": {}},
+            {"action": "FLAG_DROPPED_EVENTS", "params": {}},
+        ],
+        "jitter_min_ms": 800,
+        "jitter_max_ms": 1800,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PIXEL_CREATE_NEW_BM",
+        "name": "Khởi tạo Pixel mới bên trong Business Manager",
+        "category": "Phân phối Pixel",
+        "steps": [
+            {"action": "POST_NEW_PIXEL", "params": {}},
+            {"action": "STORE_PIXEL_IN_DB", "params": {}},
+            {"action": "AUTO_ASSIGN_ADMIN_PIXEL", "params": {}},
+        ],
+        "jitter_min_ms": 1200,
+        "jitter_max_ms": 2600,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PIXEL_REVOKE_COMPROMISED",
+        "name": "Thu hồi và gỡ bỏ Pixel khỏi các tài khoản quảng cáo bị vô hiệu",
+        "category": "Phân phối Pixel",
+        "steps": [
+            {"action": "IDENTIFY_DISABLED_ACCOUNTS_WITH_PIXEL", "params": {}},
+            {"action": "DETACH_PIXEL_FROM_ACCOUNT", "params": {}},
+            {"action": "LOG_SECURITY_REVOCATION", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2200,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PIXEL_GRANT_AGENCY_PARTNER",
+        "name": "Cấp quyền truy cập Pixel cho BM đại lý đối tác",
+        "category": "Phân phối Pixel",
+        "steps": [
+            {"action": "SELECT_TARGET_PARTNER_BM", "params": {}},
+            {"action": "SHARE_PIXEL_WITH_AGENCY", "params": {}},
+            {"action": "CONFIRM_PARTNER_ACCEPTANCE", "params": {}},
+        ],
+        "jitter_min_ms": 1200,
+        "jitter_max_ms": 2800,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PIXEL_CONVERSION_API_TOKEN",
+        "name": "Sinh mã Access Token cho Conversions API (CAPI Server-side)",
+        "category": "Phân phối Pixel",
+        "steps": [
+            {"action": "GENERATE_CAPI_SYSTEM_TOKEN", "params": {}},
+            {"action": "STORE_ENCRYPTED_CAPI_TOKEN", "params": {}},
+            {"action": "PING_TEST_SERVER_EVENT", "params": {}},
+        ],
+        "jitter_min_ms": 1500,
+        "jitter_max_ms": 3000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PIXEL_AGGREGATED_MEASUREMENT",
+        "name": "Cấu hình 8 sự kiện đo lường tổng hợp (Aggregated Event Measurement)",
+        "category": "Phân phối Pixel",
+        "steps": [
+            {"action": "READ_VERIFIED_DOMAIN_PIXELS", "params": {}},
+            {"action": "SET_PRIORITY_CONVERSION_EVENTS", "params": {}},
+            {"action": "SAVE_AGGREGATED_CONFIG", "params": {}},
+        ],
+        "jitter_min_ms": 1800,
+        "jitter_max_ms": 3500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PIXEL_BACKUP_CATALOG_LINK",
+        "name": "Liên kết Pixel với Danh mục sản phẩm (Product Catalog)",
+        "category": "Phân phối Pixel",
+        "steps": [
+            {"action": "SELECT_TARGET_CATALOG", "params": {}},
+            {"action": "ATTACH_PIXEL_MICRODATA_FEED", "params": {}},
+            {"action": "VERIFY_DYNAMIC_ADS_READY", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PIXEL_CLEAN_DUPLICATE_EVENTS",
+        "name": "Kiểm tra và khử trùng lặp sự kiện trình duyệt và CAPI (Deduplication)",
+        "category": "Phân phối Pixel",
+        "steps": [
+            {"action": "INSPECT_EVENT_ID_MATCH_RATE", "params": {}},
+            {"action": "VALIDATE_EXTERNAL_ID_FORMAT", "params": {}},
+            {"action": "REPORT_DEDUPLICATION_ACCURACY", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PIXEL_EXPORT_ASSET_MAP",
+        "name": "Xuất bảng đồ liên kết Pixel với toàn bộ danh mục tài sản",
+        "category": "Phân phối Pixel",
+        "steps": [
+            {"action": "INDEX_PIXEL_ATTACHMENTS", "params": {}},
+            {"action": "GENERATE_PIXEL_GRAPH_REPORT", "params": {}},
+            {"action": "CACHE_GRAPH_METADATA", "params": {}},
+        ],
+        "jitter_min_ms": 600,
+        "jitter_max_ms": 1500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PIXEL_AUTO_DIAGNOSTICS",
+        "name": "Chẩn đoán tự động lỗi phân phối sự kiện và cảnh báo Meta",
+        "category": "Phân phối Pixel",
+        "steps": [
+            {"action": "GET_PIXEL_DIAGNOSTICS", "params": {}},
+            {"action": "CLASSIFY_WARNINGS", "params": {}},
+            {"action": "SEND_TELEGRAM_SECURITY_ALERT", "params": {}},
+        ],
+        "jitter_min_ms": 800,
+        "jitter_max_ms": 1800,
+        "is_builtin": True,
+    },
+
+    # -------------------------------------------------------------
+    # 5. Lên Camp & Boost Post (12 presets)
+    # -------------------------------------------------------------
+    {
+        "code": "WF_CAMP_BOOST_POST_ACTIVE",
+        "name": "Lên chiến dịch Boost Post trực tiếp với trạng thái ACTIVE",
+        "category": "Lên Camp & Boost Post",
+        "steps": [
+            {"action": "RESOLVE_POST_STORY_ID", "params": {}},
+            {"action": "CREATE_CAMPAIGN_SHELL", "params": {"status": "ACTIVE"}},
+            {"action": "CREATE_ADSET_TARGETING", "params": {"status": "ACTIVE"}},
+            {"action": "CREATE_AD_CREATIVE", "params": {"status": "ACTIVE"}},
+        ],
+        "jitter_min_ms": 1200,
+        "jitter_max_ms": 3000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_CAMP_BOOST_POST_PAUSED",
+        "name": "Lên chiến dịch Boost Post bản nháp với trạng thái PAUSED",
+        "category": "Lên Camp & Boost Post",
+        "steps": [
+            {"action": "RESOLVE_POST_STORY_ID", "params": {}},
+            {"action": "CREATE_CAMPAIGN_SHELL", "params": {"status": "PAUSED"}},
+            {"action": "CREATE_ADSET_TARGETING", "params": {"status": "PAUSED"}},
+            {"action": "CREATE_AD_CREATIVE", "params": {"status": "PAUSED"}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_CAMP_MESSENGER_LEAD_MULTI_ACT",
+        "name": "Phân bổ chiến dịch Tin nhắn Messenger đa tài khoản song song",
+        "category": "Lên Camp & Boost Post",
+        "steps": [
+            {"action": "VALIDATE_SELECTED_ACCOUNTS", "params": {}},
+            {"action": "CONVERT_BUDGET_CURRENCIES", "params": {}},
+            {"action": "DISPATCH_CAMPAIGNS_PARALLEL", "params": {"objective": "OUTCOME_ENGAGEMENT"}},
+        ],
+        "jitter_min_ms": 1500,
+        "jitter_max_ms": 3500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_CAMP_CONVERSION_WEB_PURCHASE",
+        "name": "Lên chiến dịch Chuyển đổi Web tối ưu hóa sự kiện Purchase",
+        "category": "Lên Camp & Boost Post",
+        "steps": [
+            {"action": "VERIFY_PIXEL_CONVERSION_EVENT", "params": {"event": "PURCHASE"}},
+            {"action": "CREATE_CONVERSION_CAMPAIGN", "params": {"status": "ACTIVE"}},
+            {"action": "ATTACH_LANDING_PAGE_URL", "params": {}},
+        ],
+        "jitter_min_ms": 1400,
+        "jitter_max_ms": 3200,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_CAMP_SUPER_TARGET_DEPLOY",
+        "name": "Triển khai tệp Super Target 500+ sở thích chuyên sâu ẩn",
+        "category": "Lên Camp & Boost Post",
+        "steps": [
+            {"action": "LOAD_SAVED_SUPER_TARGET_SET", "params": {}},
+            {"action": "EXPAND_INTEREST_HIERARCHY", "params": {}},
+            {"action": "APPLY_FLEXIBLE_SPEC_TARGETING", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_CAMP_CLONE_WINNING_ADSET",
+        "name": "Nhân bản nhóm quảng cáo hiệu quả (Winning AdSet) sang 5 TKQC",
+        "category": "Lên Camp & Boost Post",
+        "steps": [
+            {"action": "INSPECT_PERFORMANCE_METRICS", "params": {"min_roas": 2.5}},
+            {"action": "SERIALIZE_ADSET_STRUCTURE", "params": {}},
+            {"action": "CLONE_TO_TARGET_ACCOUNTS", "params": {"count": 5}},
+        ],
+        "jitter_min_ms": 1600,
+        "jitter_max_ms": 3800,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_CAMP_SCHEDULED_LAUNCH",
+        "name": "Hẹn giờ kích hoạt chiến dịch vào khung giờ vàng (08:30 sáng)",
+        "category": "Lên Camp & Boost Post",
+        "steps": [
+            {"action": "CALCULATE_SCHEDULE_TIMEZONE", "params": {"target_hour": 8, "target_minute": 30}},
+            {"action": "CREATE_CAMPAIGN_WITH_SCHEDULE", "params": {}},
+            {"action": "REGISTER_DISPATCH_WATCHER", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2200,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_CAMP_A_B_SPLIT_TEST",
+        "name": "Thiết lập thử nghiệm A/B Testing giữa 2 mẫu bài viết",
+        "category": "Lên Camp & Boost Post",
+        "steps": [
+            {"action": "SETUP_EQUAL_BUDGET_SPLIT", "params": {}},
+            {"action": "CREATE_ADSET_VARIATION_A", "params": {}},
+            {"action": "CREATE_ADSET_VARIATION_B", "params": {}},
+        ],
+        "jitter_min_ms": 1200,
+        "jitter_max_ms": 2600,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_CAMP_DYNAMIC_CREATIVE_SETUP",
+        "name": "Cài đặt cụm quảng cáo nội dung động (Dynamic Creative Ads)",
+        "category": "Lên Camp & Boost Post",
+        "steps": [
+            {"action": "UPLOAD_MULTI_ASSET_IMAGES", "params": {}},
+            {"action": "ATTACH_MULTI_TEXT_VARIANTS", "params": {}},
+            {"action": "ENABLE_DYNAMIC_CREATIVE_FLAG", "params": {}},
+        ],
+        "jitter_min_ms": 1500,
+        "jitter_max_ms": 3200,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_CAMP_RETARGET_PAGE_ENGAGERS",
+        "name": "Chạy bám đuổi (Retargeting) khách đã nhắn tin cho Fanpage trong 30 ngày",
+        "category": "Lên Camp & Boost Post",
+        "steps": [
+            {"action": "CREATE_PAGE_ENGAGEMENT_AUDIENCE", "params": {"lookback_days": 30}},
+            {"action": "WAIT_FOR_AUDIENCE_POPULATION", "params": {}},
+            {"action": "DEPLOY_RETARGETING_CAMPAIGN", "params": {}},
+        ],
+        "jitter_min_ms": 1400,
+        "jitter_max_ms": 3000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_CAMP_BID_CAP_SAFETY_NET",
+        "name": "Cài đặt giá thầu trần (Bid Cap) chống cắn tiền ảo quá mức",
+        "category": "Lên Camp & Boost Post",
+        "steps": [
+            {"action": "CALCULATE_BENCHMARK_CPC", "params": {}},
+            {"action": "UPDATE_ADSET_BID_STRATEGY", "params": {"bid_strategy": "COST_CAP"}},
+            {"action": "APPLY_BID_AMOUNT_SAFETY", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2200,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_CAMP_BULK_DUPLICATE_ADS",
+        "name": "Nhân bản 10 bài viết quảng cáo vào cùng 1 nhóm chiến dịch",
+        "category": "Lên Camp & Boost Post",
+        "steps": [
+            {"action": "READ_CREATIVE_BATCH", "params": {}},
+            {"action": "BATCH_CREATE_ADS", "params": {"count": 10}},
+            {"action": "VERIFY_ADS_PUBLISHED", "params": {}},
+        ],
+        "jitter_min_ms": 1500,
+        "jitter_max_ms": 3400,
+        "is_builtin": True,
+    },
+
+    # -------------------------------------------------------------
+    # 6. Thanh toán & Thẻ (11 presets)
+    # -------------------------------------------------------------
+    {
+        "code": "WF_PAY_TRIGGER_PAY_NOW",
+        "name": "Kích hoạt thanh toán ngay số dư nợ (Pay Now / Settlement)",
+        "category": "Thanh toán & Thẻ",
+        "steps": [
+            {"action": "INSPECT_CURRENT_BALANCE", "params": {}},
+            {"action": "TRIGGER_BILLING_SETTLEMENT", "params": {}},
+            {"action": "VERIFY_ZERO_BALANCE_RECEIPT", "params": {}},
+        ],
+        "jitter_min_ms": 1200,
+        "jitter_max_ms": 2800,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAY_INSPECT_CARD_BIN",
+        "name": "Tra cứu đầu thẻ BIN và trạng thái hạn mức thẻ tín dụng",
+        "category": "Thanh toán & Thẻ",
+        "steps": [
+            {"action": "READ_FUNDING_SOURCE_DETAILS", "params": {}},
+            {"action": "EXTRACT_CARD_BIN_METRICS", "params": {}},
+            {"action": "CHECK_CARD_EXPIRATION_DATE", "params": {}},
+        ],
+        "jitter_min_ms": 800,
+        "jitter_max_ms": 1800,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAY_ATTACH_BACKUP_CARD",
+        "name": "Thêm phương thức thanh toán dự phòng cho TKQC",
+        "category": "Thanh toán & Thẻ",
+        "steps": [
+            {"action": "VERIFY_CARD_TOKEN_CREDENTIALS", "params": {}},
+            {"action": "ATTACH_PAYMENT_METHOD", "params": {"make_primary": False}},
+            {"action": "TEST_CARD_MICRO_CHARGE", "params": {}},
+        ],
+        "jitter_min_ms": 1500,
+        "jitter_max_ms": 3500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAY_REMOVE_FAILED_CARD",
+        "name": "Gỡ bỏ thẻ thanh toán bị từ chối / thẻ nợ xấu khỏi tài khoản",
+        "category": "Thanh toán & Thẻ",
+        "steps": [
+            {"action": "CHECK_ACTIVE_PAYMENT_METHODS", "params": {}},
+            {"action": "IDENTIFY_FAILED_PAYMENT_TOKENS", "params": {}},
+            {"action": "DETACH_PAYMENT_METHOD", "params": {}},
+        ],
+        "jitter_min_ms": 1200,
+        "jitter_max_ms": 2500,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAY_ALLOCATE_CARD_BUDGET",
+        "name": "Phân bổ hạn mức chi tiêu định mức cho thẻ VCC ảo",
+        "category": "Thanh toán & Thẻ",
+        "steps": [
+            {"action": "CALCULATE_REQUIRED_SETTLEMENT", "params": {}},
+            {"action": "TRANSFER_VCC_CREDIT_LINE", "params": {}},
+            {"action": "SYNC_VCC_BALANCE_DB", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2200,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAY_APPEAL_PAYMENT_HOLD",
+        "name": "Gửi kháng nghị tài khoản bị tạm giữ thanh toán (Payment Hold / Risk)",
+        "category": "Thanh toán & Thẻ",
+        "steps": [
+            {"action": "CHECK_PAYMENT_RISK_CODE", "params": {}},
+            {"action": "SUBMIT_PAYMENT_APPEAL_EVIDENCE", "params": {}},
+            {"action": "UPDATE_LOCAL_RISK_STATUS", "params": {"status": "HOLD_APPEALED"}},
+        ],
+        "jitter_min_ms": 1600,
+        "jitter_max_ms": 3600,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAY_SWITCH_PRIMARY_METHOD",
+        "name": "Đổi phương thức thanh toán chính sang thẻ dự phòng",
+        "category": "Thanh toán & Thẻ",
+        "steps": [
+            {"action": "SELECT_SECONDARY_FUNDING_SOURCE", "params": {}},
+            {"action": "SET_AS_PRIMARY_PAYMENT", "params": {}},
+            {"action": "CONFIRM_PRIMARY_STATUS", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2400,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAY_SYNC_INVOICE_HISTORY",
+        "name": "Đồng bộ toàn bộ hóa đơn VAT / biên lai thanh toán gần nhất",
+        "category": "Thanh toán & Thẻ",
+        "steps": [
+            {"action": "FETCH_BILLING_INVOICES", "params": {"limit": 20}},
+            {"action": "PARSE_INVOICE_AMOUNTS", "params": {}},
+            {"action": "STORE_INVOICES_TO_LEDGER", "params": {}},
+        ],
+        "jitter_min_ms": 800,
+        "jitter_max_ms": 2000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAY_PREVENTIVE_SPEND_CAP",
+        "name": "Đặt hạn mức chi tiêu tổng tài khoản phòng ngừa rò rỉ ngân sách",
+        "category": "Thanh toán & Thẻ",
+        "steps": [
+            {"action": "GET_ACCOUNT_LIFETIME_SPEND", "params": {}},
+            {"action": "SET_ACCOUNT_SPEND_CAP", "params": {}},
+            {"action": "CONFIRM_SPEND_CAP_ACTIVE", "params": {}},
+        ],
+        "jitter_min_ms": 1000,
+        "jitter_max_ms": 2200,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAY_AUTO_RETRY_FAILED_BILL",
+        "name": "Tự động thử lại lệnh thu tiền sau khi nạp tiền thẻ VCC thành công",
+        "category": "Thanh toán & Thẻ",
+        "steps": [
+            {"action": "CHECK_CARD_BALANCE_AVAILABLE", "params": {}},
+            {"action": "TRIGGER_BILLING_RETRY", "params": {}},
+            {"action": "VERIFY_ACCOUNT_ACTIVATION", "params": {}},
+        ],
+        "jitter_min_ms": 1400,
+        "jitter_max_ms": 3000,
+        "is_builtin": True,
+    },
+    {
+        "code": "WF_PAY_ALERT_DECLINED_CARDS",
+        "name": "Phát cảnh báo khẩn cấp lên Telegram khi thẻ bị từ chối giao dịch",
+        "category": "Thanh toán & Thẻ",
+        "steps": [
+            {"action": "DETECT_DECLINE_RESPONSE", "params": {}},
+            {"action": "FORMAT_TELEGRAM_PAYMENT_ALERT", "params": {}},
+            {"action": "SEND_BOT_NOTIFICATION", "params": {}},
+        ],
+        "jitter_min_ms": 600,
+        "jitter_max_ms": 1500,
+        "is_builtin": True,
+    },
+]
+
+
+def seed_workflow_presets(session: Any) -> int:
+    """Tự động kiểm tra và thêm các preset quy trình chuẩn vào database nếu chưa có."""
+    from sqlalchemy import select
+    from app.models.extension_remote import WorkflowTemplate
+
+    count = 0
+    for preset in BUILTIN_WORKFLOW_PRESETS:
+        stmt = select(WorkflowTemplate).where(WorkflowTemplate.code == preset["code"])
+        existing = session.execute(stmt).scalar_one_or_none()
+        if not existing:
+            template = WorkflowTemplate(
+                code=preset["code"],
+                name=preset["name"],
+                category=preset["category"],
+                steps=preset["steps"],
+                jitter_min_ms=preset["jitter_min_ms"],
+                jitter_max_ms=preset["jitter_max_ms"],
+                is_builtin=True,
+            )
+            session.add(template)
+            count += 1
+    if count > 0:
+        session.commit()
+    return count

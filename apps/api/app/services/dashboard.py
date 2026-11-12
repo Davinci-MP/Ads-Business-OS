@@ -6,15 +6,22 @@ snapshot is_checkpoint_9h gần nhất.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, time, timezone
+from decimal import Decimal
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.connectors.meta import build_connector
-from app.models import AuditLog, AdAccount, AdAccountAssignment, Campaign, Customer, DriftRecord, SpendSnapshot
-from app.models.spend import DATA_UNVERIFIED, DATA_VERIFIED
+from app.models import (
+    AuditLog, AdAccount, AdAccountAssignment, AdAccountSnapshot, Campaign, Customer,
+    DriftRecord, RemoteViaCommand, SpendSnapshot, SyncedAdAccount,
+)
+from app.models.campaign import RECOGNITION_CONFIRMED
+from app.models.spend import DATA_UNVERIFIED, DATA_VERIFIED, SOURCE_META_API
+from app.services import treasury as treasury_service
 
 
 def _iso(value: datetime | None) -> str | None:
@@ -164,6 +171,7 @@ def account_rows(session: Session) -> list[dict[str, Any]]:
         rows.append(
             {
                 "account_id": account.id,
+                "allow_violated_accounts": account.allow_violated_accounts,
                 "meta_ad_account_id": account.meta_ad_account_id,
                 "name": account.name,
                 "business_manager_id": account.business_manager_id,
@@ -247,5 +255,168 @@ def system_rows(session: Session) -> dict[str, Any]:
                 "spend_amount": str(s.spend_amount),
             }
             for s in unverified
+        ],
+    }
+
+
+def operational_dashboard(
+    session: Session,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Dashboard vận hành chỉ dùng TKQC đang gán cho khách hàng hoạt động."""
+    current = now or datetime.now(timezone.utc)
+    if current.tzinfo is None:
+        current = current.replace(tzinfo=timezone.utc)
+    vn_tz = ZoneInfo("Asia/Ho_Chi_Minh")
+    current_vn = current.astimezone(vn_tz)
+    today = current_vn.date()
+    start = date_from
+    end = date_to or today
+
+    assigned_pairs = session.execute(
+        select(SyncedAdAccount, Customer)
+        .join(Customer, SyncedAdAccount.customer_id == Customer.id)
+        .where(Customer.is_active.is_(True))
+        .order_by(SyncedAdAccount.act_id)
+    ).all()
+    synced_by_act = {
+        account.act_id.replace("act_", "").strip(): (account, customer)
+        for account, customer in assigned_pairs
+    }
+
+    def add_money(bucket: dict[str, Decimal], currency: str, value: Decimal) -> None:
+        bucket[currency] = bucket.get(currency, Decimal("0")) + value
+
+    threshold_by_currency: dict[str, Decimal] = {}
+    for account, _customer in assigned_pairs:
+        currency = (account.currency or "").upper()
+        if not currency:
+            continue
+        balance = Decimal(str(account.balance or 0))
+        add_money(threshold_by_currency, currency, balance)
+
+    account_map = {account.id: account for account in session.scalars(select(AdAccount)).all()}
+    campaigns_query = select(Campaign).where(
+        Campaign.recognition_status == RECOGNITION_CONFIRMED,
+        Campaign.report_period_end.isnot(None),
+    )
+    if start is not None:
+        campaigns_query = campaigns_query.where(Campaign.report_period_end >= start)
+    if end is not None:
+        campaigns_query = campaigns_query.where(Campaign.report_period_end <= end)
+
+    chart: dict[str, dict[str, dict[str, Decimal]]] = {}
+    today_spend: dict[str, Decimal] = {}
+    today_fee: dict[str, Decimal] = {}
+    top_accounts: dict[tuple[str, str], dict[str, Any]] = {}
+    for campaign in session.scalars(campaigns_query.order_by(Campaign.report_period_end, Campaign.id)).all():
+        ad_account = account_map.get(campaign.ad_account_id)
+        if ad_account is None:
+            continue
+        clean_act = ad_account.meta_ad_account_id.replace("act_", "").strip()
+        assigned = synced_by_act.get(clean_act)
+        if assigned is None:
+            continue
+        synced, customer = assigned
+        if campaign.customer_id != customer.id:
+            continue
+        snapshot = session.scalar(select(SpendSnapshot).where(
+            SpendSnapshot.campaign_id == campaign.id,
+            SpendSnapshot.data_status == DATA_VERIFIED,
+            SpendSnapshot.source == SOURCE_META_API,
+        ).order_by(SpendSnapshot.snapshot_at.desc(), SpendSnapshot.id.desc()).limit(1))
+        if snapshot is None:
+            continue
+        currency = (snapshot.currency or synced.currency or "").upper()
+        spend = Decimal(snapshot.spend_amount)
+        fee = spend * Decimal(customer.fee_rate)
+        business_date = campaign.report_period_end.isoformat()
+        day = chart.setdefault(business_date, {"spend": {}, "fee": {}})
+        add_money(day["spend"], currency, spend)
+        add_money(day["fee"], currency, fee)
+        if campaign.report_period_end == today:
+            add_money(today_spend, currency, spend)
+            add_money(today_fee, currency, fee)
+            key = (clean_act, currency)
+            row = top_accounts.setdefault(key, {
+                "act_id": clean_act,
+                "account_name": synced.name,
+                "customer_name": customer.name,
+                "currency": currency,
+                "spend": Decimal("0"),
+            })
+            row["spend"] += spend
+
+    day_start_vn = datetime.combine(today, time.min, tzinfo=vn_tz)
+    day_end_vn = datetime.combine(today, time.max, tzinfo=vn_tz)
+    day_start_utc = day_start_vn.astimezone(timezone.utc)
+    day_end_utc = day_end_vn.astimezone(timezone.utc)
+    disabled_today = 0
+    for account, _customer in assigned_pairs:
+        snapshots = session.scalars(select(AdAccountSnapshot).where(
+            AdAccountSnapshot.act_id == account.act_id,
+            AdAccountSnapshot.snapshot_at <= day_end_utc,
+        ).order_by(AdAccountSnapshot.snapshot_at, AdAccountSnapshot.id)).all()
+        previous_status: str | None = None
+        transitioned = False
+        for snapshot in snapshots:
+            status = (snapshot.status_dot or "").upper()
+            if snapshot.snapshot_at >= day_start_utc and status == "DIE" and previous_status not in (None, "DIE"):
+                transitioned = True
+                break
+            previous_status = status
+        if transitioned:
+            disabled_today += 1
+
+    treasury = treasury_service.get_treasury_summary(session)
+    commands = session.scalars(select(RemoteViaCommand).where(
+        RemoteViaCommand.status.in_(("PENDING", "RUNNING", "PROCESSING", "COMPLETED")),
+    ).order_by(RemoteViaCommand.created_at.desc(), RemoteViaCommand.id.desc()).limit(10)).all()
+    meta_mode = build_connector().mode
+
+    return {
+        "business_date": today.isoformat(),
+        "meta_mode": meta_mode,
+        "metrics": {
+            "today_spend_by_currency": {key: str(value) for key, value in sorted(today_spend.items())},
+            "debt_threshold_by_currency": {key: str(value) for key, value in sorted(threshold_by_currency.items())},
+            "active_accounts": sum(1 for account, _ in assigned_pairs if account.status_dot == "LIVE"),
+            "disabled_today": disabled_today,
+            "fee_by_currency": {key: str(value) for key, value in sorted(today_fee.items())},
+            "assigned_accounts": len(assigned_pairs),
+            "warning_accounts": sum(1 for account, _ in assigned_pairs if account.status_dot == "WARNING"),
+            "binance_usdt": treasury["breakdown"]["binance"]["total_usdt"],
+            "pingpong_usd": treasury["breakdown"]["pingpong"]["total_usd"],
+            "binance_accounts": treasury["breakdown"]["binance"]["accounts_count"],
+            "pingpong_accounts": treasury["breakdown"]["pingpong"]["accounts_count"],
+        },
+        "chart": {
+            "chart_rows": [
+                {
+                    "business_date": business_date,
+                    "meta_by_currency": {key: str(value) for key, value in sorted(values["spend"].items())},
+                    "fee_by_currency": {key: str(value) for key, value in sorted(values["fee"].items())},
+                }
+                for business_date, values in sorted(chart.items())
+            ],
+            "rows": [],
+            "meta_mode": meta_mode,
+            "meta_source_label": "META_API_VERIFIED",
+        },
+        "top_accounts": [
+            {**row, "spend": str(row["spend"])}
+            for row in sorted(top_accounts.values(), key=lambda item: item["spend"], reverse=True)
+        ],
+        "commands": [
+            {
+                "id": command.id,
+                "command": command.command_type,
+                "target_account": command.act_id,
+                "status": command.status,
+                "created_at": _iso(command.created_at),
+            }
+            for command in commands
         ],
     }

@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ADSOS SMIT PRO — Quản Trị Toàn Diện Tài Khoản &amp; VIA</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body class="obsidian-dark">
+  <!-- TOP STICKY HEADER -->
+  <header class="top-navbar">
+    <div class="top-brand"><strong>ADSOS CHECK</strong><small>Trung tâm tài sản quảng cáo</small></div>
+    <label class="top-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg><input type="search" id="tableSearchInput" placeholder="Tìm ID tài khoản, tên, BM hoặc 4 số cuối thẻ..."><kbd>F</kbd></label>
+    <div class="top-status-pills">
+      <button class="pill-btn active" data-status="ALL" id="pillAll">Tất cả <span id="countPillAll">0</span></button>
+      <button class="pill-btn" data-status="LIVE" id="pillLive"><i class="led led-live"></i>Live <span id="countPillLive">0</span></button>
+      <button class="pill-btn" data-status="UNSETTLED" id="pillUnsettled"><i class="led led-warning"></i>Cảnh báo <span id="countPillUnsettled">0</span></button>
+      <button class="pill-btn" data-status="DIE" id="pillDie"><i class="led led-die"></i>Die <span id="countPillDie">0</span></button>
+    </div>
+    <select id="masterViaSelector" class="master-via-selector" aria-label="Chọn VIA chính"><option value="">Tất cả VIA</option></select>
+    <div class="top-session" id="activeSessionPill"><span id="activeSessionLabel">Chrome</span><b id="badgeCookie">Cookie</b><b id="badgeEaag">EAAG</b><b id="badgeEaab">EAAB</b><b id="badgeDtsg">fb_dtsg</b></div>
+    <div class="connection-pill" id="connStatusPill"><span class="status-dot pulse" id="connDot"></span><span id="connLabel">Đang kết nối...</span></div>
+    <div class="nav-right">
+      <button class="icon-action" id="btnDashOpenAdsManager" title="Mở Trình quản lý quảng cáo"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"></path></svg></button>
+      <button class="icon-action" id="btnOpenSessionModal" title="Xem Cookie và Token"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="11" height="11" rx="2"></rect><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"></path></svg></button>
+      <button class="icon-action" id="btnOpenSettingsModal" title="Cấu hình máy chủ"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1z"></path></svg></button>
+      <button class="primary-action" id="btnSyncServer">Đồng bộ</button>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <div class="app-layout">
+    <!-- LEFT SIDEBAR: VIA MANAGEMENT -->
+    <aside class="sidebar-vias">
+      <nav class="asset-navigation" aria-label="Điều hướng ADSOS CHECK">
+        <p>QUẢN LÝ TÀI SẢN</p>
+        <button class="asset-nav-btn active" data-target="tabPaneAccounts"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M7 8h10M7 12h6"></path></svg>TKQC Cá nhân</button>
+        <button class="asset-nav-btn" data-target="tabPaneBmSecurity"><svg viewBox="0 0 24 24"><path d="M4 20V8l8-4 8 4v12M8 11h2m4 0h2M8 15h2m4 0h2"></path></svg>Doanh nghiệp (BM)</button>
+        <button class="asset-nav-btn" data-target="tabPaneSuperTarget"><svg viewBox="0 0 24 24"><path d="M5 3h14v18H5zM8 7h8M8 11h8"></path></svg>Fanpage</button>
+        <button class="asset-nav-btn" data-target="tabPaneSuperTarget"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3m0 14v3M2 12h3m14 0h3"></path></svg>Pixel</button>
+        <p>ĐIỀU KHIỂN VẬN HÀNH</p>
+        <button class="asset-nav-btn" data-target="tabPaneWorkflow"><svg viewBox="0 0 24 24"><path d="M4 6h10m-6 6h12M4 18h10"></path><circle cx="17" cy="6" r="2"></circle><circle cx="5" cy="12" r="2"></circle><circle cx="17" cy="18" r="2"></circle></svg>69+ Kịch bản Workflow</button>
+        <button class="asset-nav-btn" data-target="tabPaneWorkflow"><svg viewBox="0 0 24 24"><path d="M5 4v16M5 5h11l-2 4 2 4H5"></path></svg>Lên Camp Hàng Loạt</button>
+        <button class="asset-nav-btn" data-target="tabPaneSuperTarget"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"></circle><circle cx="12" cy="12" r="3"></circle><path d="m15 9 6-6"></path></svg>Super Target (Sở thích ẩn)</button>
+        <p>TIỆN ÍCH</p>
+        <button class="asset-nav-btn" data-target="tabPaneWorkflow"><svg viewBox="0 0 24 24"><path d="M4 7h16v13H4zM8 4h8v3"></path></svg>Ads Save (Kho lưu trữ)</button>
+        <button class="asset-nav-btn" id="btnSidebarPayment"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3 10h18"></path></svg>Extended Payment (Quản lý thẻ)</button>
+      </nav>
+      <div class="sidebar-head">
+        <div class="sidebar-title-row">
+          <span class="sidebar-title"> DANH SÁCH VIA QUẢN TRỊ</span>
+          <button class="btn-icon" id="btnRefreshVias" title="Quét phiên VIA Facebook hiện tại trên trình duyệt"><svg viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"></path><path d="M18 12a6 6 0 0 0-10-4L4 12m2 0a6 6 0 0 0 10 4l4-4"></path></svg></button>
+        </div>
+        <!-- VIEW MODE SELECTOR -->
+        <div class="view-mode-toggle">
+          <button class="mode-btn active" id="btnModeSingle" data-mode="single"> Từng VIA</button>
+          <button class="mode-btn" id="btnModeGrouped" data-mode="grouped" title="Hiển thị gộp tất cả VIA với tiêu đề phân nhóm"> Phân Nhóm Tất Cả</button>
+        </div>
+        <!-- SEARCH VIA -->
+        <div class="sidebar-search">
+          <input type="text" id="searchViaInput" placeholder=" Lọc VIA theo UID, tên...">
+        </div>
+      </div>
+
+      <!-- VIA LIST CONTAINER -->
+      <div class="vias-scroll-list" id="viasListContainer">
+        <div class="empty-hint">Đang tải danh sách VIA...</div>
+      </div>
+
+      <!-- SIDEBAR FOOTER -->
+      <div class="sidebar-footer">
+        <span id="sidebarViaCount">Đã lưu 0 VIA</span>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn-link" id="btnHarvestCurrentVia"> Quét phiên</button>
+          <button class="btn-link text-rose" id="btnClearViaCache" title="Làm mới và xóa sạch cache VIA hiện tại"> Xóa cache</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT MAIN WORKSPACE -->
+    <main class="main-workspace">
+      <!-- REAL-TIME DIAGNOSTIC SCAN BANNER -->
+      <div class="dashboard-scan-banner hidden" id="dashboardScanBanner">
+        <div class="progress-title-row"><div class="sync-progress-head" id="dashboardScanText">Đang chuẩn bị đồng bộ...</div><button class="cancel-task-btn" id="btnCancelSync">Hủy lệnh</button></div>
+        <div class="sync-progress-track" role="progressbar" aria-label="Tiến độ đồng bộ Meta" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="sync-progress-fill" id="dashboardSyncProgressFill"></div>
+        </div>
+      </div>
+
+      <!-- 4 FUNCTIONAL PILLARS NAVIGATION BAR -->
+      <nav class="pillars-nav-bar">
+        <button class="pillar-tab-btn active" id="tabBtnAccounts" data-target="tabPaneAccounts">
+           Quản Trị TKQC &amp; Thanh Toán
+        </button>
+        <button class="pillar-tab-btn" id="tabBtnBmSecurity" data-target="tabPaneBmSecurity">
+           Bảo Mật BM &amp; Quét QTV Ẩn
+        </button>
+        <button class="pillar-tab-btn" id="tabBtnSuperTarget" data-target="tabPaneSuperTarget">
+           Super Target &amp; Fanpage/Pixel
+        </button>
+        <button class="pillar-tab-btn" id="tabBtnWorkflow" data-target="tabPaneWorkflow">
+           Workflow &amp; Control Hub
+        </button>
+      </nav>
+
+      <!-- ===================================================================== -->
+      <!-- TAB 1: QUẢN TRỊ TKQC & THANH TOÁN -->
+      <!-- ===================================================================== -->
+      <div class="tab-pane active" id="tabPaneAccounts">
+        <!-- SUMMARY KPI METRICS BAR -->
+        <section class="kpi-banner">
+          <div class="kpi-item">
+            <div class="kpi-label">Tổng Tài Khoản Live</div>
+            <div class="kpi-number text-emerald" id="kpiLive">0</div>
+            <div class="kpi-sub">Sẵn sàng chạy QC</div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-label">Tổng Tài Khoản Die</div>
+            <div class="kpi-number text-rose" id="kpiDie">0</div>
+            <div class="kpi-sub">Cần kháng nghị</div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-label">Tổng Tiền Đã Tiêu</div>
+            <div class="kpi-number text-indigo" id="kpiSpent">0 ₫</div>
+            <div class="kpi-sub" id="kpiSpentUsd">0 $</div>
+          </div>
+          <div class="kpi-item">
+            <div class="kpi-label">Tổng Dư Nợ</div>
+            <div class="kpi-number text-sky" id="kpiBalance">0 ₫</div>
+            <div class="kpi-sub" id="kpiAssignedDebt">Đã gán khách: 0 ₫ | 0 $</div>
+          </div>
+          <div class="legacy-kpis" aria-hidden="true"><span id="kpiTotal">0</span><span id="kpiUnsettled">0</span><span id="kpiThreshold">0</span><span id="kpiViaLabel"></span></div>
+        </section>
+
+        <section class="density-toolbar">
+          <div><strong id="assetCounter">0 tài sản</strong><span id="selectedCounter">0 đã chọn</span></div>
+          <div><label class="compact-switch">Chế độ gọn<input type="checkbox" id="compactViewToggle" checked><span></span></label><button class="secondary-action" id="btnExportCsvTop"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 19h14"></path></svg>Xuất CSV</button></div>
+        </section>
+
+        <!-- 4 SMIT LOAD ACTION MODES TOOLBAR -->
+        <section class="smit-actions-toolbar">
+          <div class="toolbar-title-group">
+            <span class="toolbar-tag">CHẾ ĐỘ TẢI SMIT:</span>
+          </div>
+          <div class="action-buttons-group">
+            <button class="action-btn btn-mode-all" id="btnLoadAll">
+              <span class="btn-icon"></span> Tải Tất Cả TKQC Của VIA
+            </button>
+            <button class="action-btn btn-mode-id" id="btnOpenLoadByIdModal">
+              <span class="btn-icon"></span> Tải Theo Danh Sách ID
+            </button>
+            <button class="action-btn btn-mode-bm" id="btnOpenLoadByBmModal">
+              <span class="btn-icon"></span> Tải Theo ID BM
+            </button>
+            <button class="action-btn btn-mode-scan" id="btnScanBmPages">
+              <span class="btn-icon"></span> Quét Lại BM &amp; Fanpage
+            </button>
+          </div>
+        </section>
+
+        <!-- FILTER & SEARCH BAR -->
+        <section class="filter-controls-card">
+          <!-- STATUS PILLS -->
+          <div class="status-pills-row legacy-status-row" aria-hidden="true"></div>
+
+          <!-- SECONDARY CONTROLS -->
+          <div class="secondary-filters-row">
+            <div class="search-box">
+              <span class="search-icon"></span>
+              <input type="text" id="tableSearchInputLegacy" placeholder="Tìm theo ID act_, tên tài khoản, 4 số thẻ..." disabled>
+            </div>
+            <div class="select-box">
+              <select id="filterTypeSelect">
+                <option value="ALL">Tất cả loại TK</option>
+                <option value="PERSONAL">TK Cá Nhân</option>
+                <option value="BM">TK Doanh Nghiệp (BM)</option>
+              </select>
+            </div>
+            <div class="select-box">
+              <select id="filterCardSelect">
+                <option value="ALL">Tất cả trạng thái thẻ</option>
+                <option value="ATTACHED">Đã gắn thẻ</option>
+                <option value="NO_CARD">Chưa gắn thẻ</option>
+              </select>
+            </div>
+            <div class="select-box">
+              <select id="filterCurrencySelect">
+                <option value="ALL">Tất cả tiền tệ</option>
+                <option value="VND">VND</option>
+                <option value="USD">USD</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- FLOATING BULK ACTIONS TOOLBAR (HIDDEN UNTIL ROWS CHECKED) -->
+          <div class="bulk-action-bar hidden" id="bulkActionBar">
+            <div class="bulk-left">
+              <span class="bulk-badge" id="bulkSelectedCount">Đã chọn 0 tài sản</span>
+            </div>
+            <div class="bulk-right">
+              <button class="btn btn-sm btn-outline" id="btnBulkRenameModal"><svg viewBox="0 0 24 24"><path d="m14 5 5 5L9 20H4v-5Z"></path><path d="m12 7 5 5"></path></svg>Đổi tên</button>
+              <button class="btn btn-sm btn-outline" id="btnBulkPixel"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3m0 14v3M2 12h3m14 0h3"></path></svg>Chia sẻ Pixel</button>
+              <button class="btn btn-sm btn-outline" id="btnBulkAppeal"><svg viewBox="0 0 24 24"><path d="M12 3 4 7v5c0 5 3 8 8 9 5-1 8-4 8-9V7Z"></path><path d="M9 12h6"></path></svg>Kháng nghị</button>
+              <button class="btn btn-sm btn-primary" id="btnBulkWorkflow"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"></path></svg>Chạy kịch bản <kbd>Ctrl+Enter</kbd></button>
+              <button class="btn btn-sm btn-ghost" id="btnClearSelection"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg>Bỏ chọn <kbd>Esc</kbd></button>
+              <button class="hidden" id="btnBulkTimezoneCurrencyModal" aria-hidden="true"></button>
+              <button class="hidden" id="btnBulkShareModal" aria-hidden="true"></button>
+              <button class="hidden" id="btnCopySelectedIds" aria-hidden="true"></button>
+              <button class="hidden" id="btnExportCsv" aria-hidden="true"></button>
+            </div>
+          </div>
+        </section>
+
+        <!-- HIGH DENSITY SMIT DATA TABLE -->
+        <section class="table-container">
+          <div class="table-scroll-area">
+            <table class="smit-table" id="smitTable">
+              <thead>
+                <tr>
+                  <th class="sticky-left-select" style="width: 40px; text-align: center;">
+                    <input type="checkbox" id="checkAllRows" title="Chọn tất cả">
+                  </th>
+                  <th class="sticky-left-account" style="min-width: 260px;">Tài Khoản / ID / BM Cha</th>
+                  <th style="width: 105px;">Trạng Thái</th>
+                  <th style="width: 120px;">Dư Nợ</th>
+                  <th style="width: 120px;">Ngưỡng</th>
+                  <th style="width: 135px;">Ngưỡng Còn Lại</th>
+                  <th style="width: 120px;">Limit Ẩn</th>
+                  <th style="width: 130px;">Tổng Chi Tiêu</th>
+                  <th style="width: 80px;">Tiền Tệ</th>
+                  <th style="width: 120px;">Thẻ TT</th>
+                  <th style="width: 140px;">Múi Giờ</th>
+                  <th style="width: 90px; text-align: center;">QTV</th>
+                  <th class="sticky-right-actions" style="width: 210px; text-align: center;">Hành Động</th>
+                </tr>
+              </thead>
+              <tbody id="smitTableBody">
+                <tr>
+                  <td colspan="12" class="table-empty">Đang tải dữ liệu tài khoản...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- TAB 2: BẢO MẬT BM & QUÉT QTV ẨN -->
+      <!-- ===================================================================== -->
+      <div class="tab-pane hidden" id="tabPaneBmSecurity">
+        <!-- PANEL 1: QUÉT & XÓA SẠCH QTV ẨN -->
+        <div class="panel-card">
+          <div class="panel-card-head">
+            <div>
+              <div class="panel-card-title"> Quét &amp; Xóa Sạch Quản Trị Viên Ẩn (Anti-Theft)</div>
+              <div class="panel-card-sub">Tự động phát hiện các UID lạ/ẩn chiếm quyền quản trị trên các tài khoản quảng cáo và gỡ bỏ ngay lập tức.</div>
+            </div>
+            <div class="panel-actions-row">
+              <button class="btn btn-sm btn-outline" id="btnScanHiddenAdmins"> Quét QTV Ẩn Tự Động</button>
+              <button class="btn btn-sm btn-secondary text-rose" id="btnCleanSelectedAdmins" disabled> Xóa Tất Cả QTV Ẩn Đã Chọn</button>
+            </div>
+          </div>
+          <div class="table-scroll-area" style="max-height: 260px;">
+            <table class="smit-table" id="tableHiddenAdmins">
+              <thead>
+                <tr>
+                  <th style="width: 40px; text-align: center;"><input type="checkbox" id="checkAllHiddenAdmins"></th>
+                  <th style="width: 50px; text-align: center;">STT</th>
+                  <th style="width: 180px;">ID Tài Khoản QC</th>
+                  <th>Tên Tài Khoản</th>
+                  <th style="width: 180px;">UID Admin Lạ</th>
+                  <th style="width: 150px;">Tên Admin</th>
+                  <th style="width: 120px;">Vai Trò</th>
+                  <th style="width: 120px; text-align: center;">Hành Động</th>
+                </tr>
+              </thead>
+              <tbody id="hiddenAdminsTableBody">
+                <tr>
+                  <td colspan="8" class="table-empty">Bấm "Quét QTV Ẩn Tự Động" để kiểm tra toàn bộ tài khoản.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- PANEL 2: QUẢN LÝ CẤU TRÚC BUSINESS MANAGER (BM) -->
+        <div class="panel-card">
+          <div class="panel-card-head">
+            <div>
+              <div class="panel-card-title"> Quản Trị &amp; Cấu Trúc Business Manager (BM)</div>
+              <div class="panel-card-sub">Xem toàn bộ BM sở hữu bởi VIA, tạo thêm tài khoản quảng cáo, kiểm soát link mời và phân quyền đối tác.</div>
+            </div>
+            <div class="panel-actions-row">
+              <button class="btn btn-sm btn-outline" id="btnCreateBmInviteModal"> Tạo Link Mời BM</button>
+              <button class="btn btn-sm btn-emerald" id="btnOpenLoadByBmModal2"> Quét Chi Tiết BM</button>
+            </div>
+          </div>
+          <div class="table-scroll-area" style="max-height: 320px;">
+            <table class="smit-table" id="tableBms">
+              <thead>
+                <tr>
+                  <th style="width: 50px; text-align: center;">STT</th>
+                  <th style="width: 190px;">ID Business Manager</th>
+                  <th style="min-width: 220px;">Tên Doanh Nghiệp (BM)</th>
+                  <th style="width: 150px;">Xác Minh Doanh Nghiệp</th>
+                  <th style="width: 130px; text-align: center;">Số TKQC Sở Hữu</th>
+                  <th style="width: 120px;">Trạng Thái</th>
+                  <th style="width: 140px; text-align: center;">Hành Động</th>
+                </tr>
+              </thead>
+              <tbody id="bmsTableBody">
+                <tr>
+                  <td colspan="7" class="table-empty">Chưa có dữ liệu Business Manager. Bấm "Quét Lại BM &amp; Fanpage" ở tab TKQC để nạp.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- TAB 3: SUPER TARGET & FANPAGE/PIXEL -->
+      <!-- ===================================================================== -->
+      <div class="tab-pane hidden" id="tabPaneSuperTarget">
+        <!-- PANEL 1: SUPER TARGET TÌM SỞ THÍCH ẨN -->
+        <div class="panel-card">
+          <div class="panel-card-head">
+            <div>
+              <div class="panel-card-title"> Super Target: Mở Khóa Sở Thích Ẩn Meta Graph API</div>
+              <div class="panel-card-sub">Vượt qua giới hạn 25 sở thích gợi ý của Ads Manager để khai thác toàn bộ sở thích ngách với quy mô khán giả chính xác.</div>
+            </div>
+            <div class="panel-actions-row">
+              <button class="btn btn-sm btn-emerald" id="btnCopySelectedInterests" disabled> Copy Sở Thích Đã Chọn (<span id="selectedInterestsCount">0</span>)</button>
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px; margin-bottom: 12px; align-items: center;">
+            <input type="text" id="targetKeywordInput" placeholder="Nhập từ khóa sở thích (VD: thời trang, mỹ phẩm, sneaker, du lịch)..." style="flex: 1; padding: 8px 12px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; color: #fff;">
+            <select id="targetLocaleSelect" style="width: 140px; padding: 8px 10px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; color: #fff;">
+              <option value="vi_VN">Tiếng Việt (vi_VN)</option>
+              <option value="en_US">English (en_US)</option>
+              <option value="th_TH">Thai (th_TH)</option>
+            </select>
+            <button class="btn btn-primary" id="btnExecuteSuperTarget"> Quét Sở Thích Ẩn</button>
+          </div>
+          <div class="table-scroll-area" style="max-height: 260px;">
+            <table class="smit-table" id="tableSuperTarget">
+              <thead>
+                <tr>
+                  <th style="width: 40px; text-align: center;"><input type="checkbox" id="checkAllInterests"></th>
+                  <th style="width: 50px; text-align: center;">STT</th>
+                  <th>Tên Sở Thích (Interest Name)</th>
+                  <th style="width: 180px;">Quy Mô Khán Giả (Audience)</th>
+                  <th style="min-width: 200px;">Đường Dẫn Danh Mục (Path)</th>
+                  <th style="width: 160px;">Chủ Đề (Topic)</th>
+                </tr>
+              </thead>
+              <tbody id="superTargetTableBody">
+                <tr>
+                  <td colspan="6" class="table-empty">Nhập từ khóa và bấm "Quét Sở Thích Ẩn" để tìm kiếm.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- PANEL 2: QUẢN LÝ FANPAGE VỆ TINH & CHIA SẺ PIXEL HÀNG LOẠT -->
+        <div class="panel-card">
+          <div class="panel-card-head">
+            <div>
+              <div class="panel-card-title"> Vệ Tinh: Quản Lý Fanpages &amp; Chia Sẻ Pixel Hàng Loạt</div>
+              <div class="panel-card-sub">Chia sẻ Meta Pixel nhanh sang toàn bộ tài khoản quảng cáo và theo dõi danh sách Fanpage của VIA.</div>
+            </div>
+            <div class="panel-actions-row">
+              <input type="text" id="pixelIdInput" placeholder="Nhập Pixel ID (VD: 9876543210)..." style="width: 200px; padding: 6px 10px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; color: #fff;">
+              <button class="btn btn-sm btn-emerald" id="btnExecuteBulkSharePixel"> Chia Sẻ Pixel Cho TK Đang Chọn</button>
+            </div>
+          </div>
+          <div class="table-scroll-area" style="max-height: 260px;">
+            <table class="smit-table" id="tableFanpages">
+              <thead>
+                <tr>
+                  <th style="width: 50px; text-align: center;">STT</th>
+                  <th style="width: 180px;">ID Fanpage</th>
+                  <th>Tên Fanpage</th>
+                  <th style="width: 160px; text-align: center;">Lượt Thích / Theo Dõi</th>
+                  <th style="width: 140px; text-align: center;">Trạng Thái</th>
+                  <th style="width: 120px; text-align: center;">Hành Động</th>
+                </tr>
+              </thead>
+              <tbody id="fanpagesTableBody">
+                <tr>
+                  <td colspan="6" class="table-empty">Chưa có dữ liệu Fanpage. Bấm "Quét Lại BM &amp; Fanpage" ở tab TKQC để nạp.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===================================================================== -->
+      <!-- TAB 4: WORKFLOW BUILDER & CONTROL HUB -->
+      <!-- ===================================================================== -->
+      <div class="tab-pane hidden" id="tabPaneWorkflow">
+        <!-- PANEL 1: WORKFLOW AUTOMATION BUILDER -->
+        <div class="panel-card">
+          <div class="panel-card-head">
+            <div>
+              <div class="panel-card-title"> Kịch Bản Tự Động Hóa Vận Hành (Workflow Builder - 69+ Presets)</div>
+              <div class="panel-card-sub">Chuỗi các tác vụ tự động liên tiếp giúp thiết lập dàn tài khoản sạch, an toàn, chống checkpoint và đồng bộ đầy đủ.</div>
+            </div>
+            <div class="panel-actions-row">
+              <button class="btn btn-outline" id="btnOpenBulkCampModal"> Lên Camp &amp; Boost Post Hàng Loạt</button>
+              <button class="btn btn-primary" id="btnStartWorkflow"> Bắt Đầu Chạy Kịch Bản Đã Chọn</button>
+            </div>
+          </div>
+
+          <!-- 69+ WORKFLOW PRESETS SELECTOR -->
+          <div style="display: flex; gap: 10px; margin: 12px 0; align-items: center; background: var(--bg-surface); padding: 12px; border-radius: 8px; border: 1px solid var(--border-subtle);">
+            <strong style="font-size: 13px; color: var(--text-color); white-space: nowrap;">Thư viện 69+ Preset:</strong>
+            <select id="selectWorkflowPreset" style="flex: 1; padding: 8px 12px; background: #0f172a; border: 1px solid var(--border-color); border-radius: 6px; color: #38bdf8; font-weight: 600; font-size: 13px;">
+              <option value="">-- Đang tải 69+ quy trình vận hành chuẩn từ Server --</option>
+            </select>
+            <button class="btn btn-sm btn-secondary" id="btnApplySelectedWorkflow">Áp Dụng Preset</button>
+          </div>
+
+          <div class="workflow-checklist">
+            <label class="workflow-check-item">
+              <input type="checkbox" id="wfStepScan" checked>
+              <span><strong>Bước 1:</strong> Quét sâu toàn bộ tài sản VIA (TKQC cá nhân &amp; 40+ BM)</span>
+            </label>
+            <label class="workflow-check-item">
+              <input type="checkbox" id="wfStepCleanAdmins" checked>
+              <span><strong>Bước 2:</strong> Tự động quét &amp; gỡ sạch Quản Trị Viên Ẩn (Anti-Theft)</span>
+            </label>
+            <label class="workflow-check-item">
+              <input type="checkbox" id="wfStepSharePixel">
+              <span><strong>Bước 3:</strong> Chia sẻ Meta Pixel dự phòng sang tất cả TKQC khả dụng</span>
+            </label>
+            <label class="workflow-check-item">
+              <input type="checkbox" id="wfStepRename">
+              <span><strong>Bước 4:</strong> Chuẩn hóa &amp; Đổi tên TKQC hàng loạt theo tiền tố hệ thống</span>
+            </label>
+            <label class="workflow-check-item">
+              <input type="checkbox" id="wfStepShareRoles">
+              <span><strong>Bước 5:</strong> Cấp quyền quản trị cho UID dự phòng / tài khoản khách hàng</span>
+            </label>
+            <label class="workflow-check-item">
+              <input type="checkbox" id="wfStepSyncServer" checked>
+              <span><strong>Bước 6:</strong> Đồng bộ chi tiêu và dữ liệu đối soát trực tiếp về AdsOS Server</span>
+            </label>
+          </div>
+
+          <div style="display: flex; gap: 16px; align-items: center; margin: 12px 0; background: var(--bg-surface); padding: 10px 14px; border-radius: 6px;">
+            <span style="font-size: 12px; font-weight: 600; color: #cbd5e1;"> Độ trễ an toàn chống checkpoint (Anti-Checkpoint Jitter):</span>
+            <input type="range" id="antiCheckpointDelay" min="1500" max="5000" step="500" value="2500" style="flex: 1; accent-color: var(--indigo);">
+            <span id="antiCheckpointDelayLabel" style="font-size: 12px; font-weight: 700; color: var(--sky); width: 80px;">2500 ms</span>
+          </div>
+
+          <div class="workflow-console" id="workflowConsole">ADSOS Workflow Automation Terminal v2.5.0 sẵn sàng. Chọn các bước và bấm 'Bắt Đầu Chạy Toàn Bộ Kịch Bản'...</div>
+        </div>
+
+        <!-- PANEL 2: CONTROL HUB & REMOTE TASK POLLER -->
+        <div class="panel-card">
+          <div class="panel-card-head">
+            <div>
+              <div class="panel-card-title"> Trạm Điều Khiển Trung Tâm (Control Hub)</div>
+              <div class="panel-card-sub">Trạng thái kết nối máy chủ AdsOS, chế độ nhận tác vụ từ xa (Remote Command Polling) và lịch sử thực thi.</div>
+            </div>
+            <div class="panel-actions-row">
+              <button class="btn btn-sm btn-outline" id="btnPollTasksNow"> Kéo Task Từ Server Ngay</button>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 14px;">
+            <div style="background: var(--bg-surface); padding: 12px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+              <div style="font-size: 11px; color: var(--text-muted);">Trạng Thái Máy Chủ</div>
+              <div style="font-size: 14px; font-weight: 700; color: var(--emerald);" id="hubServerStatus">HTTP 200 OK</div>
+            </div>
+            <div style="background: var(--bg-surface); padding: 12px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+              <div style="font-size: 11px; color: var(--text-muted);">Tác Vụ Từ Xa Hỗ Trợ</div>
+              <div style="font-size: 14px; font-weight: 700; color: #fff;">SYNC, SET_CAMP, SHARE, PAUSE</div>
+            </div>
+            <div style="background: var(--bg-surface); padding: 12px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+              <div style="font-size: 11px; color: var(--text-muted);">Tần Suất Polling</div>
+              <div style="font-size: 14px; font-weight: 700; color: var(--sky);">5 giây / lần</div>
+            </div>
+          </div>
+          <!-- MULTI-BROWSER NODES TABLE -->
+          <div style="margin: 16px 0 8px 0; font-size: 13px; font-weight: 700; color: #fff; display: flex; justify-content: space-between; align-items: center;">
+            <span> Danh Sách Node Trình Duyệt Đang Kết Nối (Antidetect / Chrome Nodes):</span>
+            <button class="btn btn-sm btn-secondary" id="btnRefreshNodes"> Làm mới Nodes</button>
+          </div>
+          <div class="table-scroll-area" style="max-height: 220px; margin-bottom: 16px;">
+            <table class="smit-table" id="tableBrowserNodes">
+              <thead>
+                <tr>
+                  <th style="width: 140px;">Node UID</th>
+                  <th>Tên Profile</th>
+                  <th style="width: 120px;">Trình Duyệt</th>
+                  <th style="width: 140px;">Facebook UID</th>
+                  <th style="width: 120px; text-align: center;">Trạng Thái</th>
+                  <th style="width: 150px;">Heartbeat (5s)</th>
+                  <th style="width: 140px; text-align: center;">Session Hub</th>
+                </tr>
+              </thead>
+              <tbody id="browserNodesTableBody">
+                <tr>
+                  <td colspan="7" class="table-empty">Đang kết nối danh sách node trình duyệt...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="table-scroll-area" style="max-height: 200px;">
+            <table class="smit-table" id="tableRecentTasks">
+              <thead>
+                <tr>
+                  <th style="width: 140px;">Thời Gian</th>
+                  <th style="width: 160px;">Loại Tác Vụ</th>
+                  <th style="width: 160px;">ID Tài Khoản Đích</th>
+                  <th>Kết Quả Thực Thi</th>
+                  <th style="width: 120px; text-align: center;">Trạng Thái</th>
+                </tr>
+              </thead>
+              <tbody id="recentTasksTableBody">
+                <tr>
+                  <td colspan="5" class="table-empty">Chưa có tác vụ từ xa nào được giao từ máy chủ AdsOS.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL: TẢI THEO DANH SÁCH ID -->
+  <div class="modal-overlay hidden" id="modalLoadById">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title"> Tải Tài Khoản Theo Danh Sách ID</div>
+        <button class="modal-close" id="btnCloseLoadById">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">
+          Dán danh sách ID tài khoản quảng cáo (mỗi dòng một ID, chấp nhận định dạng <code>act_123456789</code> hoặc <code>123456789</code>):
+        </p>
+        <textarea id="inputAccountIds" rows="7" placeholder="act_123456789012&#10;987654321098&#10;act_554433221100"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelLoadById">Hủy</button>
+        <button class="btn btn-primary" id="btnExecuteLoadById"> Tải Dữ Liệu Ngay</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: TẢI THEO ID BM -->
+  <div class="modal-overlay hidden" id="modalLoadByBm">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title"> Tải Tài Khoản Theo ID Business Manager (BM)</div>
+        <button class="modal-close" id="btnCloseLoadByBm">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">
+          Nhập mã số ID của Doanh nghiệp (Business Manager) cần quét toàn bộ tài khoản sở hữu và quyền truy cập đối tác:
+        </p>
+        <div class="form-group">
+          <label for="inputBmId">ID Business Manager:</label>
+          <input type="text" id="inputBmId" placeholder="VD: 123456789012345">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelLoadByBm">Hủy</button>
+        <button class="btn btn-primary" id="btnExecuteLoadByBm"> Tải Tài Khoản BM</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EXTENDED PAYMENT INSPECTOR -->
+  <div class="modal-overlay hidden" id="modalExtendedPayment">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title"> Extended Payment: Chi Tiết Phương Thức &amp; Hóa Đơn Thanh Toán</div>
+        <button class="modal-close" id="btnCloseExtendedPayment">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+          <div class="form-group">
+            <label>ID Tài Khoản:</label>
+            <input type="text" id="payActId" readonly>
+          </div>
+          <div class="form-group">
+            <label>Tên Tài Khoản QC:</label>
+            <input type="text" id="payActName" readonly>
+          </div>
+          <div class="form-group">
+            <label>Dư Nợ Chưa Thanh Toán:</label>
+            <input type="text" id="payBalance" readonly style="color: var(--amber); font-weight: 700;">
+          </div>
+          <div class="form-group">
+            <label>Ngưỡng Lập Hóa Đơn Hiện Tại:</label>
+            <input type="text" id="payThreshold" readonly style="color: var(--emerald); font-weight: 700;">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label>Thông Tin Thẻ &amp; Cổng Thanh Toán Gắn Vào TK:</label>
+          <textarea id="payFundingDetails" rows="3" readonly></textarea>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-primary" id="btnPayNowAction"> Kích Hoạt Thanh Toán Nợ Ngay</button>
+          <button class="btn btn-secondary" id="btnDownloadInvoices"> Tải Báo Cáo Hóa Đơn (PDF/CSV)</button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelExtendedPayment">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ĐỔI TÊN HÀNG LOẠT -->
+  <div class="modal-overlay hidden" id="modalBulkRename">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title"> Đổi Tên Tài Khoản Quảng Cáo Hàng Loạt</div>
+        <button class="modal-close" id="btnCloseBulkRename">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">
+          Nhập mẫu tên mới. Sử dụng <code>{index}</code> cho số thứ tự hoặc <code>{id}</code> cho ID tài khoản:
+        </p>
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label for="inputRenamePattern">Mẫu tên mới:</label>
+          <input type="text" id="inputRenamePattern" placeholder="VD: VIP_AGENCY_TK_{index}">
+        </div>
+        <div id="renamePreview" style="font-size: 11px; color: var(--sky); margin-top: 6px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelBulkRename">Hủy</button>
+        <button class="btn btn-primary" id="btnExecuteBulkRename"> Đổi Tên Hàng Loạt</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ĐỔI MÚI GIỜ & TIỀN TỆ HÀNG LOẠT -->
+  <div class="modal-overlay hidden" id="modalBulkTimezoneCurrency">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title"> Đổi Múi Giờ &amp; Tiền Tệ Hàng Loạt</div>
+        <button class="modal-close" id="btnCloseBulkTimezoneCurrency">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="selectBulkTimezone">Múi Giờ:</label>
+          <select id="selectBulkTimezone" style="padding: 8px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; color: #fff;">
+            <option value="Asia/Ho_Chi_Minh">Asia/Ho_Chi_Minh (GMT+7)</option>
+            <option value="America/Los_Angeles">America/Los_Angeles (GMT-8)</option>
+            <option value="America/New_York">America/New_York (GMT-5)</option>
+            <option value="Asia/Bangkok">Asia/Bangkok (GMT+7)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="selectBulkCurrency">Tiền Tệ:</label>
+          <select id="selectBulkCurrency" style="padding: 8px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; color: #fff;">
+            <option value="VND">VND (Việt Nam Đồng)</option>
+            <option value="USD">USD (Đô la Mỹ)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelBulkTimezoneCurrency">Hủy</button>
+        <button class="btn btn-primary" id="btnExecuteBulkTimezoneCurrency"> Áp Dụng Thay Đổi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: BULK SHARE AD ACCOUNT -->
+  <div class="modal-overlay hidden" id="modalBulkShare">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title"> Chia Sẻ Quyền Tài Khoản QC Hàng Loạt</div>
+        <button class="modal-close" id="btnCloseBulkShare">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="inputShareTargetUid">UID Facebook Nhận Quyền:</label>
+          <input type="text" id="inputShareTargetUid" placeholder="VD: 10008899889988">
+        </div>
+        <div class="form-group">
+          <label for="selectShareRole">Vai Trò / Quyền Hạn:</label>
+          <select id="selectShareRole" style="padding: 8px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; color: #fff;">
+            <option value="281423141961553">Quản Trị Viên (Administer / Full Control)</option>
+            <option value="461324040994511">Nhà Quảng Cáo (General User / Advertiser)</option>
+            <option value="498930495899">Nhà Phân Tích (Reports Only / Analyst)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelBulkShare">Hủy</button>
+        <button class="btn btn-primary" id="btnExecuteBulkShare"> Chia Sẻ Quyền Ngay</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CẤU HÌNH MÁY CHỦ ADSOS -->
+  <div class="modal-overlay hidden" id="modalSettings">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title"> Cấu Hình Máy Chủ AdsOS Server</div>
+        <button class="modal-close" id="btnCloseSettings">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="cfgServerUrl">Địa Chỉ Máy Chủ (Server URL):</label>
+          <input type="text" id="cfgServerUrl" placeholder="http://127.0.0.1:8000">
+        </div>
+        <div class="form-group">
+          <label for="cfgClientKey">Mã Khách Hàng / Client Key:</label>
+          <input type="text" id="cfgClientKey" placeholder="ADSOS-CLI-XXXX (tùy chọn)">
+        </div>
+        <div class="conn-test-box" id="connTestResultBox">
+          <span id="connTestMessage">Bấm "Kiểm Tra Kết Nối" để kiểm tra trạng thái máy chủ.</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnTestConn"> Kiểm Tra Kết Nối</button>
+        <button class="btn btn-primary" id="btnSaveSettings"> Lưu Cấu Hình</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: BÓC TÁCH COOKIE & TOKEN -->
+  <div class="modal-overlay hidden" id="modalSession">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title"> Chi Tiết Phiên Facebook Đang Hoạt Động</div>
+        <button class="modal-close" id="btnCloseSession">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>UID Facebook (c_user):</label>
+          <input type="text" id="sessionUidDisplay" readonly>
+        </div>
+        <div class="form-group">
+          <label>Access Token (EAAB / EAAG):</label>
+          <textarea id="sessionTokenDisplay" rows="3" readonly></textarea>
+        </div>
+        <div class="form-group">
+          <label>Session Cookie:</label>
+          <textarea id="sessionCookieDisplay" rows="4" readonly></textarea>
+        </div>
+        <div class="form-group">
+          <label>Token fb_dtsg (GraphQL):</label>
+          <input type="text" id="sessionDtsgDisplay" readonly>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelSession">Đóng</button>
+        <button class="btn btn-primary" id="btnCopyAllSession"> Copy Tất Cả Vào Clipboard</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: LÊN CAMP HÀNG LOẠT (BULK BOOST POST / CAMPAIGN - D-065) -->
+  <div class="modal-overlay hidden" id="modalBulkCamp">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title"> Lên Camp &amp; Boost Post Hàng Loạt (Đa Tài Khoản)</div>
+        <button class="modal-close" id="btnCloseBulkCamp">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Tên chiến dịch:</label>
+          <input type="text" id="bulkCampName" placeholder="[ADSOS] Chiến Dịch Tương Tác - Ngày 1011">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label>Mục tiêu chiến dịch (Objective):</label>
+            <select id="bulkCampObjective">
+              <option value="OUTCOME_ENGAGEMENT">Tương tác bài viết / Page (ENGAGEMENT)</option>
+              <option value="OUTCOME_LEADS">Tìm kiếm khách hàng tiềm năng (LEADS)</option>
+              <option value="OUTCOME_SALES">Chuyển đổi bán hàng / Purchase (SALES)</option>
+              <option value="OUTCOME_TRAFFIC">Lưu lượng truy cập (TRAFFIC)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Trạng thái khởi tạo (D-065):</label>
+            <select id="bulkCampStatus" style="font-weight: 700; color: #22c55e;">
+              <option value="ACTIVE" selected>ACTIVE (Bật hoạt động ngay)</option>
+              <option value="PAUSED">PAUSED (Bản nháp / Tạm dừng)</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label>Ngân sách cơ sở mỗi ngày:</label>
+            <input type="number" id="bulkCampBudget" value="500000" min="50000" step="50000">
+          </div>
+          <div class="form-group">
+            <label>Tiền tệ cơ sở:</label>
+            <select id="bulkCampCurrency">
+              <option value="VND" selected>VND (Tự quy đổi USD/EUR nếu TK ngoại tệ)</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label>Fanpage ID (Tùy chọn):</label>
+            <input type="text" id="bulkCampPageId" placeholder="VD: 10009876543210">
+          </div>
+          <div class="form-group">
+            <label>Post ID / Story ID (Tùy chọn):</label>
+            <input type="text" id="bulkCampPostId" placeholder="VD: 10009876543210_123456789">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tài khoản áp dụng:</label>
+          <div id="bulkCampSelectedAccountsLabel" style="font-size: 12px; color: #94a3b8; background: #0f172a; padding: 8px 12px; border-radius: 6px;">
+            Đang áp dụng cho 0 tài khoản đã chọn.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelBulkCamp">Hủy</button>
+        <button class="btn btn-primary" id="btnExecuteBulkCamp"> Phát Lệnh Lên Camp Ngay</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ADS SAVE (KHO LƯU TRỮ ĐỐI TƯỢNG & BÀI VIẾT) -->
+  <div class="modal-overlay hidden" id="modalAdsSave">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title"> Ads Save — Kho Lưu Trữ Đối Tượng &amp; Creative</div>
+        <button class="modal-close" id="btnCloseAdsSave">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <span style="font-size: 13px; color: #94a3b8;">Tài sản quảng cáo đã lưu trữ sẵn sàng tái sử dụng:</span>
+          <button class="btn btn-sm btn-emerald" id="btnSaveCurrentTargetAsAsset"> Lưu Tệp Target Hiện Tại</button>
+        </div>
+        <div class="table-scroll-area" style="max-height: 280px;">
+          <table class="smit-table" id="tableSavedAssets">
+            <thead>
+              <tr>
+                <th style="width: 140px;">Loại Tài Sản</th>
+                <th>Tên Tài Sản</th>
+                <th style="width: 140px;">TK Nguồn</th>
+                <th style="width: 140px;">Thời Gian</th>
+                <th style="width: 100px; text-align: center;">Thao Tác</th>
+              </tr>
+            </thead>
+            <tbody id="savedAssetsTableBody">
+              <tr>
+                <td colspan="5" class="table-empty">Đang tải kho tài sản lưu trữ...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelAdsSave">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div class="toast-popup hidden" id="toastPopup"></div>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

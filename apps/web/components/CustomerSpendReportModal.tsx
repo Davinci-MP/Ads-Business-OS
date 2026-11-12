@@ -1,0 +1,18 @@
+"use client";
+import { useEffect, useState } from "react";
+import { fetchJson } from "../lib/api";
+import { moneyText, sumMoney } from "../lib/admin-utils.mjs";
+import { useAdminData } from "./admin-data";
+import { Empty, ErrorNotice, Modal, useToast } from "./admin-ui";
+import type { DailyReport } from "../types/admin";
+
+export default function CustomerSpendReportModal({isOpen,onClose}:{isOpen:boolean;onClose:()=>void}) {
+  const {data:assets}=useAdminData();const toast=useToast();
+  const [customer,setCustomer]=useState("");const [report,setReport]=useState<DailyReport|null>(null);const [error,setError]=useState<string|null>(null);const [loading,setLoading]=useState(false);
+  useEffect(()=>{if(!isOpen||!customer){setReport(null);return;}const controller=new AbortController();setLoading(true);setError(null);setReport(null);void fetchJson<DailyReport>(`/reports/daily?customer_id=${customer}`,{signal:controller.signal}).then(result=>{if(!controller.signal.aborted)setReport(result);}).catch((e:unknown)=>{if(!controller.signal.aborted)setError(e instanceof Error?e.message:"Không thể tải đối soát.");}).finally(()=>{if(!controller.signal.aborted)setLoading(false);});return()=>controller.abort();},[isOpen,customer]);
+  if(!isOpen)return null;
+  const currencies=[...new Set((report?.rows||[]).flatMap(row=>[...Object.keys(row.meta_by_currency),...Object.keys(row.fee_by_currency)]))];
+  const amounts=currencies.map(currency=>({currency,spend:sumMoney((report?.rows||[]).flatMap(row=>row.meta_by_currency[currency]==null?[]:[row.meta_by_currency[currency]])),fee:(report?.rows||[]).some(row=>row.fee_by_currency[currency]!=null)?sumMoney((report?.rows||[]).flatMap(row=>row.fee_by_currency[currency]==null?[]:[row.fee_by_currency[currency]])):null}));
+  const copy=async()=>{try{await navigator.clipboard.writeText([`BÁO CÁO ĐỐI SOÁT — ${assets.customers.find(c=>String(c.id)===customer)?.name||""}`,`Nguồn: ${report?.meta_source_label||"Báo cáo nghiệp vụ"}`,...amounts.map(row=>`${row.currency}: Chi tiêu ${moneyText(row.spend,row.currency)}; phí đối soát ${moneyText(row.fee,row.currency)}`),"Phí là khoản riêng, chưa xác nhận tiền thực thu. Không cộng các tiền tệ khác nhau."].join("\n"));toast("Đã sao chép báo cáo cho khách hàng.");}catch{toast("Không thể sao chép báo cáo.","error");}};
+  return <Modal title="Báo cáo chi tiêu & phí dịch vụ" onClose={onClose}><div className="admin-form"><label>Khách hàng<select value={customer} onChange={e=>setCustomer(e.target.value)}><option value="">Chọn khách cần đối soát</option>{assets.customers.map(c=><option key={c.id} value={c.id}>{c.name} · Phí {Number(c.fee_rate)*100}%</option>)}</select></label><ErrorNotice message={error}/>{loading?<p className="loading">Đang đọc báo cáo…</p>:amounts.length?<div className="table-scroll"><table><thead><tr><th>Tiền tệ</th><th>Chi tiêu Meta</th><th>Phí đối soát</th></tr></thead><tbody>{amounts.map(row=><tr key={row.currency}><td>{row.currency}</td><td>{moneyText(row.spend,row.currency)}</td><td>{moneyText(row.fee,row.currency)}</td></tr>)}</tbody></table></div>:<Empty description={customer?"Khách chưa có dữ liệu đối soát đủ căn cứ.":"Chọn khách hàng để đọc báo cáo chi tiêu và mức phí đã cấu hình."}/>}<p className="notice">Phí mặc định 4% hoặc mức riêng của khách. Dữ liệu từ báo cáo nghiệp vụ; không quy đổi hoặc cộng chéo tiền tệ, không tự xác nhận đã thu tiền.</p><div className="form-footer"><button className="btn" onClick={onClose}>Đóng</button><button className="btn primary" disabled={!amounts.length||loading} onClick={()=>void copy()}>Sao chép gửi khách</button></div></div></Modal>;
+}

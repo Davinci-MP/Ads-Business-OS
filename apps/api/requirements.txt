@@ -9,5 +9,7 @@ apscheduler>=3.11
 pytest>=8.3
 httpx>=0.27
 google-auth>=2.35
+gspread>=6.1,<7
 requests>=2.32
 cryptography>=42
+websockets>=15

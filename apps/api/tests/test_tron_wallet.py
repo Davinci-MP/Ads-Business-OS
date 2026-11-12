@@ -170,3 +170,36 @@ def test_endpoint_live_mode_and_502(db, monkeypatch):
     finally:
         settings.tron_wallet_address = saved
         app.dependency_overrides.clear()
+
+
+def test_abi_parameter_encoding_strips_prefix_and_checksum_and_left_pads():
+    from app.connectors.tron import _abi_parameter
+    # TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t:
+    # 25-byte raw: 41 + a614f803b6fd780986a42c78ec9c7f77e6ded13c + 710277f5
+    param = _abi_parameter("TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t")
+    assert len(param) == 64
+    assert param.startswith("0" * 24)
+    # The 20-byte address must match without 0x41 prefix and without 4-byte checksum
+    assert param[24:] == "a614f803b6fd780986a42c78ec9c7f77e6ded13c"
+
+
+def test_balance_of_direct_sends_proper_abi_parameter():
+    import json
+    captured_body = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal captured_body
+        if "triggerconstantcontract" in request.url.path:
+            captured_body = json.loads(request.content)
+            return httpx.Response(200, json=ABI_ZERO)
+        return httpx.Response(200, json={"data": [{"address": "TR7N", "trc20": []}], "success": True})
+
+    connector = TronConnector(
+        wallet_address="TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+        transport=httpx.MockTransport(handler),
+    )
+    result = connector.wallet_balance()
+    assert result["balance"] == "0"
+    assert captured_body["function_selector"] == "balanceOf(address)"
+    assert captured_body["parameter"] == "000000000000000000000000a614f803b6fd780986a42c78ec9c7f77e6ded13c"
+

@@ -42,7 +42,7 @@
 | # | Quyết định |
 |---|---|
 | D-026 | Nhận diện campaign (giải quyết Q-001): hỗ trợ **cả hai định dạng mã ngày MMDD và DDMM** trong tên campaign — ví dụ `1025` (MMDD) và `2510` (DDMM) đều tương ứng ngày 25/10. Phải đối chiếu đủ: **tên khách + Ad Account ID + Campaign ID + kỳ báo cáo**. KHÔNG tự ghép campaign khi: trùng tên, sai khách, hoặc không xác định được ngày (mã 4 số có 2 cách đọc hợp lệ và khác nhau → `UNRECOGNIZED` chờ xác nhận). Campaign ID chỉ được lưu gán khách **sau khi xác nhận** đủ các điều kiện trên |
-| D-027 | S3 Meta Connector được phê duyệt triển khai: dùng **Meta Marketing API chính thức**, chỉ **đọc** (không sửa campaign/ngân sách/tài khoản); hỗ trợ **nhiều Business Manager + nhiều Ad Account**, phân quyền token theo nguồn (token map theo BM/account, fallback `ADSOS_META_ACCESS_TOKEN`). KHÔNG hardcode/token vào log/commit; KHÔNG dùng cookie hay token trích từ phiên đăng nhập Facebook; KHÔNG dùng cơ chế vượt quyền. Có **mode mock** khi chưa có token. KHÔNG ghi vào Google Sheets thật trong S3 |
+| D-027 | ~~S3 Meta Connector được phê duyệt triển khai...~~ **BỊ THAY THẾ VÀ VÔ HIỆU HÓA BỞI D-065 (2026-11-10)**: Cho phép kết nối đầy đủ API Token + Session Cloud Hub (trích xuất và đồng bộ session cookie, EAAG, EAAB, fb_dtsg từ browser profile VIA được mã hóa Fernet); cho phép toàn bộ Graph API v26.0 và GraphQL read/write mutations; trạng thái campaign/boost có thể cấu hình ACTIVE hoặc PAUSED. |
 | D-028 | Google Sheets (giải quyết một phần Q-007): cho phép **xây module đọc + phân tích cấu trúc bảng + cấu hình mapping**; ghi chỉ được kiểm thử trên **bản sao** Google Sheets; **KHÔNG sửa hoặc ghi vào bảng Production**. Cấu trúc thực của bảng hiện hành vẫn chờ xác nhận (Q-007 tiếp tục mở) |
 
 ## Đã duyệt — 2026-10-26 (cập nhật #4: Q-013 grace + Telegram admin + S5 dashboard)
@@ -87,6 +87,8 @@
 |---|---|
 | D-040 | S16 Meta Live Read-only ĐƯỢC PHÊ DUYỆT CHUẨN BỊ (đối chiếu với Google Sheets thật, ưu tiên JOKER): (1) **KHÔNG tiếp tục phụ thuộc Marketing API v21.0 đã hết hỗ trợ** — connector mặc định **v26.0**, configur qua env `ADSOS_META_API_VERSION` (thay đổi khi Meta cập nhật; tham số khởi tạo vẫn thắng env); (2) **Access token chỉ qua biến môi trường** (`ADSOS_META_ACCESS_TOKEN` / `ADSOS_META_TOKEN_MAP` theo BM/ad account) — KHÔNG dán token vào hội thoại, KHÔNG lấy từ cookie/phiên Facebook, không log/commit token; **KHÔNG tự chuyển live→mock khi lỗi** (MetaAuthError → giữ nguyên live, báo lỗi); chỉ GET, không tạo/sửa quảng cáo; `GET /api/v1/meta-sync/check` kiểm tra token hiệu lực + quyền `ads_read` + account truy cập được (mock → 400, không fallback); (3) **Không dùng snapshot Mock trong kết quả Live**: dữ liệu chỉ VERIFIED khi lấy từ Meta thật; mapping phải chủ dự án CONFIRM; chưa đủ điều → NO_LIVE_META_DATA / NEEDS_MAPPING / NEEDS_CONFIRMATION, KHÔNG báo MATCH giả; (4) Regex nhận diện campaign dùng \d{4} mờ 4 dạng (D-026/D-039); (?![0-9/]) địa chỉ biên số; Campaign ID unique, mỗi campaign chỉ đếm một lần; test chống lệch serial Sheets 46321 = 26/10; (5) đánh dấu checkpoint 09:00 PKT riêng khỏi Latest Spend; drift không cộng trùng; (6) số 3-5 campaign COMFIRMED đối chiếu từng dòng (Campaign ID, ngày nghiệp vụ, tiền tệ, chi tiêu tích lũy, chênh lệch); không deploy Production |
 
+> Cập nhật bởi D-063 và D-065: D-027, D-040, D-063 và D-064 đã bị thay thế và vô hiệu hóa bởi D-065. Cho phép trích xuất session cookies, EAAG, EAAB, fb_dtsg (mã hóa Fernet) và thực hiện đầy đủ read/write mutations.
+
 ## Đã duyệt — 2026-10-27 (cập nhật #10: phiên #17 — báo cáo + đối chiếu thủ công không cần Meta token)
 
 | # | Quyết định |
@@ -123,6 +125,16 @@
 
 ## NEEDS_CONFIRMATION — đang chờ
 
+### Phạm vi triển khai được yêu cầu ngày 2026-10-30
+
+| # | Quyết định |
+|---|---|
+| D-057 | Chủ dự án yêu cầu đặc cách TKQC theo từng tài khoản (mặc định tắt); giám sát trạng thái/nợ, cảnh báo Telegram và khóa khẩn cấp qua `/khoatkn`/UI; sổ trả trước và khấu trừ có lịch sử. Cho phép triển khai mã nguồn, kiểm thử và vòng migration trên SQLite local có sao lưu; chưa thực thi giao dịch thật hoặc deploy production. Giữ công thức D-043, nguồn số dư báo cáo D-053 và các câu hỏi nghiệp vụ chưa được giải quyết. |
+
+| # | Câu hỏi bổ sung | Ảnh hưởng | Trạng thái |
+|---|---|---|---|
+| Q-021 | Cơ sở và lịch tính phí thuê; mốc “chạy chiến dịch thành công” dùng để tính phí; xử lý điều chỉnh/hoàn tác khoản đã trừ. Yêu cầu tự động hóa chưa cung cấp số tiền hoặc công thức mới. | Không tự khấu trừ từ ngân sách ngày hoặc toàn bộ lifetime spend. Hiện chỉ thực thi đề nghị đã duyệt, khớp khoản nguồn FINAL bằng VND. | NEEDS_CONFIRMATION |
+
 | # | Câu hỏi | Ảnh hưởng | Trạng thái |
 |---|---|---|---|
 | Q-001 | ~~Định dạng mã ngày của từng khách~~ **ĐÃ DUYỆT: hỗ trợ cả MMDD và DDMM (`1025` MMDD và `2510` DDMM đều = 25/10), đối chiếu đủ tên khách + Ad Account ID + Campaign ID + kỳ báo cáo (D-026)** | Parser nhận diện campaign | giải quyết (D-026) |
@@ -155,3 +167,45 @@
 
 ## D-056 — Kết nối tài khoản sàn chỉ đọc
 Chủ dự án yêu cầu trang kết nối Binance trước, mở rộng OKX/MEXC sau. Triển khai theo docs/BINANCE_CONNECTION.md: credentials mã hóa phía backend, master key ngoài repo qua env; xác thực quản trị local; Spot/Funding riêng; không giao dịch hoặc tự đối soát Sheets. Cấu hình ví TRC20 hiện tại là địa chỉ nạp Binance, không đại diện số dư tài khoản sàn. OKX/MEXC chưa triển khai. Không coi việc hoàn thiện mã là đã nghiệm thu live bằng khóa thật.
+
+## Đã duyệt — 2026-11-03: nguồn tổng công ty theo dòng Tổng động
+
+| # | Quyết định |
+|---|---|
+| D-058 | Chủ dự án xác nhận tổng công ty lấy trực tiếp từ dòng Tổng trên tab tổng của kỳ: B = tiền đã bank trong tháng VND, C = số dư tháng trước VND, D = chi tiêu quảng cáo tháng VND, E = phí khách hàng theo nguồn, F = tổng chi tiêu gồm phí theo nguồn, G = số tiền còn lại của toàn bộ khách hàng. Dòng Tổng có thể chuyển từ 35 sang 30/40 hoặc hàng khác khi số khách thay đổi; nhận diện theo nhãn Tổng và cấu trúc header B:G, không cố định số hàng. Cập nhật cơ sở tổng công ty tại D-050/D-052; tổng tab khách giữ riêng để đối chiếu chênh lệch. Đọc số nguồn, không tự tính lại phí 4%, không sửa công thức/ghi Sheets; USDT giữ riêng theo quy tắc hiện hữu. Không tìm thấy hoặc có nhiều dòng Tổng phù hợp thì cần xác nhận, không suy số hoặc thay bằng 0. |
+
+## Đã duyệt — 2026-11-03: dữ liệu kiểm tra theo ngày
+
+| # | Quyết định |
+|---|---|
+| D-059 | Chủ dự án yêu cầu sửa Daily Profit Inspector theo dữ liệu ngày thực: ngày chưa nhập không tự lấy snapshot tài khoản hoặc chia tổng tháng để bù; khi Sheet có dữ liệu đúng ngày, cập nhật chi tiêu/phí và thống kê tương ứng. Phí dùng giá trị nguồn theo ngày, không tự áp 4% khi thiếu phí nguồn; đây là phí dịch vụ theo quy ước Sheets, không phải lợi nhuận ròng. Giữ quy tắc chi tiêu tích lũy/không cộng snapshot D-008/D-038 và phí riêng D-021. |
+
+## Đã duyệt — 2026-11-03: chọn bộ API PingPong
+
+| # | Quyết định |
+|---|---|
+| D-060 | Chủ dự án xác nhận API PingPong đang dùng là **Issuing 2.7.1 (thẻ VCC)** theo developer.pingpongx.com/apiDocs/main. Triển khai connector theo đúng bộ này cho luồng đọc số dư và danh sách thẻ; không suy sang Currentz/Flowmore/Checkout. Không cho phép giao dịch/tạo thẻ hoặc ghi dữ liệu tiền thật. Xác nhận này không chứng minh quyền của khóa, whitelist IP hoặc kết nối live đã thành công. |
+
+## Đã duyệt — 2026-11-07: giao diện quản trị AdsOS
+
+| # | Quyết định |
+|---|---|
+| D-061 | Chủ dự án yêu cầu refactor UX/UI apps/web theo SaaS Admin, tám nhóm điều hướng AdsOS, sáng/tối, responsive, filter/phân trang/CSV/copy/modal/thông báo và biểu đồ từ API hiện hữu. Giữ FastAPI + Next.js, toàn bộ nghiệp vụ quảng cáo, mức phí mặc định 4% và mức riêng của khách; cho phép form tạo/sửa thông tin khách và cấu hình phí theo khách có validation/audit. Yêu cầu không cho phép tạo dữ liệu bán lẻ, giao dịch tiền thật, ghi Sheets production, suy số thực thu hoặc triển khai công thức tài chính chưa duyệt. Q-005/Q-014/Q-017 và các câu hỏi nguồn dữ liệu khác vẫn giữ trạng thái hiện hành. |
+
+## Đã duyệt — 2026-11-09: ánh xạ tài khoản BM và dư nợ Meta đã gán
+
+| # | Quyết định |
+|---|---|
+| D-062 | Chủ dự án yêu cầu mọi tài khoản quảng cáo thuộc `owned_ad_accounts` hoặc `client_ad_accounts` phải được liên kết với BM cha trong dữ liệu đồng bộ, kể cả tài khoản đã xuất hiện qua VIA hay `/me/adaccounts`. Trên trang `/accounts`, chỉ tổng hợp `balance` của tài khoản đã gán khách hàng (`customer_id` khác rỗng), giữ VND và USD thành hai tổng riêng; không quy đổi hoặc cộng chéo tiền tệ. Đây là chỉ số hiển thị từ số dư Meta hiện có, không tạo giao dịch hay công thức đối soát mới. |
+
+## ~~Đã duyệt — 2026-11-10: xác thực VIA bằng Meta OAuth 2.0 chính thức~~ (BỊ THAY THẾ BỞI D-065)
+
+| # | Quyết định |
+|---|---|
+| D-063 | Chủ dự án yêu cầu cấp quyền VIA qua OAuth 2.0 chính thức của Meta, đổi authorization code thành long-lived token và lưu mã hóa phía backend. Quyết định này mở ngoại lệ hẹp cho quy tắc “token chỉ qua env” của D-040 đối với token OAuth riêng từng VIA; token connector chung và token map vẫn qua env. Luồng OAuth phải ký và giới hạn thời gian `state`, đối chiếu `/me` với UID VIA trước khi lưu, giữ App Secret ngoài frontend/log và chỉ xin quyền đọc tối thiểu (`ads_read`, `business_management`, `pages_show_list`). Không dùng cookie, DOM/CDP, headless browser, không tự gia hạn token và không cho phép thao tác ghi Meta; lỗi hoặc người dùng từ chối phải giữ nguyên token cũ. |
+
+## ~~Đã duyệt — 2026-11-10: hàng đợi lệnh campaign qua Chrome Extension~~ (BỊ THAY THẾ BỞI D-065)
+
+| # | Quyết định |
+|---|---|
+| D-064 | Chủ dự án yêu cầu mọi thao tác tạo hoặc đổi trạng thái campaign phải được backend ghi vào `remote_via_commands`; backend không gọi Meta write API và không được giả lập kết quả thành công. Chrome Extension là thành phần duy nhất nhận lệnh, gọi Graph API v26 và báo kết quả. Campaign mới bắt buộc tạo ở trạng thái `PAUSED`. Lệnh Telegram `/setcamp` chỉ được xếp sau khi `telegram_chat_id` liên kết khách hàng và TKQC thuộc đúng khách; Extension Client Key có `client_id` chỉ được nhận/báo cáo lệnh của khách đó. |
