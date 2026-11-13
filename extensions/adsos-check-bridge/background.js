@@ -804,6 +804,11 @@ async function executeShareBmAccounts(payload, token) {
   const invitations = [];
   const businessUsers = [];
 
+  const targetUid = String(payload.target_uid || payload.targetUid || payload.uid || "").trim();
+  if (targetUid) {
+    businessUsers.push({ email: targetUid, userId: targetUid });
+  }
+
   for (const email of emails) {
     if (!email || !bmId) continue;
     const body = new URLSearchParams({ email: email.trim(), role, access_token: token });
@@ -857,7 +862,8 @@ async function executeShareBmAccounts(payload, token) {
       });
     }
   }
-  return { invitations, accounts: accountResults };
+  const firstInvite = invitations.find((i) => i.invite_link)?.invite_link || (bmId ? `https://business.facebook.com/settings/people?business_id=${bmId}` : "");
+  return { invitations, accounts: accountResults, invite_link: firstInvite };
 }
 
 // =============================================================================

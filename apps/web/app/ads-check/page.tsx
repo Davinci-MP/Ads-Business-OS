@@ -49,6 +49,7 @@ function ensureArray<T>(val: unknown): T[] {
 import AutoSetCampModal from "@/components/AutoSetCampModal";
 import CustomerSpendReportModal from "@/components/CustomerSpendReportModal";
 import ShareBmAccountsModal from "@/components/ShareBmAccountsModal";
+import RawViaImportModal from "@/components/RawViaImportModal";
 
 type TabType = "accounts" | "personal" | "bm" | "group" | "page" | "tasks";
 
@@ -103,6 +104,7 @@ function AdsCheckContent() {
   const [showSetCampModal, setShowSetCampModal] = useState(false);
   const [showCustomerSpendModal, setShowCustomerSpendModal] = useState(false);
   const [showWorkflowModal, setShowWorkflowModal] = useState(false);
+  const [showRawViaModal, setShowRawViaModal] = useState(false);
   const [compactView, setCompactView] = useState(true);
   const [copyNotice, setCopyNotice] = useState<string | null>(null);
   const [batchProgress, setBatchProgress] = useState<{
@@ -731,6 +733,20 @@ function AdsCheckContent() {
           <span className={`rounded border px-2 py-1 ${activeVia?.token_status === "ACTIVE" ? "border-[#10B981]/50 text-[#10B981]" : "border-[#3A3A42] text-[#6B7280]"}`}>EAAG</span>
           <span className={`rounded border px-2 py-1 ${activeVia?.token_status === "ACTIVE" ? "border-[#10B981]/50 text-[#10B981]" : "border-[#3A3A42] text-[#6B7280]"}`}>EAAB</span>
         </div>
+        <button
+          type="button"
+          onClick={() => setShowSuperShareModal(true)}
+          className="h-9 px-3.5 rounded-lg border border-indigo-500/60 bg-indigo-600/20 hover:bg-indigo-600/35 text-white flex items-center gap-1.5 text-xs font-semibold shadow-sm transition whitespace-nowrap ml-auto"
+          title="Mở hộp thoại Chia sẻ quyền BM & Gán TKQC"
+        >
+          <svg className="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          <span>Chia Sẻ Quyền BM &amp; Gán TKQC</span>
+        </button>
       </header>
 
       {/* 4-PILLAR CONTROL HUB BROWSER NODES STATUS BAR */}
@@ -945,6 +961,21 @@ function AdsCheckContent() {
               </div>
             )}
           </div>
+
+          {/* Nạp Nguyên Liệu & Quét Sâu Toàn Bộ */}
+          <button
+            type="button"
+            onClick={() => setShowRawViaModal(true)}
+            className="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[1.4px] bg-indigo-600 hover:bg-indigo-500 text-white transition flex items-center gap-1.5 shadow-md shadow-indigo-600/30"
+            title="Nạp định dạng VIA thô (uid|pass|2fa|mail...), giải 2FA TOTP và tự động quét sâu toàn bộ TKQC, BM, Fanpage"
+          >
+            <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <span>Nạp VIA &amp; Quét Sâu</span>
+          </button>
 
           {/*  Đồng Bộ Dữ Liệu Thật Button */}
           <button
@@ -1217,7 +1248,21 @@ function AdsCheckContent() {
           {/* SMIT 4 LOAD MODES TOOLBAR */}
           <div className="bg-[#181818]/90 border-b border-[#282828] p-3 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">CHẾ ĐỘ TẢI SMIT:</span>
+              <button
+                type="button"
+                onClick={() => setShowRawViaModal(true)}
+                className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-1.5 shadow-md shadow-indigo-600/30 transition"
+                title="Nạp VIA định dạng Pipe, giải 2FA TOTP và quét sâu toàn bộ tài sản"
+              >
+                <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="17 8 12 3 7 8" />
+                  <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                <span>Nạp VIA &amp; Quét Sâu</span>
+              </button>
+
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider ml-1">CHẾ ĐỘ TẢI SMIT:</span>
               <button
                 type="button"
                 onClick={() => {
@@ -1619,6 +1664,20 @@ function AdsCheckContent() {
                           <div className="flex items-center justify-center gap-1">
                             <button
                               type="button"
+                              onClick={() => { setSelectedAccountIds([acc.act_id]); setShowSuperShareModal(true); }}
+                              className="rounded border border-[#3A3A42] hover:border-indigo-500 px-2 py-1 text-[10px] text-indigo-400 hover:text-white flex items-center gap-1"
+                              title="Chia sẻ quyền BM & gán TKQC này"
+                            >
+                              <svg className="w-3 h-3 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                              </svg>
+                              <span>Share BM / Gán TK</span>
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => { setSelectedAccountIds([acc.act_id]); setShowSuperTargetModal(true); }}
                               className="rounded border border-[#3A3A42] px-2 py-1 text-[10px] text-[#D1D5DB] hover:border-[#EF4444] hover:text-white"
                             >
@@ -1987,7 +2046,19 @@ function AdsCheckContent() {
         <span className="whitespace-nowrap px-2 text-xs font-semibold text-white">Đã chọn {selectedAccountIds.length} tài sản</span>
         <button type="button" onClick={() => setShowRenameModal(true)} className="rounded-lg border border-[#3A3A42] px-3 py-1.5 text-xs text-[#D1D5DB] hover:text-white">Đổi tên</button>
         <button type="button" onClick={() => setShowSharePixelModal(true)} className="rounded-lg border border-[#3A3A42] px-3 py-1.5 text-xs text-[#D1D5DB] hover:text-white">Chia sẻ Pixel</button>
-        <button type="button" onClick={() => setShowSuperShareModal(true)} className="rounded-lg border border-[#3A3A42] px-3 py-1.5 text-xs text-[#D1D5DB] hover:text-white">Chia sẻ BM</button>
+        <button
+          type="button"
+          onClick={() => setShowSuperShareModal(true)}
+          className="rounded-lg border border-indigo-500/60 bg-indigo-600/25 hover:bg-indigo-600/40 px-3 py-1.5 text-xs font-semibold text-white flex items-center gap-1.5"
+        >
+          <svg className="w-3.5 h-3.5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          <span>Share BM / Gán TK</span>
+        </button>
         <button type="button" onClick={() => setShowSuperTargetModal(true)} className="rounded-lg border border-[#3A3A42] px-3 py-1.5 text-xs text-[#D1D5DB] hover:text-white">Kháng nghị</button>
         <button type="button" onClick={triggerPrimaryWorkflow} className="rounded-lg bg-[#2563EB] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#1D4ED8]">Chạy kịch bản <kbd className="ml-1 opacity-70">Ctrl+Enter</kbd></button>
         <button type="button" onClick={() => setSelectedAccountIds([])} className="rounded-lg px-2 py-1.5 text-xs text-[#9CA3AF] hover:text-white">Bỏ chọn <kbd className="ml-1">Esc</kbd></button>
@@ -2827,6 +2898,13 @@ function AdsCheckContent() {
       <CustomerSpendReportModal
         isOpen={showCustomerSpendModal}
         onClose={() => setShowCustomerSpendModal(false)}
+      />
+
+      {/* Raw VIA Import & Auto Asset Sweep Modal */}
+      <RawViaImportModal
+        open={showRawViaModal}
+        onClose={() => setShowRawViaModal(false)}
+        onSuccess={() => void fetchData()}
       />
     </div>
   );

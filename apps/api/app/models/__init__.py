@@ -9,6 +9,7 @@ from app.models.via import (
     SyncedAdAccount,
     SyncedBM,
     SyncedPage,
+    ViaAccount,
     ViaCategory,
     ViaProfile,
 )
@@ -56,6 +57,7 @@ __all__ = [
     "LedgerTransaction",
     "Customer",
     "CustomerSheetSyncRun",
+    "ViaAccount",
     "ViaProfile",
     "ViaCategory",
     "AdAccountSnapshot",

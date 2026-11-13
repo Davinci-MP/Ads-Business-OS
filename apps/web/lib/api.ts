@@ -2271,3 +2271,60 @@ export async function saveAdAsset(body: {
 export async function deleteSavedAdAsset(id: number): Promise<{ success: boolean; message: string }> {
   return deleteJson(`/ads-check/ads-save/${id}`);
 }
+
+export type ImportRawViasResult = {
+  fb_uid: string;
+  profile_name: string;
+  login_status: string;
+  has_2fa: boolean;
+  has_mail: boolean;
+  has_cookie: boolean;
+  has_eaag: boolean;
+  has_eaab: boolean;
+  totp_code?: string;
+  remaining_seconds?: number;
+  accounts_count: number;
+  bms_count: number;
+  pages_count: number;
+  pixels_count: number;
+  message?: string;
+};
+
+export type ImportRawViasResponse = {
+  success: boolean;
+  imported_count: number;
+  auto_login_and_scan: boolean;
+  results: ImportRawViasResult[];
+  message: string;
+};
+
+export async function importRawViasAndSync(body: {
+  raw_vias_text: string;
+  auto_login_and_scan?: boolean;
+  proxy_url?: string;
+}): Promise<ImportRawViasResponse> {
+  return postJson("/ads-check/import-raw-vias-and-sync", body);
+}
+
+export async function getViaTotp(viaId: number): Promise<{
+  success: boolean;
+  via_id: number;
+  uid: string;
+  code: string;
+  remaining_seconds: number;
+  has_2fa: boolean;
+  message?: string;
+}> {
+  return fetchJson(`/vias/${viaId}/totp`);
+}
+
+export async function previewTotp(secret: string): Promise<{
+  success: boolean;
+  secret: string;
+  code: string;
+  remaining_seconds: number;
+  error?: string;
+}> {
+  return postJson("/vias/totp-preview", { secret });
+}
+

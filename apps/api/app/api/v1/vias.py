@@ -1761,6 +1761,7 @@ def get_via_detail(
 
 
 @router.get("/{via_id}/2fa")
+@router.get("/{via_id}/totp")
 def get_via_live_2fa(
     via_id: int,
     db: Session = Depends(get_db),
@@ -1791,6 +1792,24 @@ def get_via_live_2fa(
         "has_2fa": True,
         "message": "Mã 2FA OTP đang có hiệu lực.",
     }
+
+
+class TotpPreviewRequest(BaseModel):
+    secret: str
+
+
+@router.post("/totp-preview")
+def preview_totp_code(req: TotpPreviewRequest) -> dict[str, Any]:
+    """Tạo trước mã 2FA OTP từ chuỗi secret bất kỳ (hỗ trợ xem thử live)."""
+    code, rem = generate_totp_code(req.secret)
+    return {
+        "success": bool(code),
+        "code": code,
+        "remaining_seconds": rem,
+        "secret": req.secret.replace(" ", "").upper(),
+        "message": "Đã tạo mã 2FA TOTP thành công." if code else "Khóa 2FA Base32 không hợp lệ.",
+    }
+
 
 
 @router.patch("/{via_id}")

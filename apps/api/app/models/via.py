@@ -32,6 +32,180 @@ class ViaProfile(Base):
         """Alias cho uid Facebook của VIA."""
         return self.uid
 
+    @fb_uid.setter
+    def fb_uid(self, val: str) -> None:
+        self.uid = val
+
+    @property
+    def fb_password(self) -> Optional[str]:
+        if not self.encrypted_credentials:
+            return None
+        try:
+            from app.services.via_manager import decrypt_via_credentials
+            return decrypt_via_credentials(self.encrypted_credentials).get("password")
+        except Exception:
+            return None
+
+    @fb_password.setter
+    def fb_password(self, val: Optional[str]) -> None:
+        from app.services.via_manager import decrypt_via_credentials, encrypt_via_credentials
+        creds = decrypt_via_credentials(self.encrypted_credentials) if self.encrypted_credentials else {}
+        creds["password"] = (val or "").strip()
+        self.encrypted_credentials = encrypt_via_credentials(creds)
+
+    @property
+    def two_fa_secret(self) -> Optional[str]:
+        if not self.encrypted_credentials:
+            return None
+        try:
+            from app.services.via_manager import decrypt_via_credentials
+            return decrypt_via_credentials(self.encrypted_credentials).get("two_fa_secret")
+        except Exception:
+            return None
+
+    @two_fa_secret.setter
+    def two_fa_secret(self, val: Optional[str]) -> None:
+        from app.services.via_manager import decrypt_via_credentials, encrypt_via_credentials
+        creds = decrypt_via_credentials(self.encrypted_credentials) if self.encrypted_credentials else {}
+        creds["two_fa_secret"] = (val or "").replace(" ", "").strip().upper()
+        self.encrypted_credentials = encrypt_via_credentials(creds)
+
+    @property
+    def email(self) -> Optional[str]:
+        if not self.encrypted_credentials:
+            return None
+        try:
+            from app.services.via_manager import decrypt_via_credentials
+            return decrypt_via_credentials(self.encrypted_credentials).get("email")
+        except Exception:
+            return None
+
+    @email.setter
+    def email(self, val: Optional[str]) -> None:
+        from app.services.via_manager import decrypt_via_credentials, encrypt_via_credentials
+        creds = decrypt_via_credentials(self.encrypted_credentials) if self.encrypted_credentials else {}
+        creds["email"] = (val or "").strip()
+        self.encrypted_credentials = encrypt_via_credentials(creds)
+
+    @property
+    def email_password(self) -> Optional[str]:
+        if not self.encrypted_credentials:
+            return None
+        try:
+            from app.services.via_manager import decrypt_via_credentials
+            return decrypt_via_credentials(self.encrypted_credentials).get("email_password")
+        except Exception:
+            return None
+
+    @email_password.setter
+    def email_password(self, val: Optional[str]) -> None:
+        from app.services.via_manager import decrypt_via_credentials, encrypt_via_credentials
+        creds = decrypt_via_credentials(self.encrypted_credentials) if self.encrypted_credentials else {}
+        creds["email_password"] = (val or "").strip()
+        self.encrypted_credentials = encrypt_via_credentials(creds)
+
+    @property
+    def backup_email(self) -> Optional[str]:
+        if not self.encrypted_credentials:
+            return None
+        try:
+            from app.services.via_manager import decrypt_via_credentials
+            return decrypt_via_credentials(self.encrypted_credentials).get("backup_email")
+        except Exception:
+            return None
+
+    @backup_email.setter
+    def backup_email(self, val: Optional[str]) -> None:
+        from app.services.via_manager import decrypt_via_credentials, encrypt_via_credentials
+        creds = decrypt_via_credentials(self.encrypted_credentials) if self.encrypted_credentials else {}
+        creds["backup_email"] = (val or "").strip()
+        self.encrypted_credentials = encrypt_via_credentials(creds)
+
+    @property
+    def backup_email_password(self) -> Optional[str]:
+        if not self.encrypted_credentials:
+            return None
+        try:
+            from app.services.via_manager import decrypt_via_credentials
+            return decrypt_via_credentials(self.encrypted_credentials).get("backup_email_password")
+        except Exception:
+            return None
+
+    @backup_email_password.setter
+    def backup_email_password(self, val: Optional[str]) -> None:
+        from app.services.via_manager import decrypt_via_credentials, encrypt_via_credentials
+        creds = decrypt_via_credentials(self.encrypted_credentials) if self.encrypted_credentials else {}
+        creds["backup_email_password"] = (val or "").strip()
+        self.encrypted_credentials = encrypt_via_credentials(creds)
+
+    @property
+    def raw_line(self) -> Optional[str]:
+        if not self.encrypted_credentials:
+            return None
+        try:
+            from app.services.via_manager import decrypt_via_credentials
+            return decrypt_via_credentials(self.encrypted_credentials).get("raw_line")
+        except Exception:
+            return None
+
+    @raw_line.setter
+    def raw_line(self, val: Optional[str]) -> None:
+        from app.services.via_manager import decrypt_via_credentials, encrypt_via_credentials
+        creds = decrypt_via_credentials(self.encrypted_credentials) if self.encrypted_credentials else {}
+        creds["raw_line"] = (val or "").strip()
+        self.encrypted_credentials = encrypt_via_credentials(creds)
+
+    @property
+    def eaag_token(self) -> Optional[str]:
+        if not self.encrypted_credentials:
+            return None
+        try:
+            from app.services.via_manager import decrypt_via_credentials
+            return decrypt_via_credentials(self.encrypted_credentials).get("eaag_token")
+        except Exception:
+            return None
+
+    @eaag_token.setter
+    def eaag_token(self, val: Optional[str]) -> None:
+        from app.services.via_manager import decrypt_via_credentials, encrypt_via_credentials
+        creds = decrypt_via_credentials(self.encrypted_credentials) if self.encrypted_credentials else {}
+        creds["eaag_token"] = (val or "").strip()
+        self.encrypted_credentials = encrypt_via_credentials(creds)
+
+    @property
+    def eaab_token(self) -> Optional[str]:
+        if not self.encrypted_credentials:
+            return None
+        try:
+            from app.services.via_manager import decrypt_via_credentials
+            return decrypt_via_credentials(self.encrypted_credentials).get("eaab_token")
+        except Exception:
+            return None
+
+    @eaab_token.setter
+    def eaab_token(self, val: Optional[str]) -> None:
+        from app.services.via_manager import decrypt_via_credentials, encrypt_via_credentials
+        creds = decrypt_via_credentials(self.encrypted_credentials) if self.encrypted_credentials else {}
+        creds["eaab_token"] = (val or "").strip()
+        self.encrypted_credentials = encrypt_via_credentials(creds)
+
+    @property
+    def fb_dtsg(self) -> Optional[str]:
+        if not self.encrypted_credentials:
+            return None
+        try:
+            from app.services.via_manager import decrypt_via_credentials
+            return decrypt_via_credentials(self.encrypted_credentials).get("fb_dtsg")
+        except Exception:
+            return None
+
+    @fb_dtsg.setter
+    def fb_dtsg(self, val: Optional[str]) -> None:
+        from app.services.via_manager import decrypt_via_credentials, encrypt_via_credentials
+        creds = decrypt_via_credentials(self.encrypted_credentials) if self.encrypted_credentials else {}
+        creds["fb_dtsg"] = (val or "").strip()
+        self.encrypted_credentials = encrypt_via_credentials(creds)
+
     @property
     def access_token(self) -> Optional[str]:
         """Lấy access_token giải mã từ encrypted_credentials."""
@@ -39,8 +213,7 @@ class ViaProfile(Base):
             return None
         try:
             from app.services.via_manager import decrypt_via_credentials
-            creds = decrypt_via_credentials(self.encrypted_credentials)
-            return creds.get("access_token")
+            return decrypt_via_credentials(self.encrypted_credentials).get("access_token")
         except Exception:
             return None
 
@@ -88,6 +261,60 @@ class ViaProfile(Base):
     @status.setter
     def status(self, val: str) -> None:
         self.uid_live_status = val
+
+    def to_safe_dict(self, role: str = "STAFF") -> dict[str, Any]:
+        """Trả về dữ liệu an toàn theo vai trò RBAC."""
+        from app.services.via_manager import decrypt_via_credentials, generate_totp_code
+        creds = decrypt_via_credentials(self.encrypted_credentials) if self.encrypted_credentials else {}
+        two_fa = creds.get("two_fa_secret", "")
+        totp_code, rem_secs = generate_totp_code(two_fa) if two_fa else ("", 0)
+
+        is_owner = (role or "").upper() == "OWNER"
+        base_data: dict[str, Any] = {
+            "id": self.id,
+            "uid": self.uid,
+            "fb_uid": self.uid,
+            "profile_name": self.profile_name,
+            "profile_dir": self.profile_dir,
+            "user_agent": self.user_agent,
+            "login_status": self.login_status or "READY",
+            "last_login_error": self.last_login_error,
+            "uid_live_status": self.uid_live_status,
+            "token_status": self.token_status,
+            "bm_count": self.bm_count,
+            "ad_account_count": self.ad_account_count,
+            "page_count": self.page_count,
+            "has_2fa": bool(two_fa),
+            "has_mail": bool(creds.get("email")),
+            "has_cookie": bool(creds.get("cookie")),
+            "has_eaag": bool(creds.get("eaag_token")),
+            "has_eaab": bool(creds.get("eaab_token")),
+            "live_2fa": {
+                "code": totp_code,
+                "remaining_seconds": rem_secs,
+            },
+            "last_live_check_at": self.last_live_check_at.isoformat() if self.last_live_check_at else None,
+            "last_token_refresh": self.last_token_refresh.isoformat() if self.last_token_refresh else None,
+            "last_synced_at": self.last_synced_at.isoformat() if self.last_synced_at else None,
+            "email": creds.get("email", ""),
+            "backup_email": creds.get("backup_email", ""),
+        }
+
+        if is_owner:
+            base_data.update({
+                "fb_password": creds.get("password", ""),
+                "two_fa_secret": two_fa,
+                "email_password": creds.get("email_password", ""),
+                "backup_email_password": creds.get("backup_email_password", ""),
+                "cookie": creds.get("cookie", ""),
+                "eaag_token": creds.get("eaag_token", ""),
+                "eaab_token": creds.get("eaab_token", ""),
+                "fb_dtsg": creds.get("fb_dtsg", ""),
+                "access_token": creds.get("access_token", ""),
+                "raw_line": creds.get("raw_line", ""),
+            })
+
+        return base_data
     profile_dir: Mapped[str] = mapped_column(String(255), nullable=False)
     user_agent: Mapped[str] = mapped_column(String(500), nullable=False)
 
@@ -103,6 +330,10 @@ class ViaProfile(Base):
 
     # Trạng thái Token: ACTIVE, EXPIRED, CHECKPOINT, NONE
     token_status: Mapped[str] = mapped_column(String(32), default="NONE", index=True)
+
+    # Trạng thái Login tự động: READY, LOGGING_IN, CHECKPOINT, WRONG_PASS, PENDING
+    login_status: Mapped[str] = mapped_column(String(32), default="READY", index=True)
+    last_login_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     # Số lượng tài sản phát hiện
     bm_count: Mapped[int] = mapped_column(Integer, default=0)
@@ -354,4 +585,6 @@ class MaxcareActivityLog(Base):
 # Model Aliases for flexible naming
 SyncedBusinessManager = SyncedBM
 SyncedFanpage = SyncedPage
+ViaAccount = ViaProfile
+
 

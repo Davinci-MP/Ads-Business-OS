@@ -7,6 +7,7 @@ import {
   fetchJson,
   fmtTime,
   getAdsCheckData,
+  getVia2FA,
   SyncedAdAccount,
   ViaProfile,
   maxcareSyncReports,
@@ -18,6 +19,7 @@ import { assignedDebtTotals, csvCell } from "../../lib/admin-utils.mjs";
 import CustomerSpendReportModal from "@/components/CustomerSpendReportModal";
 import { MonoIcon } from "@/components/mono-icon";
 import ShareBmAccountsModal from "@/components/ShareBmAccountsModal";
+import RawViaImportModal from "@/components/RawViaImportModal";
 
 type CustomerRef = { id: number; name: string; fee_rate?: string; telegram_chat_id?: string | null };
 type SyncedBMRef = { id: number; bm_id: string; name: string };
@@ -86,6 +88,8 @@ export default function AccountsPage() {
   const [showLegacyTools, setShowLegacyTools] = useState(false);
   const [showCustomerSpendModal, setShowCustomerSpendModal] = useState(false);
   const [showShareBmModal, setShowShareBmModal] = useState(false);
+  const [showRawViaModal, setShowRawViaModal] = useState(false);
+  const [otpCountdowns, setOtpCountdowns] = useState<Record<number, { code: string; rem: number }>>({});
 
   // Legacy Form States
   const [newCustomerName, setNewCustomerName] = useState("");
@@ -115,14 +119,69 @@ export default function AccountsPage() {
 
       setAccounts(adsRes);
       setCustomers(ensureArray<CustomerRef>(custRes));
-      setVias(ensureArray<ViaProfile>(viaRes));
+      const viaArray = ensureArray<ViaProfile>(viaRes);
+      setVias(viaArray);
       setBms(ensureArray<SyncedBMRef>(bmRes));
+
+      const otps: Record<number, { code: string; rem: number }> = {};
+      viaArray.forEach((v) => {
+        if (v.live_2fa?.code) {
+          otps[v.id] = { code: v.live_2fa.code, rem: v.live_2fa.remaining_seconds || 30 };
+        }
+      });
+      setOtpCountdowns(otps);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setOtpCountdowns((prev) => {
+        const next: Record<number, { code: string; rem: number }> = {};
+        let needsFetch = false;
+        Object.entries(prev).forEach(([key, val]) => {
+          const id = Number(key);
+          if (val.rem <= 1) {
+            next[id] = { code: val.code, rem: 30 };
+            needsFetch = true;
+          } else {
+            next[id] = { code: val.code, rem: val.rem - 1 };
+          }
+        });
+        if (needsFetch) {
+          vias.forEach((v) => {
+            if (v.has_2fa) {
+              getVia2FA(v.id)
+                .then((res) => {
+                  if (res.code) {
+                    setOtpCountdowns((cur) => ({
+                      ...cur,
+                      [v.id]: { code: res.code, rem: res.remaining_seconds || 30 },
+                    }));
+                  }
+                })
+                .catch(() => {});
+            }
+          });
+        }
+        return next;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [vias]);
+
+  const viaLookup = useMemo(() => {
+    const byId = new Map<number, ViaProfile>();
+    const byUid = new Map<string, ViaProfile>();
+    vias.forEach((v) => {
+      byId.set(v.id, v);
+      if (v.uid) byUid.set(v.uid, v);
+    });
+    return { byId, byUid };
+  }, [vias]);
 
   useEffect(() => {
     void loadData();
@@ -406,6 +465,33 @@ export default function AccountsPage() {
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap">
+          <button
+            onClick={() => setShowRawViaModal(true)}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-full text-xs font-bold uppercase tracking-[1.4px] shadow-sm transition"
+            title="Nạp định dạng VIA thô (uid|pass|2fa|mail...), giải 2FA TOTP và tự động quét sâu toàn bộ TKQC, BM, Fanpage"
+          >
+            <svg className="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            Nạp Nguyên Liệu &amp; Quét Sâu
+          </button>
+
+          <button
+            onClick={() => setShowShareBmModal(true)}
+            className="flex items-center gap-2 bg-[#1f1f1f] hover:bg-[#282828] text-white border border-indigo-500/60 hover:border-indigo-400 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-[1.4px] shadow-sm transition"
+            title="Mở hộp thoại Chia sẻ quyền BM & Gán TKQC"
+          >
+            <svg className="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+              <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+            Chia Sẻ Quyền BM &amp; Gán TKQC
+          </button>
+
           <button
             onClick={loadData}
             disabled={loading || busy}
@@ -774,8 +860,18 @@ export default function AccountsPage() {
               >
                 Lưu Gắn Kết
               </button>
-              <button className="btn" type="button" onClick={() => setShowShareBmModal(true)}>
-                Chia sẻ BM &amp; gán TKQC
+              <button
+                type="button"
+                onClick={() => setShowShareBmModal(true)}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[1.4px] shadow transition flex items-center gap-1.5"
+              >
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                Share BM / Gán TK
               </button>
             </div>
 
@@ -827,12 +923,13 @@ export default function AccountsPage() {
                 <th className="py-3 px-3"> Thẻ TT</th>
                 <th className="py-3 px-3">Múi Giờ</th>
                 <th className="py-3 px-3">Cập Nhật</th>
+                <th className="py-3 px-3 text-center">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#282828]">
               {loading ? (
                 <tr>
-                  <td colSpan={17} className="py-12 text-center text-slate-400">
+                  <td colSpan={18} className="py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center gap-2">
                       <span className="text-2xl animate-spin"></span>
                       <span>Đang đọc tài khoản quảng cáo đã đồng bộ…</span>
@@ -841,7 +938,7 @@ export default function AccountsPage() {
                 </tr>
               ) : filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan={17} className="py-12 text-center text-slate-400">
+                  <td colSpan={18} className="py-12 text-center text-slate-400">
                     Không tìm thấy tài khoản quảng cáo nào phù hợp với bộ lọc.
                   </td>
                 </tr>
@@ -958,9 +1055,42 @@ export default function AccountsPage() {
                       {/* 7.  VIA Nguồn */}
                       <td className="py-3 px-3 whitespace-nowrap">
                         {acc.via_profile_name || acc.via_uid ? (
-                          <div className="space-y-0.5">
+                          <div className="space-y-1">
                             <div className="font-semibold text-slate-200">{acc.via_profile_name || "VIA"}</div>
                             <div className="text-[11px] font-mono text-slate-400">{acc.via_uid}</div>
+                            {(() => {
+                              const linkedVia = acc.via_profile_id
+                                ? viaLookup.byId.get(acc.via_profile_id)
+                                : (acc.via_uid ? viaLookup.byUid.get(acc.via_uid) : undefined);
+                              if (!linkedVia?.has_2fa) return null;
+                              const otp = otpCountdowns[linkedVia.id];
+                              const code = otp?.code || linkedVia.live_2fa?.code;
+                              return (
+                                <div className="flex items-center gap-1.5 pt-0.5">
+                                  <div className="bg-[#0B0F19] px-2 py-0.5 rounded border border-[#374151] flex items-center gap-1.5 shadow-inner">
+                                    <span className="font-mono text-xs font-bold text-emerald-400 tabular-nums">
+                                      {code || "------"}
+                                    </span>
+                                    <span className="text-[10px] text-amber-400 font-mono font-bold tabular-nums">
+                                      ({otp ? `${otp.rem}s` : "30s"})
+                                    </span>
+                                  </div>
+                                  {code && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(code);
+                                        showToast(`Đã sao chép mã 2FA: ${code}`, "success");
+                                      }}
+                                      className="p-1 rounded bg-[#1F2937] hover:bg-gray-700 text-gray-300 text-xs transition"
+                                      title="Sao chép 2FA"
+                                    >
+                                      <MonoIcon name="copy" className="h-3 w-3" />
+                                    </button>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </div>
                         ) : (
                           <span className="text-slate-400 italic">—</span>
@@ -1033,6 +1163,27 @@ export default function AccountsPage() {
                       <td className="py-3 px-3 text-slate-400 text-[11px] whitespace-nowrap">
                         {acc.updated_at ? fmtTime(acc.updated_at) : "—"}
                       </td>
+
+                      {/* 17. Thao tác */}
+                      <td className="py-3 px-3 text-center whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedIds([acc.act_id]);
+                            setShowShareBmModal(true);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#1f1f1f] hover:bg-[#282828] text-indigo-400 hover:text-indigo-300 border border-[#333333] hover:border-indigo-500/50 text-[11px] font-medium transition"
+                          title="Chia sẻ quyền BM & gán TKQC này"
+                        >
+                          <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                          </svg>
+                          Share BM / Gán TK
+                        </button>
+                      </td>
                     </tr>
                   );
                 })
@@ -1056,6 +1207,11 @@ export default function AccountsPage() {
         customers={customers}
         bms={bms}
         initialAccountIds={selectedIds}
+      />
+      <RawViaImportModal
+        open={showRawViaModal}
+        onClose={() => setShowRawViaModal(false)}
+        onSuccess={() => void loadData()}
       />
     </div>
   );

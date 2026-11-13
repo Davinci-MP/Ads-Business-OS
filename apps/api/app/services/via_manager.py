@@ -2657,26 +2657,34 @@ def toggle_synced_bm_primary_rental(
 # 9. SERIALIZATION HELPERS CHO UI & API
 # ==============================================================================
 
-def serialize_via_profile(via: ViaProfile) -> dict[str, Any]:
-    """Chuyển đổi ViaProfile sang JSON an toàn (không lộ mật khẩu plaintext)."""
-    creds = decrypt_via_credentials(via.encrypted_credentials)
+def serialize_via_profile(via: ViaProfile, role: str = "STAFF") -> dict[str, Any]:
+    """Chuyển đổi ViaProfile sang JSON an toàn (theo chuẩn RBAC)."""
+    creds = decrypt_via_credentials(via.encrypted_credentials) if via.encrypted_credentials else {}
     two_fa_secret = creds.get("two_fa_secret", "")
     code, rem = generate_totp_code(two_fa_secret)
 
     proxy_info = normalize_proxy_config(via.proxy_config or "")
-
     category = via.category
-    return {
+    is_owner = (role or "").upper() == "OWNER"
+
+    data: dict[str, Any] = {
         "id": via.id,
         "uid": via.uid,
+        "fb_uid": via.uid,
         "profile_name": via.profile_name,
         "profile_dir": via.profile_dir,
         "user_agent": via.user_agent,
+        "login_status": getattr(via, "login_status", None) or "READY",
+        "last_login_error": getattr(via, "last_login_error", None),
         "uid_live_status": via.uid_live_status,
         "token_status": via.token_status,
         "email": creds.get("email", ""),
         "backup_email": creds.get("backup_email", ""),
         "has_2fa": bool(two_fa_secret),
+        "has_mail": bool(creds.get("email")),
+        "has_cookie": bool(creds.get("cookie")),
+        "has_eaag": bool(creds.get("eaag_token")),
+        "has_eaab": bool(creds.get("eaab_token")),
         "live_2fa": {
             "code": code,
             "remaining_seconds": rem,
@@ -2705,6 +2713,22 @@ def serialize_via_profile(via: ViaProfile) -> dict[str, Any]:
         "created_at": via.created_at.isoformat() if via.created_at else None,
         "updated_at": via.updated_at.isoformat() if via.updated_at else None,
     }
+
+    if is_owner:
+        data.update({
+            "fb_password": creds.get("password", ""),
+            "two_fa_secret": two_fa_secret,
+            "email_password": creds.get("email_password", ""),
+            "backup_email_password": creds.get("backup_email_password", ""),
+            "cookie": creds.get("cookie", ""),
+            "eaag_token": creds.get("eaag_token", ""),
+            "eaab_token": creds.get("eaab_token", ""),
+            "fb_dtsg": creds.get("fb_dtsg", ""),
+            "access_token": creds.get("access_token", ""),
+            "raw_line": creds.get("raw_line", ""),
+        })
+
+    return data
 
 
 def serialize_synced_bm(bm: SyncedBM) -> dict[str, Any]:

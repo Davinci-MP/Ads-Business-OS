@@ -22,6 +22,7 @@ import {
 } from "../../lib/api";
 import ExtensionManagerModal from "@/components/ExtensionManagerModal";
 import AutoSetCampModal from "@/components/AutoSetCampModal";
+import RawViaImportModal from "@/components/RawViaImportModal";
 import { MonoIcon } from "@/components/mono-icon";
 
 export default function ViasFarmPage() {
@@ -165,10 +166,13 @@ export default function ViasFarmPage() {
     return () => clearInterval(timer);
   }, [vias]);
 
-  const copyToClipboard = (text: string, keyName: string) => {
+  const copyToClipboard = (text: string, keyName: string, toastText?: string) => {
     if (!text) return;
     navigator.clipboard.writeText(text);
     setCopiedKey(keyName);
+    if (toastText) {
+      setFeedback({ text: toastText });
+    }
     setTimeout(() => {
       setCopiedKey(null);
     }, 1500);
@@ -864,32 +868,32 @@ export default function ViasFarmPage() {
                         <td className="py-3.5 px-3">
                           {via.has_2fa ? (
                             <div className="flex items-center gap-2">
-                              <div className="bg-[#0B0F19] px-2 py-1 rounded-lg border border-[#374151]">
+                              <div className="bg-[#0B0F19] px-2.5 py-1 rounded-lg border border-[#374151]">
                                 <div
-                                  className="font-mono text-sm font-bold text-amber-300 tracking-wider"
+                                  className="font-mono text-sm font-bold text-emerald-400 tracking-wider tabular-nums"
                                   suppressHydrationWarning
                                 >
                                   {isMounted
                                     ? otpData?.code || via.live_2fa?.code || "------"
                                     : via.live_2fa?.code || "------"}
                                 </div>
-                                <div className="flex items-center justify-between text-[9px] text-gray-500 mt-0.5">
+                                <div className="flex items-center justify-between text-[9px] text-gray-400 mt-0.5">
                                   <span>2FA</span>
-                                  <span className="text-amber-400/80" suppressHydrationWarning>
+                                  <span className="text-amber-400 font-mono font-bold tabular-nums" suppressHydrationWarning>
                                     {isMounted && otpData ? `${otpData.rem}s` : "30s"}
                                   </span>
                                 </div>
                               </div>
                               <button
                                 type="button"
-                                onClick={() =>
-                                  copyToClipboard(
-                                    otpData?.code || via.live_2fa.code,
-                                    `otp-${via.id}`
-                                  )
-                                }
-                                className="p-1 rounded bg-[#1F2937] hover:bg-gray-700 text-gray-300 text-xs"
-                                title="Sao chép 2FA"
+                                onClick={() => {
+                                  const code = otpData?.code || via.live_2fa?.code;
+                                  if (code) {
+                                    copyToClipboard(code, `otp-${via.id}`, `Đã sao chép mã 2FA: ${code}`);
+                                  }
+                                }}
+                                className="p-1.5 rounded-lg bg-[#1F2937] hover:bg-gray-700 text-gray-300 text-xs transition"
+                                title="Sao chép mã 2FA"
                               >
                                 <MonoIcon name={copiedKey === `otp-${via.id}` ? "check" : "copy"} className="h-3.5 w-3.5" />
                               </button>
@@ -1188,83 +1192,12 @@ export default function ViasFarmPage() {
       {/* =========================================================================
          MODAL 1: BULK IMPORT 100+ VIAS
          ========================================================================= */}
-      {showImportModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-[#111827] border border-[#1F2937] rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-4 text-gray-200">
-            <div className="flex items-start justify-between border-b border-[#1F2937] pb-3">
-              <div>
-                <h3 className="text-base font-bold text-white tracking-tight m-0">
-                   Thêm / Nhập Hàng Loạt VIA (100+ Profiles)
-                </h3>
-                <p className="text-xs text-gray-400 mt-1">
-                  Định dạng: <code>UID|PASS|2FA|mail|pass mail|Mail back up</code> (Mỗi tài khoản 1 dòng)
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowImportModal(false)}
-                className="text-gray-400 hover:text-white p-1"
-              >
-                
-              </button>
-            </div>
-
-            <form onSubmit={(e) => void handleBulkImport(e)} className="space-y-4 text-xs">
-              <div>
-                <label className="block text-gray-300 font-semibold mb-1">
-                  Danh sách VIA (Dán trực tiếp từ file hoặc shop):
-                </label>
-                <textarea
-                  required
-                  rows={8}
-                  placeholder={`100088889999|MatKhau123|JBSWY3DPEHPK3PXP|user1@gmail.com|pass123|backup1@gmail.com\n100077778888|MatKhau456|JBSWY3DPEHPK3PXP|user2@gmail.com|pass456|backup2@gmail.com`}
-                  value={bulkText}
-                  onChange={(e) => setBulkText(e.target.value)}
-                  className="w-full bg-[#0B0F19] border border-[#1F2937] rounded-xl p-3 font-mono text-xs text-purple-200 focus:outline-none focus:border-purple-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-gray-300 font-semibold mb-1">
-                  Proxy mặc định cho đợt nhập này (Tùy chọn):
-                </label>
-                <input
-                  type="text"
-                  placeholder="IP:Port:User:Pass hoặc URL (VD: 103.45.67.89:8080:user:pass)"
-                  value={defaultProxy}
-                  onChange={(e) => setDefaultProxy(e.target.value)}
-                  className="w-full bg-[#0B0F19] border border-[#1F2937] rounded-xl px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-purple-500"
-                />
-                <span className="text-[10px] text-gray-400 mt-1 block">
-                  Hệ thống sẽ tự động gán đường truyền proxy này vào từng profile VIA độc lập.
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between pt-3 border-t border-[#1F2937]">
-                <span className="text-[11px] text-gray-400">
-                   Mọi mật khẩu và khóa 2FA đều được mã hóa bằng Fernet Master Key.
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowImportModal(false)}
-                    className="px-4 py-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 transition"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isImporting || !bulkText.trim()}
-                    className="px-5 py-2 rounded-xl font-semibold text-white bg-purple-600 hover:bg-purple-500 transition disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-purple-900/20"
-                  >
-                    {isImporting ? "Đang nhập..." : " Bắt Đầu Nhập VIA"}
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* MODAL 1: NẠP NGUYÊN LIỆU & QUÉT SÂU TOÀN BỘ (RAW VIA + 2FA + TOKENS + DEEP ASSET SWEEP) */}
+      <RawViaImportModal
+        open={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onSuccess={() => void loadData()}
+      />
 
       {/* =========================================================================
          MODAL 2: GẮN / SỬA PROXY RIÊNG CHO VIA

@@ -94,6 +94,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const btnBulkRenameModal = document.getElementById("btnBulkRenameModal");
   const btnBulkTimezoneCurrencyModal = document.getElementById("btnBulkTimezoneCurrencyModal");
   const btnBulkShareModal = document.getElementById("btnBulkShareModal");
+  const btnOpenShareBmModalTop = document.getElementById("btnOpenShareBmModalTop");
   const btnBulkPixel = document.getElementById("btnBulkPixel");
   const btnBulkAppeal = document.getElementById("btnBulkAppeal");
   const btnBulkWorkflow = document.getElementById("btnBulkWorkflow");
@@ -174,8 +175,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   const btnCloseBulkShare = document.getElementById("btnCloseBulkShare");
   const btnCancelBulkShare = document.getElementById("btnCancelBulkShare");
   const btnExecuteBulkShare = document.getElementById("btnExecuteBulkShare");
-  const inputShareTargetUid = document.getElementById("inputShareTargetUid");
+  const selectShareBmId = document.getElementById("selectShareBmId");
+  const inputShareBmId = document.getElementById("inputShareBmId");
+  const inputShareEmails = document.getElementById("inputShareEmails");
   const selectShareRole = document.getElementById("selectShareRole");
+  const inputShareTargetUid = document.getElementById("inputShareTargetUid");
+  const inputShareAccountIds = document.getElementById("inputShareAccountIds");
+  const badgeShareAccountCount = document.getElementById("badgeShareAccountCount");
+  const btnSyncShareSelectedFromTable = document.getElementById("btnSyncShareSelectedFromTable");
+  const btnClearShareAccountIds = document.getElementById("btnClearShareAccountIds");
+  const shareBmResultBox = document.getElementById("shareBmResultBox");
+  const shareBmResultMessage = document.getElementById("shareBmResultMessage");
+  const shareBmInviteLinkRow = document.getElementById("shareBmInviteLinkRow");
+  const inputShareInviteLink = document.getElementById("inputShareInviteLink");
+  const btnCopyShareInviteLink = document.getElementById("btnCopyShareInviteLink");
 
   const modalSettings = document.getElementById("modalSettings");
   const btnCloseSettings = document.getElementById("btnCloseSettings");
@@ -1067,48 +1080,168 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Bulk Share Modal
-  if (btnBulkShareModal) {
-    btnBulkShareModal.addEventListener("click", () => {
-      if (selectedAccountIds.size === 0) {
-        showToast("Vui lòng chọn ít nhất 1 tài khoản để chia sẻ quyền!");
-        return;
+  // Bulk Share BM & Assign Accounts Modal
+  function updateShareAccountCount() {
+    if (!inputShareAccountIds || !badgeShareAccountCount) return;
+    const lines = inputShareAccountIds.value.split(/\r?\n/).map((s) => s.trim().replace(/^act_/, "")).filter(Boolean);
+    const valid = new Set(lines.filter((s) => /\d{5,25}/.test(s)));
+    badgeShareAccountCount.textContent = `${valid.size} TKQC`;
+  }
+
+  function openBulkShareModal() {
+    if (!modalBulkShare) return;
+
+    // 1. Populate BM selector from active VIA or viasData
+    if (selectShareBmId) {
+      const active = viasData[activeViaUid] || {};
+      const bms = active.bms || [];
+      selectShareBmId.innerHTML = `<option value="">— Chọn BM từ danh sách (${bms.length} BM) —</option>` +
+        bms.map((b) => `<option value="${escapeHtml(b.bm_id)}">${escapeHtml(b.name || `BM ${b.bm_id}`)} (${escapeHtml(b.bm_id)})</option>`).join("");
+      if (bms.length > 0 && inputShareBmId && !inputShareBmId.value) {
+        inputShareBmId.value = bms[0].bm_id;
+        selectShareBmId.value = bms[0].bm_id;
       }
-      if (modalBulkShare) modalBulkShare.classList.remove("hidden");
+    }
+
+    // 2. Pre-fill any selected account IDs if textarea is empty or user has fresh selection
+    if (inputShareAccountIds) {
+      if (selectedAccountIds.size > 0) {
+        inputShareAccountIds.value = Array.from(selectedAccountIds).join("\n");
+      }
+      updateShareAccountCount();
+    }
+
+    // 3. Reset result box
+    if (shareBmResultBox) shareBmResultBox.classList.add("hidden");
+    if (shareBmInviteLinkRow) shareBmInviteLinkRow.classList.add("hidden");
+
+    modalBulkShare.classList.remove("hidden");
+  }
+
+  if (btnOpenShareBmModalTop) {
+    btnOpenShareBmModalTop.addEventListener("click", () => openBulkShareModal());
+  }
+  if (btnBulkShareModal) {
+    btnBulkShareModal.addEventListener("click", () => openBulkShareModal());
+  }
+
+  if (selectShareBmId) {
+    selectShareBmId.addEventListener("change", () => {
+      if (selectShareBmId.value && inputShareBmId) {
+        inputShareBmId.value = selectShareBmId.value;
+      }
     });
   }
-  if (btnCloseBulkShare) btnCloseBulkShare.addEventListener("click", () => modalBulkShare.classList.add("hidden"));
-  if (btnCancelBulkShare) btnCancelBulkShare.addEventListener("click", () => modalBulkShare.classList.add("hidden"));
+
+  if (inputShareAccountIds) {
+    inputShareAccountIds.addEventListener("input", updateShareAccountCount);
+  }
+
+  if (btnSyncShareSelectedFromTable) {
+    btnSyncShareSelectedFromTable.addEventListener("click", () => {
+      if (selectedAccountIds.size === 0) {
+        showToast("Chưa có dòng nào được tích chọn trên bảng.");
+        return;
+      }
+      inputShareAccountIds.value = Array.from(selectedAccountIds).join("\n");
+      updateShareAccountCount();
+      showToast(`Đã lấy ${selectedAccountIds.size} TKQC từ bảng.`);
+    });
+  }
+
+  if (btnClearShareAccountIds) {
+    btnClearShareAccountIds.addEventListener("click", () => {
+      if (inputShareAccountIds) inputShareAccountIds.value = "";
+      updateShareAccountCount();
+    });
+  }
+
+  if (btnCopyShareInviteLink) {
+    btnCopyShareInviteLink.addEventListener("click", () => {
+      if (inputShareInviteLink?.value) {
+        navigator.clipboard.writeText(inputShareInviteLink.value);
+        showToast("Đã sao chép liên kết mời BM!");
+      }
+    });
+  }
+
+  if (btnCloseBulkShare) {
+    btnCloseBulkShare.addEventListener("click", () => modalBulkShare.classList.add("hidden"));
+  }
+  if (btnCancelBulkShare) {
+    btnCancelBulkShare.addEventListener("click", () => modalBulkShare.classList.add("hidden"));
+  }
 
   if (btnExecuteBulkShare) {
     btnExecuteBulkShare.addEventListener("click", async () => {
+      const bmId = (inputShareBmId ? inputShareBmId.value.trim() : "") || (selectShareBmId ? selectShareBmId.value : "");
+      const emails = inputShareEmails ? inputShareEmails.value.split(/\r?\n|,/).map((e) => e.trim()).filter(Boolean) : [];
+      const role = selectShareRole ? selectShareRole.value : "EMPLOYEE";
       const targetUid = inputShareTargetUid ? inputShareTargetUid.value.trim() : "";
-      const role = selectShareRole ? selectShareRole.value : "281423141961553";
-      if (!targetUid) {
-        showToast("Vui lòng nhập UID Facebook nhận quyền!");
+      const lines = inputShareAccountIds ? inputShareAccountIds.value.split(/\r?\n/).map((s) => s.trim().replace(/^act_/, "")).filter(Boolean) : [];
+      const accountIds = Array.from(new Set(lines.map((s) => {
+        const match = s.match(/\d{5,25}/);
+        return match ? match[0] : s;
+      }).filter(Boolean)));
+
+      if (!bmId && accountIds.length === 0 && !targetUid) {
+        showToast("Vui lòng nhập BM ID, email khách hoặc danh sách ID TKQC!");
         return;
       }
 
-      const ids = Array.from(selectedAccountIds);
-      modalBulkShare.classList.add("hidden");
-      showToast(` Đang chia sẻ quyền quản trị cho UID ${targetUid} trên ${ids.length} tài khoản...`, 4000);
+      const tasks = role === "ANALYST" ? ["ANALYZE"] : role === "ADVERTISER" ? ["ADVERTISE", "ANALYZE"] : ["MANAGE", "ADVERTISE", "ANALYZE"];
 
-      const storage = await chrome.storage.local.get(["serverUrl", "clientKey"]);
-      const srvUrl = storage.serverUrl || "http://127.0.0.1:8000";
+      btnExecuteBulkShare.disabled = true;
+      btnExecuteBulkShare.textContent = "Đang thực thi...";
+      showToast("Đang gửi lệnh chia sẻ quyền BM & gán TKQC...", 3000);
 
-      try {
-        await fetch(`${srvUrl}/api/v1/vias/ads-check/super-share-ads`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            account_ids: ids,
-            role: role,
-            access_type: "ADMIN",
-          }),
-        });
-      } catch (_) {}
+      const payload = {
+        bm_id: bmId,
+        customer_emails: emails,
+        account_ids: accountIds,
+        bm_role: role,
+        target_uid: targetUid,
+        ad_account_tasks: tasks,
+      };
 
-      showToast(` Đã gửi lệnh phân quyền tài khoản cho UID ${targetUid}!`);
+      chrome.runtime.sendMessage({
+        action: "SHARE_BM_AND_ASSIGN_ACCOUNTS",
+        payload,
+      }, async (response) => {
+        btnExecuteBulkShare.disabled = false;
+        btnExecuteBulkShare.innerHTML = " Thực Thi Chia Sẻ BM &amp; Gán TKQC";
+
+        const ok = response && (response.success || response.ok);
+        const resData = response?.result || response?.data || response || {};
+        const inviteLink = resData.invite_link || (resData.invitations && resData.invitations[0]?.invite_link) || "";
+        const msg = resData.message || (ok ? `Chia sẻ thành công cho ${accountIds.length} TKQC và ${emails.length} email!` : (response?.error || response?.message || "Lỗi khi chia sẻ BM & TKQC"));
+
+        if (shareBmResultBox && shareBmResultMessage) {
+          shareBmResultBox.classList.remove("hidden");
+          shareBmResultMessage.textContent = msg;
+          shareBmResultMessage.style.color = ok ? "var(--emerald)" : "var(--rose)";
+          if (inviteLink && inputShareInviteLink && shareBmInviteLinkRow) {
+            inputShareInviteLink.value = inviteLink;
+            shareBmInviteLinkRow.classList.remove("hidden");
+          }
+        }
+
+        showToast(msg, 4000);
+
+        // Also call backend API to log in StaffAuditLog
+        try {
+          const storage = await chrome.storage.local.get(["serverUrl", "clientKey"]);
+          const srvUrl = storage.serverUrl || "http://127.0.0.1:8000";
+          await fetch(`${srvUrl}/api/v1/ads-check/share-bm-accounts`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-AdsOS-Client-Key": storage.clientKey || "",
+            },
+            body: JSON.stringify(payload),
+          }).catch(() => null);
+        } catch (_) {}
+      });
     });
   }
 
@@ -1300,9 +1433,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (btnCreateBmInviteModal) {
     btnCreateBmInviteModal.addEventListener("click", () => {
-      const inviteUrl = `https://business.facebook.com/confirm_business_invite?code=${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
-      navigator.clipboard.writeText(inviteUrl);
-      showToast(` Đã tạo & copy Link mời BM (Quyền Admin): ${inviteUrl}`);
+      openBulkShareModal();
     });
   }
 
@@ -2430,4 +2561,4 @@ chrome.storage.onChanged.addListener((changes, area) => {
   });
 });
   
-});
+

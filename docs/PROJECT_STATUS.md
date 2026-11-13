@@ -1,5 +1,50 @@
 # PROJECT_STATUS.md — Trạng thái dự án
 
+## Cập nhật 2026-11-12 — Nạp VIA Thô (uid|pass|2fa|mail...), Tự Động Vượt 2FA TOTP & Quét Sâu Tài Sản (Web App & Backend)
+
+- **Backend & Database (`apps/api/`):**
+  - Mở rộng model `ViaProfile` (alias `ViaAccount`) thêm 2 trường DB: `login_status` (`READY`, `LOGGING_IN`, `CHECKPOINT`, `WRONG_PASS`, `PENDING`) và `last_login_error`.
+  - Bổ sung property getters/setters mã hóa Fernet ở trạng thái nghỉ cho: `fb_uid`, `fb_password`, `two_fa_secret`, `email`, `email_password`, `backup_email`, `backup_email_password`, `raw_line`, `eaag_token`, `eaab_token`, `fb_dtsg`.
+  - Phân quyền RBAC nghiêm ngặt: Phương thức `to_safe_dict()` và `serialize_via_profile()` tự động xóa toàn bộ credential nhạy cảm đối với nhân viên (`STAFF`), chỉ trả cờ boolean (`has_2fa`, `has_mail`, `has_cookie`, `has_eaag`, `has_eaab`) trừ khi người gọi có vai trò `OWNER`.
+  - Tạo migration reversible `w7x8y9z0a1b2_add_via_login_status_fields.py` và đã kiểm tra `upgrade head -> downgrade -1 -> upgrade head` thành công trên SQLite.
+  - Xây dựng module tự động hóa `app/services/via_auto_login.py`:
+    - Bộ tạo mã RFC 6238 TOTP thuần Python `generate_totp_code(secret)` (zero dependency ngoài standard library), hỗ trợ làm sạch khoảng trắng trong secret base32 và trả về mã 6 chữ số kèm số giây còn lại.
+    - Bộ phân tích chuỗi VIA thô `parse_via_raw_line` và `parse_bulk_raw_vias` hỗ trợ đa định dạng phân cách pipe (từ 2 đến 9+ trường), nhận diện thông minh cookie `c_user` và token `EAA`.
+    - Đăng nhập phiên HTTP có trạng thái (stateful session) qua `httpx`, tự động điền form, giải challenge 2FA `approvals_code`, xác nhận lưu trình duyệt `save_device`, và fallback đọc mã checkpoint qua IMAP email.
+    - Trích xuất token `EAAG`, `EAAB`, `fb_dtsg` và tự động kích hoạt Deep Asset Sweep (`sync_via_all_assets`) để nạp toàn bộ TKQC, BM, Fanpage, Pixel vào DB.
+  - Bổ sung endpoint `POST /api/v1/ads-check/import-raw-vias-and-sync` (ghi `StaffAuditLog`), `GET /api/v1/vias/{via_id}/totp`, và `POST /api/v1/vias/totp-preview`.
+  - Bộ kiểm thử: `tests/test_via_raw_import_and_totp.py` đạt 3/3; toàn bộ test suite backend đạt **630/630 tests** (100% pass rate).
+
+- **Web App UI (`apps/web/`):**
+  - Xây dựng `lib/totp.ts`: Tính toán RFC 6238 TOTP bằng Web Crypto API phía trình duyệt không cần round-trip mạng, kết hợp API client `getViaTotp` và `previewTotp`.
+  - Tạo Component `RawViaImportModal.tsx`:
+    - **Tab 1: Nạp Định Dạng VIA**: Textarea dán chuỗi VIA dạng pipe; bảng xem trước realtime hiển thị UID, mật khẩu (ẩn/hiện), mã 2FA live (OTP + đếm ngược giây), Email, Pass Mail, badge Cookie/Token; tùy chọn auto-login & scan tài sản; proxy dùng chung; thanh tiến trình 4 bước (`[1/4] Lưu VIA`, `[2/4] Đăng nhập & 2FA`, `[3/4] Trích xuất Token`, `[4/4] Quét sâu tài sản`); card tóm tắt số lượng TKQC, BM, Page, Pixel tìm thấy.
+    - **Tab 2: Nạp Nhanh**: Hỗ trợ dán token EAAG/EAAB, cookie hoặc danh sách BM ID.
+  - Tích hợp nút **`[ Nạp Nguyên Liệu & Quét Sâu ]`** trên Top Toolbar của `/accounts` và `/ads-check` (kèm SMIT toolbar).
+  - Tích hợp mã 2FA TOTP Live & nút Copy 1-Click:
+    - Trên `/vias`: Badge mã 2FA đếm ngược mượt mà từng giây kèm thông báo toast sao chép.
+    - Trên `/accounts`: Cột "VIA Nguồn" tự động tìm VIA liên kết; nếu VIA có 2FA sẽ hiển thị badge mã 6 chữ số kèm đếm ngược `(24s)` và nút sao chép 1-click có toast notification.
+  - Kiểm thử & Build: `npx.cmd tsc --noEmit` đạt 0 lỗi; `npm.cmd run build` đạt 0 lỗi, prerender đủ **32/32 route**.
+
+## Cập nhật 2026-11-12 — Phơi bày toàn diện & tích hợp Modal "Chia Sẻ Quyền BM & Gán TKQC"
+
+- **Web App (`/accounts` & `/ads-check`):**
+  - Đặt nút **`[ Chia Sẻ Quyền BM & Gán TKQC ]`** thường trực trên Top Header Toolbar của cả 2 trang, hiển thị icon 1.5px monochrome share/users.
+  - Tích hợp nút **`Share BM / Gán TK`** trong thanh tác vụ nổi hàng loạt (Floating Bulk Bar) và trên từng hàng dữ liệu của bảng (Quick Actions column).
+  - Hoàn thiện `ShareBmAccountsModal.tsx` với bộ chọn BM ID (danh sách BM đã sync + ô nhập tay), email nhận quyền (nhiều dòng), vai trò Facebook BM (`EMPLOYEE`, `ADMIN` giới hạn Owner, `FINANCE_EDITOR`, `FINANCE_ANALYST`, `DEVELOPER`) kèm tasks (`MANAGE`, `ADVERTISE`, `ANALYZE`).
+  - Hỗ trợ bộ chọn TKQC 3 cách: tự động điền theo khách hàng đã gán, nạp nhanh các dòng đang chọn trên bảng, nhập/dán ID bằng tay có lọc trùng live và badge đếm số lượng.
+  - Gửi lệnh qua `POST /api/v1/ads-check/share-bm-accounts` (ghi `StaffAuditLog`), đồng thời phát tín hiệu qua `window.ExtensionBridge` nếu có, hiển thị kết quả từng tài khoản và nút copy link mời BM.
+- **Extension Bridge (`dashboard.html` & `dashboard.js`):**
+  - Mở khóa `#btnBulkShareModal` trong `#bulkActionBar` và gắn nhãn **`Chia Sẻ BM & Gán TKQC`**.
+  - Thêm nút cố định **`Chia Sẻ Quyền BM & Gán TKQC`** (`#btnOpenShareBmModalTop`) tại `.smit-actions-toolbar` ở đầu Tab 1.
+  - Nâng cấp `#modalBulkShare` thành modal đầy đủ (BM ID selector/input, email nhiều dòng, role selector, target UID, textarea ID TKQC kèm badge đếm và nút lấy từ bảng).
+  - Đấu nối `#btnOpenShareBmModalTop`, `#btnBulkShareModal`, và `#btnCreateBmInviteModal` (Tab 2) mở `#modalBulkShare` và điền sẵn TKQC đang chọn.
+  - Xử lý submit qua `chrome.runtime.sendMessage({ action: "SHARE_BM_AND_ASSIGN_ACCOUNTS", payload })`, hỗ trợ cả target UID và email mời, hiển thị kết quả và link mời BM.
+- **Kiểm tra & Nghiệm thu:**
+  - `node --check` đạt 0 lỗi trên `dashboard.js` và `background.js`.
+  - `npx tsc --noEmit` và `npm.cmd run build` đạt 0 lỗi (prerender đủ 32/32 route).
+  - Dev server port 3000 khởi động lại và phản hồi HTTP 200 cho cả `/accounts` và `/ads-check`.
+
 ## Cập nhật 2026-11-12 — Xác thực nhân sự và vận hành tài sản end-to-end
 
 - **Xác thực thật:** hoàn thiện đăng nhập nhân sự bằng Bearer token ký HMAC, API `/auth/login`, `/auth/me`, đổi mật khẩu và kiểm tra phiên ở `AppShell`. Tài khoản OWNER mặc định chỉ được seed trong môi trường local; production bắt buộc cấu hình khóa ký qua biến môi trường.

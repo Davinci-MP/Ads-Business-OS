@@ -25,7 +25,7 @@ from app.models.extension_remote import (
     WorkflowTemplate,
 )
 from app.models.staff import StaffUser
-from app.models.via import SyncedAdAccount, SyncedBM
+from app.models.via import SyncedAdAccount, SyncedBM, ViaProfile
 from app.services.via_manager import serialize_synced_ad_account
 from app.services.workflow_presets import BUILTIN_WORKFLOW_PRESETS, seed_workflow_presets
 
@@ -241,6 +241,116 @@ def share_bm_accounts(
         "results": results,
         "invite_link": f"https://business.facebook.com/settings/people/?business_id={req.bm_id}",
         "message": f"Đã xếp lệnh chia sẻ BM và {len(found_ids)} TKQC để Extension xử lý.",
+    }
+
+
+class ImportRawViasRequest(BaseModel):
+    raw_vias_text: str
+    auto_login_and_scan: bool = True
+    proxy_url: Optional[str] = None
+
+
+@router.post("/import-raw-vias-and-sync")
+def import_raw_vias_and_sync(
+    req: ImportRawViasRequest,
+    db: Session = Depends(get_db),
+    current_staff: StaffUser = Depends(get_current_staff),
+) -> dict[str, Any]:
+    """Nạp danh sách VIA thô (uid|pass|2fa|mail...), tự động vượt 2FA, trích xuất Cookie/Token và quét sâu toàn bộ tài sản."""
+    from app.services.via_auto_login import (
+        auto_login_and_harvest_via,
+        parse_bulk_raw_vias,
+    )
+    from app.services.via_manager import decrypt_via_credentials, encrypt_via_credentials
+
+    parsed_list = parse_bulk_raw_vias(req.raw_vias_text)
+    if not parsed_list:
+        raise HTTPException(
+            status_code=422,
+            detail="Không có dòng nguyên liệu VIA hợp lệ nào được tìm thấy. Định dạng chuẩn: uid|pass|2fa|mail|passmail|mailbackup|passmailbackup",
+        )
+
+    saved_vias: list[ViaProfile] = []
+    results: list[dict[str, Any]] = []
+
+    for item in parsed_list:
+        uid = str(item["uid"]).strip()
+        via = db.scalar(select(ViaProfile).where(ViaProfile.uid == uid))
+        creds = {
+            "password": item.get("password") or item.get("fb_password") or "",
+            "two_fa_secret": item.get("two_fa_secret") or "",
+            "email": item.get("email") or "",
+            "email_password": item.get("email_password") or "",
+            "backup_email": item.get("backup_email") or "",
+            "backup_email_password": item.get("backup_email_password") or "",
+            "raw_line": item.get("raw_line") or "",
+            "cookie": item.get("cookie") or "",
+            "access_token": item.get("access_token") or "",
+            "eaag_token": item.get("eaag_token") or "",
+            "eaab_token": item.get("eaab_token") or "",
+            "fb_dtsg": item.get("fb_dtsg") or "",
+        }
+
+        if not via:
+            via = ViaProfile(
+                uid=uid,
+                profile_name=f"VIA {uid}",
+                profile_dir=f"data/browser_profiles/{uid}",
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+                encrypted_credentials=encrypt_via_credentials(creds),
+                proxy_config=req.proxy_url,
+                proxy_status="UNKNOWN" if req.proxy_url else "NONE",
+                uid_live_status="LIVE" if item.get("cookie") or item.get("access_token") else "UNKNOWN",
+                token_status="ACTIVE" if item.get("access_token") else "NONE",
+                login_status="PENDING",
+            )
+            db.add(via)
+            db.flush()
+        else:
+            old_creds = decrypt_via_credentials(via.encrypted_credentials) if via.encrypted_credentials else {}
+            for k, v in creds.items():
+                if v or k not in old_creds:
+                    old_creds[k] = v
+            via.encrypted_credentials = encrypt_via_credentials(old_creds)
+            if req.proxy_url:
+                via.proxy_config = req.proxy_url
+            db.flush()
+
+        saved_vias.append(via)
+
+    db.commit()
+
+    for via in saved_vias:
+        if req.auto_login_and_scan:
+            try:
+                res = auto_login_and_harvest_via(via, session=db, proxy_url=req.proxy_url)
+                res_dict = via.to_safe_dict(role=current_staff.role)
+                res_dict["message"] = res.get("message")
+                results.append(res_dict)
+            except Exception as login_err:
+                logger.warning("Lỗi auto login VIA %s: %s", via.uid, login_err)
+                via.login_status = "PENDING"
+                via.last_login_error = str(login_err)
+                db.commit()
+                res_dict = via.to_safe_dict(role=current_staff.role)
+                res_dict["message"] = f"Lỗi: {login_err}"
+                results.append(res_dict)
+        else:
+            results.append(via.to_safe_dict(role=current_staff.role))
+
+    log_staff_action(
+        db,
+        current_staff,
+        "IMPORT_RAW_VIAS",
+        detail=f"Đã nạp {len(saved_vias)} VIA thô và kích hoạt quét tài sản (auto_login={req.auto_login_and_scan}).",
+    )
+    db.commit()
+
+    return {
+        "success": True,
+        "imported_count": len(results),
+        "results": results,
+        "message": f"Đã nạp và xử lý thành công {len(results)} VIA.",
     }
 
 

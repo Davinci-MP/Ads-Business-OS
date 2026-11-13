@@ -155,6 +155,9 @@
             <button class="action-btn btn-mode-scan" id="btnScanBmPages">
               <span class="btn-icon"></span> Quét Lại BM &amp; Fanpage
             </button>
+            <button class="action-btn btn-mode-share" id="btnOpenShareBmModalTop" style="border-color: rgba(99, 102, 241, 0.5); color: #a5b4fc;">
+              <span class="btn-icon"></span> Chia Sẻ Quyền BM &amp; Gán TKQC
+            </button>
           </div>
         </section>
 
@@ -203,8 +206,8 @@
               <button class="btn btn-sm btn-outline" id="btnBulkAppeal"><svg viewBox="0 0 24 24"><path d="M12 3 4 7v5c0 5 3 8 8 9 5-1 8-4 8-9V7Z"></path><path d="M9 12h6"></path></svg>Kháng nghị</button>
               <button class="btn btn-sm btn-primary" id="btnBulkWorkflow"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"></path></svg>Chạy kịch bản <kbd>Ctrl+Enter</kbd></button>
               <button class="btn btn-sm btn-ghost" id="btnClearSelection"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></svg>Bỏ chọn <kbd>Esc</kbd></button>
+              <button class="btn btn-sm btn-outline" id="btnBulkShareModal" style="border-color: rgba(99, 102, 241, 0.5); color: #a5b4fc;"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Chia Sẻ BM &amp; Gán TKQC</button>
               <button class="hidden" id="btnBulkTimezoneCurrencyModal" aria-hidden="true"></button>
-              <button class="hidden" id="btnBulkShareModal" aria-hidden="true"></button>
               <button class="hidden" id="btnCopySelectedIds" aria-hidden="true"></button>
               <button class="hidden" id="btnExportCsv" aria-hidden="true"></button>
             </div>
@@ -673,30 +676,74 @@
     </div>
   </div>
 
-  <!-- MODAL: BULK SHARE AD ACCOUNT -->
+  <!-- MODAL: BULK SHARE BM & AD ACCOUNTS -->
   <div class="modal-overlay hidden" id="modalBulkShare">
-    <div class="modal-card">
+    <div class="modal-card modal-lg">
       <div class="modal-header">
-        <div class="modal-title"> Chia Sẻ Quyền Tài Khoản QC Hàng Loạt</div>
+        <div class="modal-title"> Chia Sẻ Quyền BM &amp; Gán TKQC Hàng Loạt</div>
         <button class="modal-close" id="btnCloseBulkShare">&times;</button>
       </div>
-      <div class="modal-body">
-        <div class="form-group" style="margin-bottom: 12px;">
-          <label for="inputShareTargetUid">UID Facebook Nhận Quyền:</label>
-          <input type="text" id="inputShareTargetUid" placeholder="VD: 10008899889988">
+      <div class="modal-body" style="max-height: 80vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label for="selectShareBmId">Chọn Business Manager (BM):</label>
+            <select id="selectShareBmId" style="padding: 8px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; color: #fff;">
+              <option value="">— Chọn BM từ danh sách —</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="inputShareBmId">Hoặc Nhập BM ID Đích:</label>
+            <input type="text" id="inputShareBmId" placeholder="VD: 123456789012345">
+          </div>
         </div>
+
         <div class="form-group">
-          <label for="selectShareRole">Vai Trò / Quyền Hạn:</label>
-          <select id="selectShareRole" style="padding: 8px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; color: #fff;">
-            <option value="281423141961553">Quản Trị Viên (Administer / Full Control)</option>
-            <option value="461324040994511">Nhà Quảng Cáo (General User / Advertiser)</option>
-            <option value="498930495899">Nhà Phân Tích (Reports Only / Analyst)</option>
-          </select>
+          <label for="inputShareEmails">Email Khách Hàng Nhận Quyền (mỗi email 1 dòng):</label>
+          <textarea id="inputShareEmails" rows="2" placeholder="khachhang1@gmail.com&#10;khachhang2@gmail.com" style="border-radius: 6px; padding: 8px; font-size: 12px;"></textarea>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group">
+            <label for="selectShareRole">Vai Trò / Quyền Hạn Facebook BM:</label>
+            <select id="selectShareRole" style="padding: 8px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; color: #fff;">
+              <option value="EMPLOYEE">Nhân Viên (EMPLOYEE - Khuyên dùng)</option>
+              <option value="ADMIN">Quản Trị Viên (ADMIN)</option>
+              <option value="ADVERTISER">Nhà Quảng Cáo (ADVERTISER)</option>
+              <option value="ANALYST">Nhà Phân Tích (ANALYST)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="inputShareTargetUid">Target UID Facebook (tùy chọn):</label>
+            <input type="text" id="inputShareTargetUid" placeholder="VD: 10008899889988">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+            <label for="inputShareAccountIds">Danh Sách ID TKQC Gán Quyền (mỗi ID 1 dòng):</label>
+            <span id="badgeShareAccountCount" style="font-size: 11px; font-family: monospace; font-weight: 700; color: var(--emerald); background: rgba(16, 185, 129, 0.15); padding: 2px 8px; border-radius: 10px; border: 1px solid rgba(16, 185, 129, 0.3);">0 TKQC</span>
+          </div>
+          <textarea id="inputShareAccountIds" rows="4" placeholder="act_123456789&#10;987654321" style="border-radius: 6px; padding: 8px; font-size: 12px;"></textarea>
+          <div style="display: flex; gap: 8px; margin-top: 4px;">
+            <button type="button" class="btn btn-sm btn-outline" id="btnSyncShareSelectedFromTable"> Lấy TKQC đang chọn trên bảng</button>
+            <button type="button" class="btn btn-sm btn-ghost" id="btnClearShareAccountIds"> Xóa trắng</button>
+          </div>
+        </div>
+
+        <div id="shareBmResultBox" class="hidden" style="background: rgba(15, 23, 42, 0.9); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px; font-size: 12px;">
+          <div id="shareBmResultMessage" style="color: var(--emerald); font-weight: 600; margin-bottom: 6px;"></div>
+          <div id="shareBmInviteLinkRow" class="hidden" style="margin-top: 6px;">
+            <label style="font-size: 11px; color: #94a3b8; display: block; margin-bottom: 2px;">Link Mời BM (Invite Link):</label>
+            <div style="display: flex; gap: 6px;">
+              <input type="text" id="inputShareInviteLink" readonly style="flex: 1; font-size: 11px; background: #000; color: #38bdf8;">
+              <button type="button" class="btn btn-sm btn-outline" id="btnCopyShareInviteLink"> Sao chép</button>
+            </div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="btnCancelBulkShare">Hủy</button>
-        <button class="btn btn-primary" id="btnExecuteBulkShare"> Chia Sẻ Quyền Ngay</button>
+        <button class="btn btn-secondary" id="btnCancelBulkShare">Đóng</button>
+        <button class="btn btn-primary" id="btnExecuteBulkShare"> Thực Thi Chia Sẻ BM &amp; Gán TKQC</button>
       </div>
     </div>
   </div>
