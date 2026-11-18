@@ -1,5 +1,11 @@
 # PROJECT_STATUS.md — Trạng thái dự án
 
+## Cập nhật 2026-11-13 — Sửa thứ tự React Hooks trong modal nhập VIA
+
+- Chuyển nhánh đóng sớm của `RawViaImportModal` xuống sau `useMemo(summaryTotals)`, bảo đảm số lượng và thứ tự Hooks không thay đổi khi mở/đóng modal.
+- Quét bằng parser TypeScript toàn bộ 61 tệp TSX trong `apps/web/components` và `apps/web/app`; không còn Hook nào nằm sau `return null`. Tám component Modal/Dialog đặt tên riêng cũng đã được đối chiếu trực tiếp.
+- Nghiệm thu: `npx.cmd tsc --noEmit` đạt mã thoát 0, không có lỗi TypeScript.
+
 ## Cập nhật 2026-11-12 — Nạp VIA Thô (uid|pass|2fa|mail...), Tự Động Vượt 2FA TOTP & Quét Sâu Tài Sản (Web App & Backend)
 
 - **Backend & Database (`apps/api/`):**

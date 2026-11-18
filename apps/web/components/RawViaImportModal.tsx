@@ -181,8 +181,6 @@ export default function RawViaImportModal({
     };
   }, [rawText]);
 
-  if (!open) return null;
-
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
@@ -320,6 +318,8 @@ export default function RawViaImportModal({
       pixels,
     };
   }, [importResponse]);
+
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
