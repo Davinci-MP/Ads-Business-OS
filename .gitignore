@@ -9,6 +9,7 @@ venv/
 *service_account*.json
 sa-*.json
 *.db
+apps/api/*.db.backup-*
 *.sqlite3
 .pytest_cache/
 alembic/versions/*.pyc

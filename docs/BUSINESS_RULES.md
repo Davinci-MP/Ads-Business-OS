@@ -5,7 +5,7 @@
 ## 1. Bối cảnh kinh doanh
 
 - Công ty chuyên **cung cấp tài khoản quảng cáo Facebook** cho khách. Hiện quản lý **31 khách hàng**.
-- **1 khách ↦ nhiều ad account**; account dễ bị hạn chế/móa → phải **thay thế liên tục**. Lịch sử account cũ và campaign cũ phải giữ nguyên (chỉ đổi trạng thái).
+- **1 khách ↦ nhiều ad account**; account dễ bị hạn chế/khóa → phải **thay thế liên tục**. Lịch sử account cũ và campaign cũ phải giữ nguyên (chỉ đổi trạng thái).
 - Sử dụng **nhiều Facebook cá nhân + nhiều Business Manager (BM)** khác nhau.
 - Khách liên hệ, yêu cầu và báo sự cố qua **Telegram**.
 - Dữ liệu chi tiêu & công nợ hiện đang quản lý bằng **Google Sheets** (một bảng đang vận hành). Cấu trúc và công thức của bảng này là bất biến cho đến khi được phê duyệt thay đổi.
