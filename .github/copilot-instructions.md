@@ -105,3 +105,14 @@ Trước khi thay đổi hành vi, đọc tài liệu phù hợp:
 ### Kiểm chứng và bàn giao
 
 Khi thay đổi hành vi, thêm hoặc cập nhật test pytest nhỏ nhất phù hợp, bao gồm idempotency và giữ nguyên dữ liệu khi lỗi nếu có liên quan. Chạy test tập trung trước, sau đó chạy toàn bộ backend test và web build khi thay đổi ảnh hưởng đến các phần đó. Kết thúc phiên, cập nhật [`docs/PROJECT_STATUS.md`](../docs/PROJECT_STATUS.md); chỉ cập nhật [`docs/DECISIONS.md`](../docs/DECISIONS.md) khi chủ dự án đã phê duyệt quyết định.
+
+### Kiểm tra an toàn bắt buộc trước mỗi lần push
+
+1. **Chặn database backup.** Không stage, commit hoặc push file khớp `*.db.backup-*`, dù file có nằm trong `.gitignore` hoặc chỉ tồn tại trong lịch sử local. Kiểm tra cả worktree/index bằng `git status --short`, diff staged, và các commit chưa push. Nếu phát hiện file đã bị commit, phải loại nó khỏi lịch sử trước khi push thay vì bỏ qua cảnh báo size/file hook của GitHub.
+2. **Bảo vệ cấu hình Facebook extension.** Mọi thay đổi trong `extensions/adsos-check-bridge/manifest.json` phải được đối chiếu trực tiếp với `HEAD`. Không xóa hoặc làm suy giảm:
+   - `content_scripts` cho `fb-opt-main.js` ở `world: "MAIN"` và `fb-opt-relay.js` ở isolated world trên `*://*.facebook.com/*` và `*://*.messenger.com/*`;
+   - `web_accessible_resources` cho `fb-opt-main.js`, `fb-opt-relay.js`, `bridge-main.js`, và `bridge-main.js` trên localhost/127.0.0.1;
+   - các `permissions`/`host_permissions` cần cho hành vi extension hiện tại.
+   Chỉ cho phép thay đổi có chủ ý rõ ràng, chấp thuận của chủ dự án và kiểm thử extension tương ứng. Manifest phải vẫn là JSON hợp lệ.
+3. **Đối chiếu quy tắc kinh doanh.** Khi `docs/BUSINESS_RULES.md` thay đổi, đối chiếu từng thay đổi liên quan với `docs/DECISIONS.md`, ưu tiên các quyết định đã duyệt D-021 và D-041 đến D-045. Không xóa, đảo nghĩa hoặc làm yếu quy tắc đã duyệt; quyết định mới/chỉnh sửa yêu cầu phê duyệt rõ ràng của chủ dự án trước khi cập nhật `DECISIONS.md`.
+4. **Build trước khi push.** Luôn chạy `npm.cmd run build` trong `apps/web` và chỉ được push khi mã thoát thành công, kể cả khi thay đổi chính chỉ nằm ngoài frontend. Nếu build thất bại, dừng push và báo lỗi kèm đường dẫn kết quả.
