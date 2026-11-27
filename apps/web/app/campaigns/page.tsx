@@ -149,7 +149,7 @@ export default function CampaignsPage() {
               void reloadTg();
               void reloadTelemetry();
             }}
-            className="px-4 py-2 rounded-full bg-[#1ed760] hover:bg-[#1fdf64] text-black text-xs font-bold uppercase tracking-[1.4px] shadow transition"
+            className="px-4 py-2 rounded-full bg-[#0070f3] hover:bg-[#1fdf64] text-black text-xs font-bold uppercase tracking-[1.4px] shadow transition"
             style={{ border: 0, cursor: "pointer" }}
           >
             Làm mới tất cả
@@ -467,7 +467,7 @@ export default function CampaignsPage() {
                     <button
                       onClick={() => void handleCreate()}
                       disabled={creating}
-                      className="px-4 py-2 rounded-full bg-[#1ed760] hover:bg-[#1fdf64] text-black text-xs font-bold uppercase tracking-[1.4px] shadow transition cursor-pointer"
+                      className="px-4 py-2 rounded-full bg-[#0070f3] hover:bg-[#1fdf64] text-black text-xs font-bold uppercase tracking-[1.4px] shadow transition cursor-pointer"
                       style={{ border: 0 }}
                     >
                       {creating ? "Đang gửi lên Meta…" : "Xác nhận tạo Campaign (PAUSED)"}
@@ -488,7 +488,7 @@ export default function CampaignsPage() {
                   <button
                     onClick={handleDryRun}
                     disabled={overrideBusy}
-                    className="px-5 py-2.5 rounded-full bg-[#1ed760] hover:bg-[#1fdf64] text-black text-xs font-bold uppercase tracking-[1.4px] shadow transition cursor-pointer"
+                    className="px-5 py-2.5 rounded-full bg-[#0070f3] hover:bg-[#1fdf64] text-black text-xs font-bold uppercase tracking-[1.4px] shadow transition cursor-pointer"
                     style={{ border: 0 }}
                   >
                     Xem trước &amp; Xác nhận an toàn
@@ -540,7 +540,7 @@ export default function CampaignsPage() {
                 <h2 style={{ fontSize: 15, margin: 0 }}> Lịch sử tạo Campaign gần đây</h2>
                 <button
                   onClick={() => void reloadTasks()}
-                  style={{ background: "none", border: 0, color: "#1ed760", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
+                  style={{ background: "none", border: 0, color: "#0070f3", cursor: "pointer", fontSize: 12, fontWeight: 600 }}
                 >
                   Tải lại
                 </button>

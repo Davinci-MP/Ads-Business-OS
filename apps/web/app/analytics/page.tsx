@@ -7,7 +7,7 @@ import { Empty, ErrorNotice, PageHeading } from "../../components/admin-ui";
 import { useReportData } from "../../components/report-data";
 import { SpendChart } from "../../components/spend-chart";
 import { moneyText, sumMoney } from "../../lib/admin-utils.mjs";
-const palette=["#10b981","#818cf8","#38bdf8","#fbbf24","#fb7185","#a78bfa"];
+const palette=["#0070f3","#818cf8","#38bdf8","#fbbf24","#fb7185","#a78bfa"];
 export default function AnalyticsPage() {
   const {data:assets}=useAdminData();const [days,setDays]=useState(30);const [currency,setCurrency]=useState("USD");
   const {data,loading,error}=useReportData(days);

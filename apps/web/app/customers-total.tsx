@@ -462,7 +462,7 @@ export default function CustomersTotal() {
               <button
                 type="button"
                 onClick={jumpToToday}
-                className="rounded-lg border border-indigo-500/40 bg-indigo-950/40 px-2.5 py-1 text-xs font-medium text-indigo-300 hover:bg-indigo-900/40"
+                className="rounded-lg border border-indigo-500/40 bg-[#eef4ff] px-2.5 py-1 text-xs font-medium text-indigo-300 hover:bg-[#eef4ff]"
               >
                 Hôm nay
               </button>
@@ -695,7 +695,7 @@ export default function CustomersTotal() {
                           onClick={() => setSelectedDate(dayItem.date)}
                           className={`cursor-pointer transition-colors ${
                             isSelected
-                              ? "bg-indigo-950/40 border-l-4 border-l-indigo-500 font-semibold"
+                              ? "bg-[#eef4ff] border-l-4 border-l-indigo-500 font-semibold"
                               : "hover:bg-slate-800/40"
                           }`}
                         >
@@ -753,7 +753,7 @@ export default function CustomersTotal() {
                                 setSelectedDate(dayItem.date);
                                 setDailyInspectorTab("client_rank");
                               }}
-                              className="rounded px-2 py-1 text-[11px] text-indigo-400 hover:bg-indigo-950/50 hover:text-indigo-300 transition-colors"
+                              className="rounded px-2 py-1 text-[11px] text-indigo-400 hover:bg-[#eef4ff] hover:text-indigo-300 transition-colors"
                             >
                               Xem khách →
                             </button>

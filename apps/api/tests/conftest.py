@@ -25,6 +25,12 @@ def default_test_fernet_key(monkeypatch):
         monkeypatch.setattr(settings, "exchange_master_key", key)
 
 
+@pytest.fixture(autouse=True)
+def default_test_telegram_mock(monkeypatch):
+    """Đảm bảo các unit test không gửi HTTP request thật tới Telegram Bot API khi .env có live token."""
+    monkeypatch.setattr(settings, "telegram_bot_token", "")
+
+
 def datetime_utc(year, month, day, hour=0, minute=0):
     return datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
 

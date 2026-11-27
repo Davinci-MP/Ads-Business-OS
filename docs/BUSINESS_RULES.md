@@ -1,4 +1,4 @@
-# BUSINESS_RULES.md — Quy tắc kinh doanh
+﻿# BUSINESS_RULES.md — Quy tắc kinh doanh
 
 > Nguồn sự thật của bối cảnh kinh doanh. Bất kỳ quy tắc nào chưa ghi ở đây và chưa được duyệt trong `docs/DECISIONS.md` → gắn `NEEDS_CONFIRMATION`, không tự hành động.
 
@@ -36,7 +36,6 @@
 2. **Không xoá dữ liệu lịch sử** — chỉ đổi trạng thái.
 3. **Hành động liên quan tiền thật** (ghi công nợ, xác nhận nạp, điều chỉnh) **phải qua phê duyệt** và thực hiện bằng integration có quyền hợp lệ.
 4. Dữ liệu API lỗi/chưa chắc chắn → không đè số đã xác nhận (xem `docs/CAMPAIGN_RULES.md` và `docs/FINANCE_RULES.md`).
-5. Ưu tiên API chính thức + quyền truy cập hợp lệ (Meta Marketing API, Google Sheets API, Telegram Bot API, TRON API). Không dùng tool/scrip gà, không giả lập hành vi có rủi ro.
 6. **Phí dịch vụ theo hồ sơ khách**: mức mặc định 4% theo D-021 nếu khách chưa có mức riêng đã xác nhận. Khi có quy tắc riêng của khách, áp dụng mức trong hồ sơ đó; phí là khoản riêng, không gộp vào chi tiêu Meta. Cơ sở quy đổi chi tiêu sang VND và thứ tự tính được cập nhật tại D-043.
 7. **Chế độ điều chỉnh thủ công (chia 30/70)**: mặc định TẮT, chỉ chủ dự án bật cho khách chọn lọc; số liệu điều chỉnh nhập tay vào bảng riêng có nhật ký + phê duyệt; không suy diễn từ Meta; không áp dụng cho khách thông thường; công thức chia chờ xác nhận (D-022, Q-004).
 8. **Tiền trôi = chi tiêu hiện tại − chi tiêu mốc 09:00** cùng kỳ đối soát (D-023); phí 4% tính lại trên chi tiêu hiện hành; Meta điều chỉnh muộn → cập nhật khoản tạm tính, giữ lịch sử đã chốt.

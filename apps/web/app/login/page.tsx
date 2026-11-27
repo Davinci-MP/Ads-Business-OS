@@ -56,28 +56,29 @@ export default function LoginPage() {
         alignItems: "center",
         justifyContent: "center",
         padding: "20px",
-        background: "#121214",
-        color: "#FFF",
-        fontFamily: "system-ui, -apple-system, sans-serif",
+        background: "var(--page)",
+        color: "var(--ink)",
+        fontFamily: "var(--font-geist), -apple-system, system-ui, sans-serif",
       }}
     >
       <div
         style={{
-          background: "#3F3F3F",
-          border: "1.5px solid currentColor",
-          borderRadius: "8px",
+          background: "var(--surface)",
+          border: "1px solid var(--line)",
+          borderRadius: "10px",
           padding: "40px",
-          maxWidth: "420px",
+          maxWidth: "400px",
           width: "100%",
-          boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
         }}
       >
         <h2
           style={{
             margin: "0 0 20px",
-            fontSize: "1.5rem",
+            fontSize: "1.4rem",
             fontWeight: 600,
-            color: "#F3F4F6",
+            letterSpacing: "-0.02em",
+            color: "var(--ink)",
             textAlign: "center",
           }}
         >
@@ -86,9 +87,9 @@ export default function LoginPage() {
         <h3
           style={{
             margin: "0 0 20px",
-            fontSize: "1rem",
-            fontWeight: 500,
-            color: "#888",
+            fontSize: "0.9rem",
+            fontWeight: 400,
+            color: "var(--muted)",
             textAlign: "center",
           }}
         >
@@ -100,8 +101,11 @@ export default function LoginPage() {
             style={{
               marginBottom: "16px",
               padding: "8px",
-              background: "#ffe0e0",
-              borderRadius: "4px",
+              background: "#fff0f0",
+              border: "1px solid #ffd0d0",
+              color: "#b42318",
+              borderRadius: "6px",
+              fontSize: "0.85rem",
               textAlign: "center",
             }}
           >
@@ -127,11 +131,11 @@ export default function LoginPage() {
               style={{
                 width: "100%",
                 padding: "8px 12px",
-                border: "1px solid currentColor",
-                borderRadius: "4px",
-                background: "transparent",
-                color: "#FFF",
-                fontSize: "1rem",
+                border: "1px solid var(--line)",
+                borderRadius: "6px",
+                background: "var(--surface)",
+                color: "var(--ink)",
+                fontSize: "0.9rem",
               }}
               required
             />
@@ -154,12 +158,11 @@ export default function LoginPage() {
                 style={{
                   width: "100%",
                   padding: "8px 12px",
-                  border: "1px solid currentColor",
-                  borderRadius: "4px",
-                  background: "transparent",
-                  color: "#FFF",
-                  fontSize: "1rem",
-                  // password show/hide toggle will be added below
+                  border: "1px solid var(--line)",
+                  borderRadius: "6px",
+                  background: "var(--surface)",
+                  color: "var(--ink)",
+                  fontSize: "0.9rem",
                 }}
                 required
               />
@@ -172,7 +175,7 @@ export default function LoginPage() {
                   transform: "translateY(-50%)",
                   background: "transparent",
                   border: "none",
-                  color: "#666",
+                  color: "var(--muted)",
                   fontSize: "0.8rem",
                   cursor: "pointer",
                   padding: "0 4px",
@@ -190,34 +193,34 @@ export default function LoginPage() {
             style={{
               width: "100%",
               padding: "10px",
-              background: "#3b82f6",
-              color: "#FFF",
+              background: "var(--ink)",
+              color: "var(--page)",
               border: "none",
-              borderRadius: "4px",
-              fontSize: "1rem",
-              fontWeight: 500,
+              borderRadius: "6px",
+              fontSize: "0.9rem",
+              fontWeight: 600,
               cursor: "pointer",
-              transition: "background 0.2s",
+              transition: "opacity 0.2s",
             }}
           >
             {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
           </button>
         </form>
 
-        <div style={{ marginTop: "20px", textAlign: "center", fontSize: "0.75rem", color: "#666" }}>
-          <span>Chưa có tài khoản?</span> <a href="/register" style={{ color: "#3b82f6", textDecoration: "none" }}>Đăng ký</a>
+        <div style={{ marginTop: "20px", textAlign: "center", fontSize: "0.75rem", color: "var(--muted)" }}>
+          <span>Chưa có tài khoản?</span> <a href="/register" style={{ color: "var(--accent)", textDecoration: "none" }}>Đăng ký</a>
         </div>
 
         <div
-          style={{ marginTop: "20px", marginBottom: "10px", fontSize: "0.75rem", color: "#666" }}
+          style={{ marginTop: "20px", marginBottom: "10px", fontSize: "0.75rem", color: "var(--muted)" }}
         >
-          <a href="/password-reset" style={{ color: "#3b82f6", textDecoration: "none" }}>
+          <a href="/password-reset" style={{ color: "var(--accent)", textDecoration: "none" }}>
             Lấy lại mật khẩu
           </a>
         </div>
 
-        <div style={{ marginTop: "20px", fontSize: "0.75rem", color: "#666" }}>
-          <a href="/" style={{ color: "#666", textDecoration: "none" }}>
+        <div style={{ marginTop: "20px", fontSize: "0.75rem", color: "var(--muted)" }}>
+          <a href="/" style={{ color: "var(--muted)", textDecoration: "none" }}>
             Quay về AdsOS
           </a>
         </div>

@@ -450,7 +450,7 @@ export default function ViasFarmPage() {
             type="button"
             onClick={() => setShowExtensionModal(true)}
             className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-cyan-950/80 border border-cyan-500/50 text-cyan-300 hover:bg-cyan-900/50 transition flex items-center gap-1.5 shadow-lg shadow-cyan-950/40"
-            title="Tải & Quản lý Extension ADSOS CHECK PRO (Client Key, ZIP)"
+            title="Tải & Quản lý Extension metaOs (Client Key, ZIP)"
           >
             <span></span>
             <span>Tiện ích trình duyệt</span>
@@ -469,7 +469,7 @@ export default function ViasFarmPage() {
           </button>
           <Link
             href="/ads-check"
-            className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-950/80 border border-indigo-500/50 text-indigo-300 hover:bg-indigo-900/50 transition flex items-center gap-1.5 shadow-lg shadow-indigo-950/40"
+            className="px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#eef4ff] border border-indigo-500/50 text-indigo-300 hover:bg-[#eef4ff] transition flex items-center gap-1.5 shadow-lg shadow-indigo-950/40"
           >
             <span></span>
             <span>Bảng ADSOS CHECK</span>

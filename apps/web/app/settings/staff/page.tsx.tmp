@@ -1,6 +1,0 @@
-﻿import { useState, useEffect, useRef } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faTable, faUsers, faUserPlus, faEdit, faTimes, faLockOpen, faLockClosed } from "@fortawesome/free-solid-svg-icons";
-
-// Dual-Theme Monochrome colors
-const isDark = document.documentElement.getAttribute("data-theme") === "dark";

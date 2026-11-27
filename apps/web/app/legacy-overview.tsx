@@ -38,7 +38,7 @@ export default function OverviewPage() {
           aria-current={tab === "overview" ? "page" : undefined}
           className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-[1.4px] transition ${
             tab === "overview"
-              ? "bg-[#1ed760] text-black shadow-md"
+              ? "bg-[#0070f3] text-black shadow-md"
               : "bg-[#1f1f1f] text-[#b3b3b3] hover:text-white hover:bg-[#282828] border border-[#333333]"
           }`}
         >
@@ -49,7 +49,7 @@ export default function OverviewPage() {
           aria-current={tab === "customers" ? "page" : undefined}
           className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-[1.4px] transition ${
             tab === "customers"
-              ? "bg-[#1ed760] text-black shadow-md"
+              ? "bg-[#0070f3] text-black shadow-md"
               : "bg-[#1f1f1f] text-[#b3b3b3] hover:text-white hover:bg-[#282828] border border-[#333333]"
           }`}
         >
@@ -60,7 +60,7 @@ export default function OverviewPage() {
           aria-current={tab === "total" ? "page" : undefined}
           className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-[1.4px] transition ${
             tab === "total"
-              ? "bg-[#1ed760] text-black shadow-md"
+              ? "bg-[#0070f3] text-black shadow-md"
               : "bg-[#1f1f1f] text-[#b3b3b3] hover:text-white hover:bg-[#282828] border border-[#333333]"
           }`}
         >
@@ -89,7 +89,7 @@ export default function OverviewPage() {
       ) : (
         <>
           <p className="mb-4">
-            <a href="/sheets#customer-setup" className="text-[#1ed760] hover:underline font-bold text-xs uppercase tracking-[1.2px]">
+            <a href="/sheets#customer-setup" className="text-[#0070f3] hover:underline font-bold text-xs uppercase tracking-[1.2px]">
               + Thiết lập khách hàng từ Sheets ↗
             </a>
           </p>
@@ -110,7 +110,7 @@ export default function OverviewPage() {
                   <tr key={c.id}>
                     <td className="font-mono text-[#b3b3b3]">{c.id}</td>
                     <td>
-                      <a href={`/customers/${c.id}`} className="text-white hover:text-[#1ed760] font-bold">
+                      <a href={`/customers/${c.id}`} className="text-white hover:text-[#0070f3] font-bold">
                         {c.name}
                       </a>
                     </td>

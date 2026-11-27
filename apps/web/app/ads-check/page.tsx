@@ -780,7 +780,7 @@ function AdsCheckContent() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-white tracking-wide">ADSOS CHECK</span>
-                <span className="text-[10px] uppercase font-bold tracking-widest px-1.5 py-0.5 rounded bg-[#1ed760]/15 text-[#1ed760] border border-[#1ed760]/30 rounded-full font-bold uppercase tracking-[1.4px]">
+                <span className="text-[10px] uppercase font-bold tracking-widest px-1.5 py-0.5 rounded bg-[#0070f3]/15 text-[#0070f3] border border-[#0070f3]/30 rounded-full font-bold uppercase tracking-[1.4px]">
                   PRO
                 </span>
               </div>
@@ -798,7 +798,7 @@ function AdsCheckContent() {
               }}
               className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[1.4px] transition flex items-center gap-1.5 ${
                 activeTab === "accounts" || activeTab === "personal" || activeTab === "bm"
-                  ? "bg-[#1ed760] text-black font-bold shadow-md"
+                  ? "bg-[#0070f3] text-black font-bold shadow-md"
                   : "text-gray-400 hover:text-white"
               }`}
             >
@@ -813,7 +813,7 @@ function AdsCheckContent() {
               }}
               className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[1.4px] transition flex items-center gap-1.5 ${
                 activeTab === "group"
-                  ? "bg-[#1ed760] text-black font-bold shadow-md"
+                  ? "bg-[#0070f3] text-black font-bold shadow-md"
                   : "text-gray-400 hover:text-white"
               }`}
             >
@@ -828,7 +828,7 @@ function AdsCheckContent() {
               }}
               className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[1.4px] transition flex items-center gap-1.5 ${
                 activeTab === "page"
-                  ? "bg-[#1ed760] text-black font-bold shadow-md"
+                  ? "bg-[#0070f3] text-black font-bold shadow-md"
                   : "text-gray-400 hover:text-white"
               }`}
             >
@@ -843,7 +843,7 @@ function AdsCheckContent() {
               }}
               className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[1.4px] transition flex items-center gap-1.5 ${
                 activeTab === "tasks"
-                  ? "bg-[#1ed760] text-black font-bold shadow-md"
+                  ? "bg-[#0070f3] text-black font-bold shadow-md"
                   : "text-gray-400 hover:text-white"
               }`}
             >
@@ -982,22 +982,22 @@ function AdsCheckContent() {
             type="button"
             disabled={actionLoading}
             onClick={() => void handleTriggerSyncVia()}
-            className="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[1.4px] bg-[#1ed760] hover:bg-[#1fdf64] text-black transition flex items-center gap-1.5 shadow-md disabled:opacity-50"
+            className="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[1.4px] bg-[#0070f3] hover:bg-[#1fdf64] text-black transition flex items-center gap-1.5 shadow-md disabled:opacity-50"
             title="Thu hoạch session từ Chrome qua CDP và đồng bộ tài sản thật"
           >
             <span></span>
             <span>Đồng Bộ Dữ Liệu Thật</span>
           </button>
 
-          {/*  Extension ADSOS PRO */}
+          {/* Extension metaOs */}
           <button
             type="button"
             onClick={() => setShowExtensionModal(true)}
             className="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[1.4px] bg-[#1f1f1f] hover:bg-[#282828] text-white border border-[#333333] transition flex items-center gap-1.5 shadow-sm"
-            title="Tải & Quản lý Extension ADSOS CHECK PRO"
+            title="Tải & Quản lý Extension metaOs"
           >
             <span></span>
-            <span>Extension PRO</span>
+            <span>metaOs</span>
           </button>
 
           {/*  Auto Set Camp */}
@@ -1101,7 +1101,7 @@ function AdsCheckContent() {
 
             <button
               type="button"
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-full text-xs font-bold uppercase tracking-[1.2px] bg-[#1ed760]/15 text-[#1ed760] border border-[#1ed760]/30 shadow-sm text-left"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-full text-xs font-bold uppercase tracking-[1.2px] bg-[#0070f3]/15 text-[#0070f3] border border-[#0070f3]/30 shadow-sm text-left"
             >
               <span></span>
               <span>Bảng dữ liệu</span>
@@ -1186,7 +1186,7 @@ function AdsCheckContent() {
                   setShowSuperShareModal(true);
                 }
               }}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-full text-xs font-bold uppercase tracking-[1.2px] bg-[#1f1f1f] border border-[#333333] text-white hover:border-[#1ed760]/50 transition text-left shadow-sm"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-full text-xs font-bold uppercase tracking-[1.2px] bg-[#1f1f1f] border border-[#333333] text-white hover:border-[#0070f3]/50 transition text-left shadow-sm"
             >
               <span></span>
               <span>Super Share Ads</span>
@@ -1274,7 +1274,7 @@ function AdsCheckContent() {
                 }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition ${
                   smitMode === "LOAD_ALL" && !accountIdsFilter && !bmFilterId
-                    ? "bg-[#1ed760] text-black font-bold shadow-md-md shadow-indigo-600/30"
+                    ? "bg-[#0070f3] text-black font-bold shadow-md-md shadow-indigo-600/30"
                     : "bg-[#1f1f1f] text-[#b3b3b3] hover:text-white hover:bg-[#282828] border border-[#333333]"
                 }`}
               >
@@ -1300,7 +1300,7 @@ function AdsCheckContent() {
                 onClick={() => setShowLoadByBmModal(true)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition ${
                   bmFilterId
-                    ? "bg-[#1ed760] text-black font-bold shadow-md"
+                    ? "bg-[#0070f3] text-black font-bold shadow-md"
                     : "bg-[#1f1f1f] text-[#b3b3b3] hover:text-white hover:bg-[#282828] border border-[#333333]"
                 }`}
               >
@@ -1320,7 +1320,7 @@ function AdsCheckContent() {
                 }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition ${
                   smitMode === "LOAD_BY_VIA_ID" && selectedViaId
-                    ? "bg-[#1ed760] text-black font-bold shadow-md"
+                    ? "bg-[#0070f3] text-black font-bold shadow-md"
                     : "bg-[#1f1f1f] text-[#b3b3b3] hover:text-white hover:bg-[#282828] border border-[#333333]"
                 }`}
               >
@@ -1333,7 +1333,7 @@ function AdsCheckContent() {
             {(bmFilterId || accountIdsFilter) && (
               <div className="flex items-center gap-2">
                 {bmFilterId && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-purple-950/80 border border-purple-500/40 text-purple-300 text-[11px] font-mono">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#eef4ff] border border-purple-500/40 text-purple-300 text-[11px] font-mono">
                     <span>BM: {bmFilterId}</span>
                     <button onClick={() => setBmFilterId("")} className="hover:text-white ml-1"></button>
                   </span>
@@ -1567,7 +1567,7 @@ function AdsCheckContent() {
                             onChange={(e) => void handleInlineAssignCustomer(acc.act_id, e.target.value)}
                             className={`w-full text-[11px] font-semibold rounded-lg px-2 py-1 border transition focus:outline-none ${
                               acc.customer_id
-                                ? "bg-indigo-950/60 border-indigo-500/50 text-indigo-200"
+                                ? "bg-[#eef4ff] border-indigo-500/50 text-indigo-200"
                                 : "bg-slate-900 border-slate-700 text-slate-400 italic"
                             }`}
                           >
@@ -1736,7 +1736,7 @@ function AdsCheckContent() {
                         key={bm.bm_id || idx}
                         onClick={() => handleToggleRow(bm.bm_id)}
                         className={`hover:bg-[#161F33] transition cursor-pointer select-none ${
-                          isSelected ? "bg-indigo-950/30" : ""
+                          isSelected ? "bg-[#eef4ff]" : ""
                         }`}
                       >
                         <td
@@ -1832,7 +1832,7 @@ function AdsCheckContent() {
                               type="button"
                               disabled={isLaunching}
                               onClick={() => void handleOpenInVia({ bm_id: bm.bm_id, via_profile_id: bm.via_profile_id ?? undefined }, "BM_SETTINGS")}
-                              className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-900/50 transition flex items-center gap-1 disabled:opacity-50"
+                              className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-[#eef4ff] border border-indigo-500/40 text-indigo-300 hover:bg-[#eef4ff] transition flex items-center gap-1 disabled:opacity-50"
                               title="1-Click mở Chrome VIA vào Business Settings của BM này"
                             >
                               <span>{isLaunching ? "" : ""}</span>
@@ -1882,7 +1882,7 @@ function AdsCheckContent() {
                         key={pg.page_id || idx}
                         onClick={() => handleToggleRow(pg.page_id)}
                         className={`hover:bg-[#161F33] transition cursor-pointer select-none ${
-                          isSelected ? "bg-indigo-950/30" : ""
+                          isSelected ? "bg-[#eef4ff]" : ""
                         }`}
                       >
                         <td
@@ -1942,7 +1942,7 @@ function AdsCheckContent() {
                             type="button"
                             disabled={isLaunching}
                             onClick={() => void handleOpenInVia({ page_id: pg.page_id, via_profile_id: pg.via_profile_id }, "PAGE")}
-                            className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-indigo-950/80 border border-indigo-500/40 text-indigo-300 hover:bg-indigo-900/50 transition flex items-center gap-1 mx-auto disabled:opacity-50"
+                            className="px-2 py-1 rounded-lg text-[10px] font-semibold bg-[#eef4ff] border border-indigo-500/40 text-indigo-300 hover:bg-[#eef4ff] transition flex items-center gap-1 mx-auto disabled:opacity-50"
                             title="1-Click mở Chrome VIA vào Fanpage này"
                           >
                             <span>{isLaunching ? "" : ""}</span>

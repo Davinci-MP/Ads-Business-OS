@@ -503,7 +503,7 @@ export default function AccountsPage() {
 
           <button
             onClick={handleExportSMITCsv}
-            className="flex items-center gap-2 bg-[#1ed760] hover:bg-[#1fdf64] text-black px-4 py-2 rounded-full text-xs font-bold uppercase tracking-[1.4px] shadow-md transition"
+            className="flex items-center gap-2 bg-[#0070f3] hover:bg-[#1fdf64] text-black px-4 py-2 rounded-full text-xs font-bold uppercase tracking-[1.4px] shadow-md transition"
           >
              Xuất danh sách CSV
           </button>
@@ -643,7 +643,7 @@ export default function AccountsPage() {
           <span className="text-xs font-medium text-slate-400">Tổng TKQC</span>
           <div className="text-2xl font-bold font-mono text-white mt-1">{kpis.total}</div>
         </div>
-        <div className="bg-[#181818] border border-[#1ed760]/30 rounded-[8px] p-4 shadow-[0_8px_8px_rgba(0,0,0,0.3)]">
+        <div className="bg-[#181818] border border-[#0070f3]/30 rounded-[8px] p-4 shadow-[0_8px_8px_rgba(0,0,0,0.3)]">
           <span className="text-xs font-medium text-emerald-400"> Hoạt Động (Live)</span>
           <div className="text-2xl font-bold font-mono text-emerald-300 mt-1">{kpis.live}</div>
         </div>
@@ -679,7 +679,7 @@ export default function AccountsPage() {
             onClick={() => setStatusPill("ALL")}
             className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[1.4px] transition ${
               statusPill === "ALL"
-                ? "bg-[#1ed760] text-black shadow-md"
+                ? "bg-[#0070f3] text-black shadow-md"
                 : "bg-[#1f1f1f] text-[#b3b3b3] hover:text-white hover:bg-[#282828] border border-[#333333]"
             }`}
           >
@@ -689,8 +689,8 @@ export default function AccountsPage() {
             onClick={() => setStatusPill("LIVE")}
             className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[1.4px] transition flex items-center gap-1.5 ${
               statusPill === "LIVE"
-                ? "bg-[#1ed760] text-black shadow-md"
-                : "bg-[#1f1f1f] text-[#1ed760] hover:text-white hover:bg-[#282828] border border-[#333333]"
+                ? "bg-[#0070f3] text-black shadow-md"
+                : "bg-[#1f1f1f] text-[#0070f3] hover:text-white hover:bg-[#282828] border border-[#333333]"
             }`}
           >
             <span></span> Live ({kpis.live})
@@ -744,7 +744,7 @@ export default function AccountsPage() {
             <select
               value={accountTypeFilter}
               onChange={(e) => setAccountTypeFilter(e.target.value)}
-              className="w-full bg-[#1f1f1f] border border-[#333333] text-white rounded-full px-3.5 py-2 text-xs focus:border-[#1ed760] focus:outline-none"
+              className="w-full bg-[#1f1f1f] border border-[#333333] text-white rounded-full px-3.5 py-2 text-xs focus:border-[#0070f3] focus:outline-none"
             >
               <option value="ALL">Tất cả loại TK</option>
               <option value="PERSONAL">TK Cá nhân (Personal)</option>
@@ -757,7 +757,7 @@ export default function AccountsPage() {
             <select
               value={customerFilter}
               onChange={(e) => setCustomerFilter(e.target.value)}
-              className="w-full bg-[#1f1f1f] border border-[#333333] text-white rounded-full px-3.5 py-2 text-xs focus:border-[#1ed760] focus:outline-none"
+              className="w-full bg-[#1f1f1f] border border-[#333333] text-white rounded-full px-3.5 py-2 text-xs focus:border-[#0070f3] focus:outline-none"
             >
               <option value="">Tất cả khách hàng ({(customers || []).length})</option>
               {(customers || []).map((c) => (
@@ -773,7 +773,7 @@ export default function AccountsPage() {
             <select
               value={viaFilter}
               onChange={(e) => setViaFilter(e.target.value)}
-              className="w-full bg-[#1f1f1f] border border-[#333333] text-white rounded-full px-3.5 py-2 text-xs focus:border-[#1ed760] focus:outline-none"
+              className="w-full bg-[#1f1f1f] border border-[#333333] text-white rounded-full px-3.5 py-2 text-xs focus:border-[#0070f3] focus:outline-none"
             >
               <option value="">Tất cả VIA ({(vias || []).length})</option>
               {(vias || []).map((v) => (
@@ -789,7 +789,7 @@ export default function AccountsPage() {
             <select
               value={bmFilter}
               onChange={(e) => setBmFilter(e.target.value)}
-              className="w-full bg-[#1f1f1f] border border-[#333333] text-white rounded-full px-3.5 py-2 text-xs focus:border-[#1ed760] focus:outline-none"
+              className="w-full bg-[#1f1f1f] border border-[#333333] text-white rounded-full px-3.5 py-2 text-xs focus:border-[#0070f3] focus:outline-none"
             >
               <option value="">Tất cả BM ({(bms || []).length})</option>
               {(bms || []).map((b) => (
@@ -805,7 +805,7 @@ export default function AccountsPage() {
             <select
               value={currencyFilter}
               onChange={(e) => setCurrencyFilter(e.target.value)}
-              className="w-full bg-[#1f1f1f] border border-[#333333] text-white rounded-full px-3.5 py-2 text-xs focus:border-[#1ed760] focus:outline-none"
+              className="w-full bg-[#1f1f1f] border border-[#333333] text-white rounded-full px-3.5 py-2 text-xs focus:border-[#0070f3] focus:outline-none"
             >
               <option value="">Tất cả tiền tệ</option>
               <option value="USD">USD ($)</option>
@@ -822,7 +822,7 @@ export default function AccountsPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="ID, Tên TK, 4 số cuối thẻ..."
-              className="w-full bg-[#1f1f1f] border border-[#333333] text-white placeholder-[#727272] rounded-full px-3.5 py-2 text-xs focus:border-[#1ed760] focus:outline-none"
+              className="w-full bg-[#1f1f1f] border border-[#333333] text-white placeholder-[#727272] rounded-full px-3.5 py-2 text-xs focus:border-[#0070f3] focus:outline-none"
             />
           </div>
         </div>
@@ -830,7 +830,7 @@ export default function AccountsPage() {
 
       {/* FLOATING BULK ACTION TOOLBAR */}
       {selectedIds.length > 0 && (
-        <div className="sticky top-4 z-40 bg-[#181818]/95 border border-[#1ed760]/40 rounded-[8px] p-4 shadow-[0_8px_24px_rgba(0,0,0,0.5)] backdrop-blur-xl flex flex-wrap items-center justify-between gap-4 animate-slide-down">
+        <div className="sticky top-4 z-40 bg-[#181818]/95 border border-[#0070f3]/40 rounded-[8px] p-4 shadow-[0_8px_24px_rgba(0,0,0,0.5)] backdrop-blur-xl flex flex-wrap items-center justify-between gap-4 animate-slide-down">
           <div className="flex items-center gap-3">
             <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 animate-pulse" />
             <span className="text-sm font-semibold text-white">
@@ -856,7 +856,7 @@ export default function AccountsPage() {
               <button
                 disabled={busy}
                 onClick={handleBulkAssign}
-                className="bg-[#1ed760] hover:bg-[#1fdf64] text-black px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[1.4px] shadow transition disabled:opacity-50"
+                className="bg-[#0070f3] hover:bg-[#1fdf64] text-black px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-[1.4px] shadow transition disabled:opacity-50"
               >
                 Lưu Gắn Kết
               </button>
@@ -904,7 +904,7 @@ export default function AccountsPage() {
                     type="checkbox"
                     checked={pageRows.length > 0 && pageRows.every(a => selectedIds.includes(a.act_id))}
                     onChange={handleToggleSelectAll}
-                    className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-indigo-500 focus:ring-0 cursor-pointer accent-[#1ed760]"
+                    className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-indigo-500 focus:ring-0 cursor-pointer accent-[#0070f3]"
                   />
                 </th>
                 <th className="py-3 px-2 w-10 text-center">STT</th>
@@ -953,7 +953,7 @@ export default function AccountsPage() {
                     <tr
                       key={acc.id || acc.act_id}
                       className={`hover:bg-slate-800/40 transition-colors ${
-                        isChecked ? "bg-indigo-950/20" : ""
+                        isChecked ? "bg-[#eef4ff]" : ""
                       }`}
                     >
                       {/* 1. Checkbox */}
@@ -962,7 +962,7 @@ export default function AccountsPage() {
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => handleToggleRow(acc.act_id)}
-                          className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-indigo-500 focus:ring-0 cursor-pointer accent-[#1ed760]"
+                          className="w-4 h-4 rounded bg-slate-800 border-slate-700 text-indigo-500 focus:ring-0 cursor-pointer accent-[#0070f3]"
                         />
                       </td>
 
@@ -1025,7 +1025,7 @@ export default function AccountsPage() {
                           onChange={(e) => void handleInlineAssign(acc.act_id, e.target.value)}
                           className={`w-full text-xs font-semibold rounded-xl px-2.5 py-1.5 border transition focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
                             acc.customer_id
-                              ? "bg-indigo-950/60 border-indigo-500/50 text-indigo-200"
+                              ? "bg-[#eef4ff] border-indigo-500/50 text-indigo-200"
                               : "bg-[#1E293B] border-slate-700 text-slate-400 italic"
                           }`}
                         >
@@ -1102,7 +1102,7 @@ export default function AccountsPage() {
                         <span
                           className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                             acc.account_type === "BM"
-                              ? "bg-purple-950/80 text-purple-300 border border-purple-500/30"
+                              ? "bg-[#eef4ff] text-purple-300 border border-purple-500/30"
                               : "bg-blue-950/80 text-blue-300 border border-blue-500/30"
                           }`}
                         >

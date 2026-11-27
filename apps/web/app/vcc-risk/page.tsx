@@ -137,7 +137,7 @@ export default function VccRiskPage() {
           <button
             onClick={handleSync}
             disabled={syncing}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-[1.4px] bg-[#1ed760] hover:bg-[#1fdf64] text-black shadow-md transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs uppercase tracking-[1.4px] bg-[#0070f3] hover:bg-[#1fdf64] text-black shadow-md transition-all disabled:opacity-50"
           >
             <span className={syncing ? "animate-spin" : ""}></span>
             {syncing ? "Đang Quét Rủi Ro..." : "Đồng Bộ & Quét Rủi Ro"}

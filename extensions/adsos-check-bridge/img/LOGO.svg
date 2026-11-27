@@ -1,0 +1,12 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>metaOs</title>
+  <defs>
+    <linearGradient id="metaos-bg" x1="12" y1="8" x2="116" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6D45F5"/>
+      <stop offset="1" stop-color="#08B8D8"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="url(#metaos-bg)"/>
+  <path d="M18 91V37H31L50 62L69 37H82V91H67V61L50 83L33 61V91H18Z" fill="white"/>
+  <circle cx="96" cy="64" r="20" stroke="#C8FF63" stroke-width="10"/>
+</svg>

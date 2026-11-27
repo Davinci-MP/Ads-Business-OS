@@ -88,9 +88,11 @@ Telegram `/setcamp` → xác thực khách/TKQC → `remote_via_commands` → Ch
 
 | Môi trường | DB | Kết nối từ ngoài | Ghi |
 |---|---|---|---|
-| `local` | Postgres Docker; fallback SQLite nếu máy chưa có Docker | mock/local | tự do trong DB local |
-| `staging` | Postgres staging | đọc thật (service account chỉ đọc, Meta token readonly) | **KHÔNG ghi bảng Sheets thật**; ghi vào DB staging |
-| `production` | Postgres prod (bắt buộc Postgres) | đọc thật | chỉ với approval flow |
+| `local` | SQLite file (mặc định); Postgres Docker tùy chọn | mock/local | tự do trong DB local |
+| `staging` | Turso/libSQL staging (hoặc Postgres) | đọc thật (service account chỉ đọc, Meta token readonly) | **KHÔNG ghi bảng Sheets thật**; ghi vào DB staging |
+| `production` | **Turso/libSQL** (D-066) hoặc Postgres, qua `ADSOS_DATABASE_URL` | đọc thật | chỉ với approval flow |
+
+> Deploy (D-066): frontend Next.js trên **Vercel**; backend FastAPI trên **server riêng** (cần tiến trình thường trực cho APScheduler/WebSocket — không chạy trên serverless); DB **Turso**. Chi tiết trong `docs/DEPLOYMENT.md`.
 
 - Cấu hình phân biệt qua biến `APP_ENV` + file env tương ứng trong `infra/env/`.
 - Mã nguồn phải có guard cho môi trường: hành động ghi Sheets thật phải bị chặn tại code khi `APP_ENV != production` (phòng thủ cả tầng infra).
@@ -105,7 +107,7 @@ Telegram `/setcamp` → xác thực khách/TKQC → `remote_via_commands` → Ch
 
 ## 7. Khôi phục / Backup
 
-- VIA không tự trích token/cookie qua CDP, DOM hoặc headless browser. Cấp quyền dùng OAuth chính thức; Chrome Extension chỉ dùng token đã cấu hình để xử lý hàng đợi được cấp quyền.
+
 
 - DB: `pg_dump` định kỳ (job); trước mỗi migration có backup.
 - Mọi job ghi Sheets có backup dữ liệu cũ trước ghi.

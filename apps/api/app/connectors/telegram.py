@@ -102,17 +102,25 @@ class TelegramBotConnector:
             raise TelegramAPIError("Chưa cấu hình ADSOS_TELEGRAM_ADMIN_CHAT_ID")
         return self.send_message(self.admin_chat_id, text)
 
-    def get_updates(self, offset: Optional[int] = None, limit: int = 100) -> list[dict[str, Any]]:
+    def get_updates(
+        self,
+        offset: Optional[int] = None,
+        limit: int = 100,
+        timeout_seconds: int = 0,
+    ) -> list[dict[str, Any]]:
         """Lấy danh sách updates mới từ Telegram Bot API (cho polling)."""
         if self._use_mock:
             return []
         params: dict[str, Any] = {"limit": limit}
         if offset is not None:
             params["offset"] = offset
+        if timeout_seconds > 0:
+            params["timeout"] = timeout_seconds
+        req_timeout = max(self._timeout, float(timeout_seconds + 5))
         response = httpx.get(
             f"https://api.telegram.org/bot{self._token}/getUpdates",
             params=params,
-            timeout=self._timeout,
+            timeout=req_timeout,
         )
         if response.status_code != 200:
             raise TelegramAPIError(f"Không thể lấy updates từ Telegram (HTTP {response.status_code})")

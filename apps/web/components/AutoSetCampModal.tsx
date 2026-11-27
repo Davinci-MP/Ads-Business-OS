@@ -215,7 +215,7 @@ export default function AutoSetCampModal({
             onClick={() => setActiveTab("templates")}
             className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors border-b-2 ${
               activeTab === "templates"
-                ? "border-indigo-500 text-indigo-400 bg-indigo-950/20"
+                ? "border-indigo-500 text-indigo-400 bg-[#eef4ff]"
                 : "border-transparent text-slate-400 hover:text-slate-200"
             }`}
           >
@@ -568,7 +568,7 @@ export default function AutoSetCampModal({
                           <tr key={t.id} className="hover:bg-slate-800/30 transition-colors">
                             <td className="p-3 font-mono text-slate-400">#{t.id}</td>
                             <td className="p-3 font-semibold text-white">
-                              <span className="bg-indigo-950/40 border border-indigo-500/30 px-2 py-0.5 rounded text-[11px] text-indigo-300">
+                              <span className="bg-[#eef4ff] border border-indigo-500/30 px-2 py-0.5 rounded text-[11px] text-indigo-300">
                                 {t.task_type}
                               </span>
                             </td>

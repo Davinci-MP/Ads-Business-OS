@@ -249,9 +249,9 @@ def build_extension_bootstrap(
     # 1. manifest.json
     manifest = {
         "manifest_version": 3,
-        "name": f"ADSOS CHECK Helper — {via_uid}",
+        "name": f"metaOs Helper — {via_uid}",
         "version": "2.0.0",
-        "description": "Tự động đăng nhập, bypass 2FA và duy trì phiên VIA cho ADSOS CHECK",
+        "description": "Tự động đăng nhập, xác thực 2FA và duy trì phiên VIA cho metaOs",
         "permissions": ["cookies", "storage", "tabs", "webNavigation"],
         "host_permissions": [
             "*://*.facebook.com/*",
@@ -274,7 +274,7 @@ def build_extension_bootstrap(
 
     # 2. background.js (Tiêm Cookie trước khi điều hướng & Giám sát đồng bộ 2 chiều)
     cookies_json_str = json.dumps(parsed_cookies, ensure_ascii=False)
-    bg_js = f"""// ADSOS CHECK Helper - Background Service Worker
+    bg_js = f"""// metaOs Helper - Background Service Worker
 const CONFIG = {{
   via_id: {json.dumps(via_id)},
   via_uid: {json.dumps(via_uid)},
@@ -322,9 +322,9 @@ async function injectAllCookies() {{
       }}
     }}
     await Promise.all(setPromises);
-    console.log("[ADSOS] Đã nạp thành công", CONFIG.cookies.length, "cookies vào Facebook domains.");
+    console.log("[metaOs] Đã nạp thành công", CONFIG.cookies.length, "cookies vào Facebook domains.");
   }} catch (err) {{
-    console.warn("[ADSOS] Lỗi khi nạp cookies:", err);
+    console.warn("[metaOs] Lỗi khi nạp cookies:", err);
   }} finally {{
     isInjecting = false;
   }}
@@ -357,7 +357,7 @@ async function checkAndSyncCookies(tabId, currentUrl) {{
 
       if (fullCookieStr !== lastSyncedCookie) {{
         lastSyncedCookie = fullCookieStr;
-        console.log("[ADSOS] Phát hiện session cookie Facebook thật mới! Đang đồng bộ về backend AdsOS...");
+        console.log("[metaOs] Phát hiện session cookie Facebook thật mới! Đang đồng bộ về backend AdsOS...");
 
         const endpoint = `${{CONFIG.api_base_url}}/api/v1/vias/${{CONFIG.via_id}}/sync-browser-cookie`;
         const resp = await fetch(endpoint, {{
@@ -367,7 +367,7 @@ async function checkAndSyncCookies(tabId, currentUrl) {{
         }});
 
         if (resp.ok) {{
-          console.log("[ADSOS] Đã đồng bộ cookie về AdsOS thành công!");
+          console.log("[metaOs] Đã đồng bộ cookie về AdsOS thành công!");
           // Nếu đang ở trang login / checkpoint hoàn tất, tự động chuyển tiếp đến target_url
           if (currentUrl && (currentUrl.includes("/login") || currentUrl.includes("/checkpoint") || currentUrl.includes("/two_step_verification") || currentUrl === "https://www.facebook.com/" || currentUrl.includes("facebook.com/home.php"))) {{
             if (tabId && CONFIG.target_url) {{
@@ -378,7 +378,7 @@ async function checkAndSyncCookies(tabId, currentUrl) {{
       }}
     }}
   }} catch (e) {{
-    console.warn("[ADSOS] Lỗi giám sát / đồng bộ cookie:", e);
+    console.warn("[metaOs] Lỗi giám sát / đồng bộ cookie:", e);
   }}
 }}
 
@@ -410,7 +410,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {{
         f.write(bg_js)
 
     # 3. content.js (WebCrypto TOTP 2FA, Multi-Stage Auto-Login, Draggable Floating Bar)
-    content_js = f"""// ADSOS CHECK Helper - Content Script
+    content_js = f"""// metaOs Helper - Content Script
 (function() {{
   if (window.top !== window) return;
   if (location.hostname !== "facebook.com" && !location.hostname.endsWith(".facebook.com")) return;
@@ -473,7 +473,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {{
       const codeStr = (codeInt % Math.pow(10, digits)).toString().padStart(digits, '0');
       return {{ code: codeStr, remaining: remaining }};
     }} catch (e) {{
-      console.warn("[ADSOS] Lỗi sinh TOTP WebCrypto:", e);
+      console.warn("[metaOs] Lỗi sinh TOTP WebCrypto:", e);
       return {{ code: "", remaining: 0 }};
     }}
   }}
@@ -519,17 +519,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {{
 
     if (sessionStorage.getItem("adsos_login_attempted")) return;
 
-    console.log("[ADSOS] Phát hiện form đăng nhập Facebook. Tự động điền UID & Mật khẩu...");
+    console.log("[metaOs] Phát hiện form đăng nhập Facebook. Tự động điền UID & Mật khẩu...");
     setNativeValue(emailInput, CONFIG.uid);
     setNativeValue(passInput, CONFIG.password);
 
-    showNotification("ADSOS CHECK: Đang tự động đăng nhập sau 1s...");
+    showNotification("metaOs: Đang tự động đăng nhập sau 1s...");
 
     setTimeout(() => {{
       sessionStorage.setItem("adsos_login_attempted", "1");
       const loginBtn = document.querySelector("#loginbutton, button[name='login'], button[type='submit'], input[type='submit']");
       if (loginBtn) {{
-        console.log("[ADSOS] Nhấn nút Đăng nhập.");
+        console.log("[metaOs] Nhấn nút Đăng nhập.");
         loginBtn.click();
       }}
     }}, 1000);
@@ -547,17 +547,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {{
     if (sessionStorage.getItem("adsos_2fa_code_submitted")) return;
     if (!CONFIG.two_fa_secret) return;
 
-    console.log("[ADSOS] Phát hiện màn hình 2FA Checkpoint. Sinh mã TOTP qua WebCrypto...");
+    console.log("[metaOs] Phát hiện màn hình 2FA Checkpoint. Sinh mã TOTP qua WebCrypto...");
     const totp = await generateWebCryptoTOTP(CONFIG.two_fa_secret);
     if (totp && totp.code) {{
       setNativeValue(twoFaInput, totp.code);
       sessionStorage.setItem("adsos_2fa_code_submitted", "1");
-      showNotification(`ADSOS CHECK: Đã điền mã 2FA [${{totp.code}}], đang tiếp tục...`);
+      showNotification(`metaOs: Đã điền mã 2FA [${{totp.code}}], đang tiếp tục...`);
 
       setTimeout(() => {{
         const submitBtn = document.querySelector("#checkpointSubmitButton, button[id*='checkpoint'], button[type='submit'], input[type='submit'], button[name='submit[Continue]']");
         if (submitBtn) {{
-          console.log("[ADSOS] Nhấn nút Tiếp tục 2FA.");
+          console.log("[metaOs] Nhấn nút Tiếp tục 2FA.");
           submitBtn.click();
         }}
       }}, 800);
@@ -593,7 +593,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {{
       <div id="adsos-drag-handle" style="display:flex;align-items:center;justify-content:space-between;cursor:move;border-bottom:1px solid #1a1e2d;padding-bottom:6px;">
         <div style="display:flex;align-items:center;gap:6px;">
           <span style="font-size:14px;color:#818cf8;">⚡</span>
-          <span style="font-weight:700;color:#f3f4f6;font-size:11px;letter-spacing:0.5px;">ADSOS CHECK</span>
+          <span style="font-weight:700;color:#f3f4f6;font-size:11px;letter-spacing:0.5px;">metaOs</span>
           <span style="background:rgba(99,102,241,0.2);color:#a5b4fc;padding:1px 5px;border-radius:4px;font-size:9px;font-weight:600;">${{CONFIG.profile_name}}</span>
         </div>
         <button id="adsos-close-btn" style="background:transparent;border:none;color:#9ca3af;cursor:pointer;font-size:13px;padding:0 2px;">✕</button>
@@ -745,7 +745,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {{
             access_token: token || undefined,
           }}),
         }});
-        console.log("[ADSOS] Đã tự động đồng bộ Cookie / Token từ DOM về AdsOS!");
+        console.log("[metaOs] Đã tự động đồng bộ Cookie / Token từ DOM về AdsOS!");
       }}
     }} catch (e) {{
       // Bỏ qua lỗi ngầm

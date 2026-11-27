@@ -2328,3 +2328,30 @@ export async function previewTotp(secret: string): Promise<{
   return postJson("/vias/totp-preview", { secret });
 }
 
+export interface CopilotStatus {
+  provider: string;
+  model: string;
+  is_configured: boolean;
+  app_env: string;
+  staff_tools_count: number;
+  staff_tools: string[];
+}
+
+export interface CopilotChatResponse {
+  reply: string;
+  tools_used: string[];
+  provider: string;
+  status: string;
+}
+
+export async function getCopilotStatus(): Promise<CopilotStatus> {
+  return fetchJson<CopilotStatus>("/copilot/status");
+}
+
+export async function sendCopilotChat(
+  message: string,
+  history: Array<{ role: string; content: string }> = []
+): Promise<CopilotChatResponse> {
+  return postJson<CopilotChatResponse>("/copilot/chat", { message, history });
+}
+

@@ -141,7 +141,7 @@ export default function TreasurySummary() {
           </button>
           <Link
             href="/config/wallets"
-            className="px-4 py-2 rounded-full bg-[#1ed760] hover:bg-[#1fdf64] text-black text-xs font-bold uppercase tracking-[1.4px] shadow-md transition"
+            className="px-4 py-2 rounded-full bg-[#0070f3] hover:bg-[#1fdf64] text-black text-xs font-bold uppercase tracking-[1.4px] shadow-md transition"
           >
             Quản lý ví & sàn →
           </Link>
@@ -151,8 +151,8 @@ export default function TreasurySummary() {
       {/* KPI CARDS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         {/* Tổng vốn khả dụng */}
-        <div className="bg-[#1f1f1f] border border-[#1ed760]/40 border-l-4 border-l-[#1ed760] rounded-[8px] p-4 shadow-[0_8px_8px_rgba(0,0,0,0.3)]">
-          <div className="text-[11px] font-bold text-[#1ed760] uppercase tracking-[1.4px]">
+        <div className="bg-[#1f1f1f] border border-[#0070f3]/40 border-l-4 border-l-[#0070f3] rounded-[8px] p-4 shadow-[0_8px_8px_rgba(0,0,0,0.3)]">
+          <div className="text-[11px] font-bold text-[#0070f3] uppercase tracking-[1.4px]">
             TỔNG VỐN KHẢ DỤNG
           </div>
           <div className="text-2xl font-black font-mono text-white mt-1.5">
@@ -190,7 +190,7 @@ export default function TreasurySummary() {
         </div>
 
         {/* PingPong Balances */}
-        <div className="bg-[#1f1f1f] border border-[#282828] border-l-4 border-l-[#1ed760] rounded-[8px] p-4 shadow-[0_8px_8px_rgba(0,0,0,0.3)]">
+        <div className="bg-[#1f1f1f] border border-[#282828] border-l-4 border-l-[#0070f3] rounded-[8px] p-4 shadow-[0_8px_8px_rgba(0,0,0,0.3)]">
           <div className="text-[11px] font-bold text-[#b3b3b3] uppercase tracking-[1.4px]">
             PingPong Master (USD)
           </div>
