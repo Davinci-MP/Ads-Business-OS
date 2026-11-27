@@ -242,7 +242,7 @@ export default function CustomerSetup({ activeSourceId }: CustomerSetupProps) {
                 type="button"
                 disabled={!selected.size}
                 onClick={() => bulk("create")}
-                className="rounded-xl border border-indigo-700/60 bg-indigo-950/50 px-3 py-1.5 text-xs font-medium text-indigo-300 hover:bg-indigo-900/60 disabled:opacity-40 transition"
+                className="rounded-xl border border-indigo-700/60 bg-[#eef4ff] px-3 py-1.5 text-xs font-medium text-indigo-300 hover:bg-[#eef4ff] disabled:opacity-40 transition"
               >
                 Tạo hồ sơ theo tên đề xuất
               </button>
@@ -425,7 +425,7 @@ export default function CustomerSetup({ activeSourceId }: CustomerSetupProps) {
 
           {reviewing && (
             <div
-              className="rounded-xl border border-indigo-800/60 bg-indigo-950/40 p-4 text-xs text-indigo-200 space-y-3"
+              className="rounded-xl border border-indigo-800/60 bg-[#eef4ff] p-4 text-xs text-indigo-200 space-y-3"
               role="region"
               aria-label="Xác nhận thiết lập"
             >

@@ -1074,13 +1074,6 @@ def extract_tokens_from_cookie(
     except Exception as exc:
         logger.debug("Notice extract_tokens_from_cookie: %s", exc)
 
-    if not token and is_real_facebook_cookie(raw_cookie):
-        c_user_match = re.search(r'c_user=(\d+)', raw_cookie)
-        uid_val = c_user_match.group(1) if c_user_match else "999999"
-        clean_suffix = uid_val[-6:] if len(uid_val) >= 6 else uid_val
-        hash_part = hashlib.md5(f"{uid_val}_session".encode()).hexdigest()[:18].upper()
-        token = f"EAAB{clean_suffix}XwZ9M8{hash_part}"
-
     return token, fb_dtsg, discovered_accounts
 
 
@@ -3738,16 +3731,12 @@ def ingest_extension_payload(
                 eaag = best_token
             elif best_token and best_token.startswith("EAAB"):
                 eaab = best_token
-        else:
-            clean_suffix = raw_uid[-6:] if len(raw_uid) >= 6 else raw_uid
-            hash_part = hashlib.md5(f"{raw_uid}_session".encode()).hexdigest()[:18].upper()
-            best_token = f"EAAB{clean_suffix}XwZ9M8{hash_part}"
-            eaab = best_token
 
     # 2. Tìm hoặc Tạo mới ViaProfile (Auto-provisioning)
     via = session.scalar(select(ViaProfile).where(ViaProfile.uid == raw_uid))
     now = utcnow()
-    has_active_session = bool(best_token or is_real_facebook_cookie(cookie_str))
+    has_active_token = bool(best_token)
+    has_live_session = has_active_token or is_real_facebook_cookie(cookie_str)
     fb_dtsg = str(d.get("fb_dtsg") or d.get("dtsg") or "").strip()
 
     if not via:
@@ -3772,7 +3761,7 @@ def ingest_extension_payload(
             client_id=bound_client_id,
             device_name=d.get("device_name") or "Chrome Extension Bridge Pro",
             uid_live_status="LIVE",
-            token_status="ACTIVE" if has_active_session else "NONE",
+            token_status="ACTIVE" if has_active_token else "NONE",
             last_synced_at=now,
             last_live_check_at=now,
         )
@@ -3805,8 +3794,10 @@ def ingest_extension_payload(
             creds["fb_dtsg"] = fb_dtsg
         via.encrypted_credentials = encrypt_via_credentials(creds)
         via.uid_live_status = "LIVE"
-        if has_active_session:
+        if has_active_token:
             via.token_status = "ACTIVE"
+        if has_live_session:
+            via.uid_live_status = "LIVE"
         via.last_synced_at = now
         via.last_live_check_at = now
         session.flush()
@@ -3845,7 +3836,7 @@ def ingest_extension_payload(
         logger.debug("Không thể cập nhật BrowserNode trong extension-ingest: %s", bnode_err)
 
     # Đảm bảo lưu ngay trạng thái LIVE và token ACTIVE trước khi chạy deep sweep
-    if has_active_session:
+    if has_active_token:
         via.token_status = "ACTIVE"
         via.uid_live_status = "LIVE"
         session.flush()
@@ -4089,7 +4080,7 @@ def ingest_extension_payload(
 
     # 6. Kích hoạt Backend Asset Discovery & Concurrent Deep Sweep nếu accounts rỗng hoặc có BMs cần quét (chỉ khi run_deep_sync=True)
     existing_acc_cnt = session.scalar(select(func.count(SyncedAdAccount.id)).where(SyncedAdAccount.via_profile_id == via.id)) or 0
-    if run_deep_sync and (not ad_accounts_list or existing_acc_cnt == 0 or bms_list) and has_active_session:
+    if run_deep_sync and (not ad_accounts_list or existing_acc_cnt == 0 or bms_list) and has_active_token:
         try:
             sync_via_all_assets(
                 session=session,
@@ -4101,8 +4092,9 @@ def ingest_extension_payload(
         except Exception as sync_exc:
             logger.warning("Backend sync_via_all_assets notice trong extension-ingest: %s", sync_exc)
 
-    if has_active_session:
+    if has_active_token:
         via.token_status = "ACTIVE"
+    if has_live_session:
         via.uid_live_status = "LIVE"
 
     session.flush()

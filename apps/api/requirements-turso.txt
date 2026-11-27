@@ -1,0 +1,4 @@
+# Driver cho Turso / libSQL (SQLite-family) — production theo D-066.
+# Cài: .venv\Scripts\python.exe -m pip install -r requirements-turso.txt
+# URL: sqlite+libsql://<db>-<org>.turso.io/?authToken=<token>&secure=true
+sqlalchemy-libsql>=0.2.0

@@ -761,7 +761,7 @@ def test_auto_provisioned_via_from_extension_ingest_has_active_token_and_populat
     assert via_db.bm_count >= 2
     assert via_db.page_count >= 1
 
-    # Kiểm tra trường hợp Extension chỉ gửi Cookie Facebook (Zero-Manual-Input Sync)
+    # Cookie-only vẫn lưu phiên LIVE nhưng không được tự chế access token.
     cookie_uid = "100009999999999"
     cookie_only_payload = {
         "c_user": cookie_uid,
@@ -775,14 +775,13 @@ def test_auto_provisioned_via_from_extension_ingest_has_active_token_and_populat
     assert resp_cook.status_code == 200
     data_cook = resp_cook.json()
     assert data_cook["success"] is True
-    assert data_cook["token_status"] == "ACTIVE"
+    assert data_cook["token_status"] == "NONE"
 
     via_cook = db.scalar(select(ViaProfile).where(ViaProfile.uid == cookie_uid))
     assert via_cook is not None
-    assert via_cook.token_status == "ACTIVE"
+    assert via_cook.token_status == "NONE"
     assert via_cook.status == "LIVE"
-    assert via_cook.access_token is not None
-    assert via_cook.access_token.startswith("EAAB") or via_cook.access_token.startswith("EAAG")
+    assert not via_cook.access_token
     assert f"c_user={cookie_uid}" in via_cook.cookies
     assert via_cook.bm_count >= 1
 

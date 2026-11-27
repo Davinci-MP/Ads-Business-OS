@@ -146,7 +146,7 @@ export default function ViaSheetWritebackModal({
               type="button"
               disabled={previewLoading || commitLoading}
               onClick={handleDryRun}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-500/30 bg-indigo-950/40 px-3.5 py-1.5 text-xs font-medium text-indigo-300 hover:bg-indigo-900/50 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-indigo-500/30 bg-[#eef4ff] px-3.5 py-1.5 text-xs font-medium text-indigo-300 hover:bg-[#eef4ff] transition-colors disabled:opacity-50"
             >
               {previewLoading ? " Đang tính toán…" : " Xem Trước Dòng Sẽ Kẻ"}
             </button>

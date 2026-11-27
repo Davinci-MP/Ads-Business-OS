@@ -16,7 +16,7 @@ Không có lệnh lint/typecheck riêng cho backend; `npm.cmd run build` là bư
 
 ## Môi trường & biến quan trọng
 - `APP_ENV=local|staging|production` — guard mọi ghi thật; staging chỉ đọc; production cần phê duyệt trước khi deploy
-- SQLite chỉ local/test; production bắt buộc Postgres qua `ADSOS_DATABASE_URL`
+- SQLite chỉ local/test. Production dùng **Turso/libSQL** (`sqlite+libsql://...`, driver `sqlalchemy-libsql`) theo **D-066**; Postgres vẫn hỗ trợ. Đều qua `ADSOS_DATABASE_URL`. Migration reversible phải chạy thử trên DB production riêng trước khi áp.
 - Windows + Python 3.14 cần `tzdata` (có trong `requirements.txt`) cho múi giờ `Asia/Ho_Chi_Minh`
 - Secrets chỉ qua env; `.env` trong `.gitignore`; khóa JSON service account Google đặt **ngoài repo**, trỏ qua `ADSOS_GOOGLE_SERVICE_ACCOUNT_FILE`
 - Meta API mặc định **v26.0** (env `ADSOS_META_API_VERSION`), hỗ trợ đọc và ghi (mutations) qua Session Cloud Hub & Extension per D-065, mock mode khi chưa có token, **không fallback live→mock khi lỗi**

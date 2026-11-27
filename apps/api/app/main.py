@@ -1,9 +1,11 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.meta_sync import router as meta_sync_router
@@ -29,6 +31,8 @@ from app.api.v1.vcc_risk import router as vcc_risk_router
 from app.api.v1.control_hub import router as control_hub_router
 from app.api.v1.ads_check import router as ads_check_router
 from app.api.v1.auth_staff import auth_router as auth_staff_router, staff_router
+from app.api.v1.copilot import router as copilot_router
+from app.api.v1.metaos_extension import router as metaos_extension_router
 from app.core.config import settings
 
 
@@ -39,6 +43,7 @@ async def lifespan(_: FastAPI):
     from app.jobs.sheet_reports import start_sheet_scheduler, stop_sheet_scheduler
     from app.jobs.usdt_wallet import start_usdt_scheduler, stop_usdt_scheduler
     from app.jobs.exchange_wallets import start_exchange_scheduler, stop_exchange_scheduler
+    from app.jobs.telegram_polling import start_telegram_polling, stop_telegram_polling
 
     from app.core.security import seed_default_owner
 
@@ -47,9 +52,11 @@ async def lifespan(_: FastAPI):
     start_sheet_scheduler()
     start_usdt_scheduler()
     start_exchange_scheduler()
+    start_telegram_polling()
     try:
         yield
     finally:
+        stop_telegram_polling()
         stop_exchange_scheduler()
         stop_usdt_scheduler()
         stop_sheet_scheduler()
@@ -57,6 +64,11 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Ads Business OS API", lifespan=lifespan)
+app.mount(
+    "/metaos-assets",
+    StaticFiles(directory=Path(__file__).resolve().parent / "static" / "metaos"),
+    name="metaos-assets",
+)
 
 @app.exception_handler(RequestValidationError)
 async def safe_validation(request: Request, exc: RequestValidationError):
@@ -76,6 +88,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/")
+def root() -> dict:
+    return {
+        "service": "Ads Business OS API",
+        "status": "online",
+        "app_env": settings.app_env,
+        "docs_url": "/docs",
+        "health_url": "/health",
+        "web_crm_url": "http://localhost:3000",
+        "message": "Backend API đang hoạt động bình thường. Để truy cập giao diện Web CRM, vui lòng mở http://localhost:3000.",
+    }
 
 
 @app.get("/health")
@@ -107,3 +132,5 @@ app.include_router(control_hub_router, prefix="/api/v1")
 app.include_router(ads_check_router, prefix="/api/v1")
 app.include_router(auth_staff_router, prefix="/api/v1")
 app.include_router(staff_router, prefix="/api/v1")
+app.include_router(copilot_router, prefix="/api/v1")
+app.include_router(metaos_extension_router)

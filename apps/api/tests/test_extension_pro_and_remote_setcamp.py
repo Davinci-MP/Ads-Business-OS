@@ -38,16 +38,17 @@ def test_download_extension_zip(client):
     with zipfile.ZipFile(buf, "r") as zf:
         namelist = zf.namelist()
         assert "manifest.json" in namelist
-        assert "popup.html" in namelist
-        assert "popup.js" in namelist
-        assert "background.js" in namelist
-        assert "content.js" in namelist
-        assert "popup.css" in namelist
+        assert "offscreen.html" in namelist
+        assert "js/background.js" in namelist
+        assert "js/content.js" in namelist
+        assert "js/bridge-main.js" in namelist
+        assert "img/icon-128.png" in namelist
 
         # Kiểm tra nội dung manifest
         manifest_data = json.loads(zf.read("manifest.json").decode("utf-8"))
         assert manifest_data["manifest_version"] == 3
-        assert "ADSOS CHECK PRO" in manifest_data["name"]
+        assert manifest_data["name"] == "metaOs"
+        assert manifest_data["homepage_url"] == "http://127.0.0.1:8000/metaos"
 
 
 def test_extension_client_keys_crud(client, db):

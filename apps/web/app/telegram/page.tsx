@@ -202,7 +202,7 @@ export default function TelegramManagementPage() {
     <div
       className="w-full space-y-6"
       style={{
-        color: "#F4F0E8",
+        color: "#171717",
         fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
       }}
     >
@@ -214,8 +214,8 @@ export default function TelegramManagementPage() {
             bottom: 24,
             right: 24,
             zIndex: 9999,
-            background: toast.ok ? "#13141C" : "#261318",
-            color: toast.ok ? "#7EE8C0" : "#FF7D8C",
+            background: toast.ok ? "#ffffff" : "#261318",
+            color: toast.ok ? "#0070f3" : "#e5484d",
             border: `1px solid ${toast.ok ? "rgba(126,232,192,0.35)" : "rgba(255,125,140,0.35)"}`,
             padding: "12px 20px",
             borderRadius: 8,
@@ -248,7 +248,7 @@ export default function TelegramManagementPage() {
             <span
               style={{
                 background: status?.connection_ok ? "rgba(126,232,192,0.15)" : "rgba(255,178,107,0.15)",
-                color: status?.connection_ok ? "#7EE8C0" : "#FFB26B",
+                color: status?.connection_ok ? "#0070f3" : "#f5a623",
                 border: `1px solid ${status?.connection_ok ? "rgba(126,232,192,0.3)" : "rgba(255,178,107,0.3)"}`,
                 borderRadius: 999,
                 padding: "2px 10px",
@@ -259,7 +259,7 @@ export default function TelegramManagementPage() {
               {status?.connection_ok ? "Đang kết nối (Live)" : "Chế độ Mock (Kiểm thử)"}
             </span>
           </div>
-          <p style={{ margin: "6px 0 0", color: "rgba(244,240,232,0.6)", fontSize: 13 }}>
+          <p style={{ margin: "6px 0 0", color: "#666666", fontSize: 13 }}>
             Cấu hình Bot Telegram, bảo mật phân quyền Chat Whitelist và thiết lập các quy tắc cảnh báo, tự động tạm dừng campaign.
           </p>
         </div>
@@ -270,7 +270,7 @@ export default function TelegramManagementPage() {
             disabled={testingConnection}
             style={{
               background: "rgba(183,164,255,0.12)",
-              color: "#B7A4FF",
+              color: "#0070f3",
               border: "1px solid rgba(183,164,255,0.3)",
               padding: "8px 16px",
               borderRadius: 6,
@@ -289,9 +289,9 @@ export default function TelegramManagementPage() {
           <button
             onClick={() => void loadData()}
             style={{
-              background: "#1A1B25",
-              color: "#F4F0E8",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "#fafafa",
+              color: "#171717",
+              border: "1px solid rgba(0,0,0,0.12)",
               padding: "8px 14px",
               borderRadius: 6,
               fontSize: 13,
@@ -305,38 +305,38 @@ export default function TelegramManagementPage() {
 
       {/* KPI Cards Bar */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 14, marginBottom: 28 }}>
-        <div style={{ background: "#13141C", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: 16 }}>
-          <div style={{ fontSize: 12, color: "rgba(244,240,232,0.5)" }}>Tên định danh Bot</div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: "#fff", marginTop: 4 }}>
+        <div style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: 16 }}>
+          <div style={{ fontSize: 12, color: "#666666" }}>Tên định danh Bot</div>
+          <div style={{ fontSize: 18, fontWeight: 700, color: "#171717", marginTop: 4 }}>
             {status?.bot_info?.username ? `@${status.bot_info.username}` : "Chưa liên kết"}
           </div>
-          <div style={{ fontSize: 11, color: "#7EE8C0", marginTop: 2 }}>{status?.bot_info?.first_name || "Bot Mock"}</div>
+          <div style={{ fontSize: 11, color: "#0070f3", marginTop: 2 }}>{status?.bot_info?.first_name || "Bot Mock"}</div>
         </div>
 
-        <div style={{ background: "#13141C", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: 16 }}>
-          <div style={{ fontSize: 12, color: "rgba(244,240,232,0.5)" }}>Quy tắc tự động đang bật</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: "#7EE8C0", marginTop: 4, fontFamily: "monospace" }}>
+        <div style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: 16 }}>
+          <div style={{ fontSize: 12, color: "#666666" }}>Quy tắc tự động đang bật</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: "#0070f3", marginTop: 4, fontFamily: "monospace" }}>
             {rules.filter((r) => r.is_enabled).length} / {rules.length}
           </div>
-          <div style={{ fontSize: 11, color: "rgba(244,240,232,0.45)", marginTop: 2 }}>Đang bảo vệ thời gian thực</div>
+          <div style={{ fontSize: 11, color: "#666666", marginTop: 2 }}>Đang bảo vệ thời gian thực</div>
         </div>
 
-        <div style={{ background: "#13141C", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: 16 }}>
-          <div style={{ fontSize: 12, color: "rgba(244,240,232,0.5)" }}>Chat ID được phân quyền (Whitelist)</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: "#B7A4FF", marginTop: 4, fontFamily: "monospace" }}>
+        <div style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: 16 }}>
+          <div style={{ fontSize: 12, color: "#666666" }}>Chat ID được phân quyền (Whitelist)</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: "#0070f3", marginTop: 4, fontFamily: "monospace" }}>
             {status?.allowed_chat_ids_count ?? 0}
           </div>
-          <div style={{ fontSize: 11, color: "rgba(244,240,232,0.45)", marginTop: 2 }}>
+          <div style={{ fontSize: 11, color: "#666666", marginTop: 2 }}>
             Admin Chat: {status?.admin_chat_id || "Chưa gán"}
           </div>
         </div>
 
-        <div style={{ background: "#13141C", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 10, padding: 16 }}>
-          <div style={{ fontSize: 12, color: "rgba(244,240,232,0.5)" }}>Trạng thái Webhook</div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", marginTop: 6 }}>
+        <div style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 10, padding: 16 }}>
+          <div style={{ fontSize: 12, color: "#666666" }}>Trạng thái Webhook</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "#171717", marginTop: 6 }}>
             {status?.webhook_info?.url ? "Đã bật Webhook" : "Chế độ Polling"}
           </div>
-          <div style={{ fontSize: 11, color: "rgba(244,240,232,0.45)", marginTop: 2, fontFamily: "monospace" }}>
+          <div style={{ fontSize: 11, color: "#666666", marginTop: 2, fontFamily: "monospace" }}>
             Pending updates: {status?.webhook_info?.pending_update_count ?? 0}
           </div>
         </div>
@@ -345,11 +345,11 @@ export default function TelegramManagementPage() {
       {/* Grid: Main Control & Automation Rules */}
       <div style={{ display: "grid", gridTemplateColumns: "1.1fr 0.9fr", gap: 24, marginBottom: 28 }}>
         {/* PHẦN 1: BẢNG QUY TẮC TỰ ĐỘNG HÓA (Automation Rules Builder) */}
-        <div style={{ background: "#13141C", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: 20 }}>
+        <div style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
               <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}> Quy tắc Tự động hóa (Automation Rules)</h2>
-              <div style={{ fontSize: 12, color: "rgba(244,240,232,0.5)", marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: "#666666", marginTop: 2 }}>
                 Tự động kiểm tra chi tiêu, tạm dừng chiến dịch và gửi thông báo khẩn cấp tới Telegram.
               </div>
             </div>
@@ -360,7 +360,7 @@ export default function TelegramManagementPage() {
                 disabled={evaluatingRules}
                 style={{
                   background: "rgba(126,232,192,0.12)",
-                  color: "#7EE8C0",
+                  color: "#0070f3",
                   border: "1px solid rgba(126,232,192,0.3)",
                   padding: "6px 12px",
                   borderRadius: 6,
@@ -375,8 +375,8 @@ export default function TelegramManagementPage() {
               <button
                 onClick={() => setShowAddRuleModal(true)}
                 style={{
-                  background: "#B7A4FF",
-                  color: "#0B0C12",
+                  background: "#0070f3",
+                  color: "#fff",
                   border: 0,
                   padding: "6px 12px",
                   borderRadius: 6,
@@ -393,7 +393,7 @@ export default function TelegramManagementPage() {
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13, background: "transparent" }}>
               <thead>
-                <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", color: "rgba(244,240,232,0.5)", textAlign: "left" }}>
+                <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.08)", color: "#666666", textAlign: "left" }}>
                   <th style={{ padding: "8px 10px", fontWeight: 600 }}>Tên quy tắc</th>
                   <th style={{ padding: "8px 10px", fontWeight: 600 }}>Ngưỡng kích hoạt</th>
                   <th style={{ padding: "8px 10px", fontWeight: 600 }}>Hành động</th>
@@ -410,20 +410,20 @@ export default function TelegramManagementPage() {
                     <tr
                       key={rule.id}
                       style={{
-                        borderBottom: "1px solid rgba(255,255,255,0.04)",
+                        borderBottom: "1px solid rgba(0,0,0,0.04)",
                         transition: "background 0.15s",
                       }}
                     >
                       <td style={{ padding: "12px 10px" }}>
-                        <div style={{ fontWeight: 600, color: rule.is_enabled ? "#fff" : "rgba(244,240,232,0.4)" }}>
+                        <div style={{ fontWeight: 600, color: rule.is_enabled ? "#fff" : "#666666" }}>
                           {rule.name}
                         </div>
-                        <div style={{ fontSize: 11, color: "rgba(244,240,232,0.45)", marginTop: 2 }}>
+                        <div style={{ fontSize: 11, color: "#666666", marginTop: 2 }}>
                           Mã: <code style={{ fontFamily: "monospace" }}>{rule.rule_type}</code>
                         </div>
                       </td>
 
-                      <td style={{ padding: "12px 10px", fontFamily: "monospace", fontSize: 13, fontWeight: 600, color: "#FFB26B" }}>
+                      <td style={{ padding: "12px 10px", fontFamily: "monospace", fontSize: 13, fontWeight: 600, color: "#f5a623" }}>
                         {rule.threshold > 0 ? `${fmtVnd(rule.threshold)} ${rule.currency}` : "Định kỳ"}
                       </td>
 
@@ -436,7 +436,7 @@ export default function TelegramManagementPage() {
                             fontSize: 11,
                             fontWeight: 700,
                             background: isAutoPause ? "rgba(255,125,140,0.15)" : "rgba(183,164,255,0.15)",
-                            color: isAutoPause ? "#FF7D8C" : "#B7A4FF",
+                            color: isAutoPause ? "#e5484d" : "#0070f3",
                             border: `1px solid ${isAutoPause ? "rgba(255,125,140,0.3)" : "rgba(183,164,255,0.3)"}`,
                           }}
                         >
@@ -444,9 +444,9 @@ export default function TelegramManagementPage() {
                         </span>
                       </td>
 
-                      <td style={{ padding: "12px 10px", fontSize: 11, color: "rgba(244,240,232,0.5)" }}>
+                      <td style={{ padding: "12px 10px", fontSize: 11, color: "#666666" }}>
                         {rule.last_triggered_at ? fmtTime(rule.last_triggered_at) : "Chưa kích hoạt"}
-                        <div style={{ fontFamily: "monospace", color: "rgba(244,240,232,0.35)", marginTop: 1 }}>
+                        <div style={{ fontFamily: "monospace", color: "#666666", marginTop: 1 }}>
                           Trigger: {rule.trigger_count} lần
                         </div>
                       </td>
@@ -462,8 +462,8 @@ export default function TelegramManagementPage() {
                             width: 44,
                             height: 24,
                             borderRadius: 999,
-                            background: rule.is_enabled ? "#14B8A6" : "#252632",
-                            border: "1px solid rgba(255,255,255,0.15)",
+                            background: rule.is_enabled ? "#0070f3" : "#252632",
+                            border: "1px solid rgba(0,0,0,0.15)",
                             padding: 2,
                             position: "relative",
                             cursor: "pointer",
@@ -512,15 +512,15 @@ export default function TelegramManagementPage() {
         </div>
 
         {/* PHẦN 2: CẤU HÌNH & KẾT NỐI BOT (Bot Config Form) */}
-        <div style={{ background: "#13141C", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: 20 }}>
+        <div style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 20 }}>
           <h2 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 4px" }}> Cấu hình &amp; Phân quyền Telegram Bot</h2>
-          <p style={{ margin: "0 0 16px", color: "rgba(244,240,232,0.5)", fontSize: 12 }}>
+          <p style={{ margin: "0 0 16px", color: "#666666", fontSize: 12 }}>
             Token được mã hóa Fernet server-side an toàn. Chỉ Chat ID có trong Whitelist mới được tương tác.
           </p>
 
           <form onSubmit={handleSaveConfig} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(244,240,232,0.75)", marginBottom: 4 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#666666", marginBottom: 4 }}>
                 Telegram Bot Token
               </label>
               <input
@@ -530,11 +530,11 @@ export default function TelegramManagementPage() {
                 onChange={(e) => setBotTokenInput(e.target.value)}
                 style={{
                   width: "100%",
-                  background: "#1A1B25",
-                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "#fafafa",
+                  border: "1px solid rgba(0,0,0,0.12)",
                   borderRadius: 6,
                   padding: "8px 12px",
-                  color: "#fff",
+                  color: "#171717",
                   fontSize: 13,
                   fontFamily: "monospace",
                 }}
@@ -543,7 +543,7 @@ export default function TelegramManagementPage() {
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(244,240,232,0.75)", marginBottom: 4 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#666666", marginBottom: 4 }}>
                   Admin Chat ID
                 </label>
                 <input
@@ -553,11 +553,11 @@ export default function TelegramManagementPage() {
                   onChange={(e) => setAdminChatIdInput(e.target.value)}
                   style={{
                     width: "100%",
-                    background: "#1A1B25",
-                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "#fafafa",
+                    border: "1px solid rgba(0,0,0,0.12)",
                     borderRadius: 6,
                     padding: "8px 12px",
-                    color: "#fff",
+                    color: "#171717",
                     fontSize: 13,
                     fontFamily: "monospace",
                   }}
@@ -565,7 +565,7 @@ export default function TelegramManagementPage() {
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(244,240,232,0.75)", marginBottom: 4 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#666666", marginBottom: 4 }}>
                   Chat ID Whitelist (Cách nhau dấu phẩy)
                 </label>
                 <input
@@ -575,11 +575,11 @@ export default function TelegramManagementPage() {
                   onChange={(e) => setAllowedChatsInput(e.target.value)}
                   style={{
                     width: "100%",
-                    background: "#1A1B25",
-                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "#fafafa",
+                    border: "1px solid rgba(0,0,0,0.12)",
                     borderRadius: 6,
                     padding: "8px 12px",
-                    color: "#fff",
+                    color: "#171717",
                     fontSize: 13,
                     fontFamily: "monospace",
                   }}
@@ -588,7 +588,7 @@ export default function TelegramManagementPage() {
             </div>
 
             <div>
-              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(244,240,232,0.75)", marginBottom: 4 }}>
+              <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#666666", marginBottom: 4 }}>
                 Webhook URL (Tùy chọn)
               </label>
               <input
@@ -598,11 +598,11 @@ export default function TelegramManagementPage() {
                 onChange={(e) => setWebhookUrlInput(e.target.value)}
                 style={{
                   width: "100%",
-                  background: "#1A1B25",
-                  border: "1px solid rgba(255,255,255,0.12)",
+                  background: "#fafafa",
+                  border: "1px solid rgba(0,0,0,0.12)",
                   borderRadius: 6,
                   padding: "8px 12px",
-                  color: "#fff",
+                  color: "#171717",
                   fontSize: 13,
                   fontFamily: "monospace",
                 }}
@@ -614,7 +614,7 @@ export default function TelegramManagementPage() {
                 type="submit"
                 disabled={savingConfig}
                 style={{
-                  background: "#6A57F2",
+                  background: "#0070f3",
                   color: "#fff",
                   border: 0,
                   borderRadius: 6,
@@ -630,9 +630,9 @@ export default function TelegramManagementPage() {
           </form>
 
           {/* Quick Guide */}
-          <div style={{ marginTop: 18, background: "#1A1B25", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 8, padding: 12 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#FFB26B", marginBottom: 6 }}> Hướng dẫn lấy Chat ID Telegram:</div>
-            <ol style={{ margin: 0, paddingLeft: 18, fontSize: 11, color: "rgba(244,240,232,0.65)", lineHeight: 1.6 }}>
+          <div style={{ marginTop: 18, background: "#fafafa", border: "1px solid rgba(0,0,0,0.06)", borderRadius: 8, padding: 12 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#f5a623", marginBottom: 6 }}> Hướng dẫn lấy Chat ID Telegram:</div>
+            <ol style={{ margin: 0, paddingLeft: 18, fontSize: 11, color: "#666666", lineHeight: 1.6 }}>
               <li>Chat với bot <code>@userinfobot</code> hoặc <code>@getidsbot</code> trên Telegram để xem ID cá nhân.</li>
               <li>Nếu muốn bot gửi vào nhóm, thêm bot vào nhóm và lấy Chat ID dạng âm (ví dụ: <code>-100...</code>).</li>
               <li>Nhập các Chat ID vào ô Whitelist phía trên để cấp quyền điều khiển cho thành viên tin cậy.</li>
@@ -644,9 +644,9 @@ export default function TelegramManagementPage() {
       {/* Grid: Console Runner & Live Activity Logs */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
         {/* Console Trực tiếp */}
-        <div style={{ background: "#13141C", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: 20 }}>
+        <div style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 20 }}>
           <h2 style={{ fontSize: 16, fontWeight: 700, margin: "0 0 4px" }}> Bảng điều khiển thử nghiệm (Web Console)</h2>
-          <p style={{ margin: "0 0 14px", color: "rgba(244,240,232,0.5)", fontSize: 12 }}>
+          <p style={{ margin: "0 0 14px", color: "#666666", fontSize: 12 }}>
             Mô phỏng gửi lệnh bot như trên Telegram để kiểm tra phản hồi tức thì.
           </p>
 
@@ -658,11 +658,11 @@ export default function TelegramManagementPage() {
               placeholder="Nhập lệnh: /tk, /baocao today, /status, /batcamp cmp_1001..."
               style={{
                 flex: 1,
-                background: "#07080D",
-                border: "1px solid rgba(255,255,255,0.15)",
+                background: "#ffffff",
+                border: "1px solid rgba(0,0,0,0.15)",
                 borderRadius: 6,
                 padding: "8px 12px",
-                color: "#7EE8C0",
+                color: "#0070f3",
                 fontSize: 13,
                 fontFamily: "monospace",
               }}
@@ -671,8 +671,8 @@ export default function TelegramManagementPage() {
               onClick={handleRunConsoleCommand}
               disabled={runningCmd}
               style={{
-                background: "#14B8A6",
-                color: "#0B0C12",
+                background: "#0070f3",
+                color: "#fff",
                 border: 0,
                 borderRadius: 6,
                 padding: "8px 16px",
@@ -691,8 +691,8 @@ export default function TelegramManagementPage() {
                 key={cmd}
                 onClick={() => setConsoleCmd(cmd)}
                 style={{
-                  background: "#1A1B25",
-                  color: "#B7A4FF",
+                  background: "#fafafa",
+                  color: "#0070f3",
                   border: "1px solid rgba(183,164,255,0.2)",
                   borderRadius: 4,
                   padding: "3px 8px",
@@ -708,8 +708,8 @@ export default function TelegramManagementPage() {
 
           <div
             style={{
-              background: "#07080D",
-              border: "1px solid rgba(255,255,255,0.06)",
+              background: "#ffffff",
+              border: "1px solid rgba(0,0,0,0.06)",
               borderRadius: 8,
               padding: 14,
               minHeight: 180,
@@ -718,14 +718,14 @@ export default function TelegramManagementPage() {
               fontFamily: "monospace",
               fontSize: 12,
               lineHeight: 1.6,
-              color: "#E2E8F0",
+              color: "#171717",
               whiteSpace: "pre-wrap",
             }}
           >
             {consoleOutput ? (
               <div dangerouslySetInnerHTML={{ __html: consoleOutput }} />
             ) : (
-              <span style={{ color: "rgba(244,240,232,0.3)" }}>
+              <span style={{ color: "#666666" }}>
                 Nhấn [Gửi lệnh] để kiểm tra kết quả phản hồi của Bot Agent tại đây…
               </span>
             )}
@@ -733,16 +733,16 @@ export default function TelegramManagementPage() {
         </div>
 
         {/* Nhật ký tương tác (Activity Logs) */}
-        <div style={{ background: "#13141C", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: 20 }}>
+        <div style={{ background: "#ffffff", border: "1px solid rgba(0,0,0,0.08)", borderRadius: 12, padding: 20 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}> Nhật ký hoạt động Bot gần đây</h2>
-            <span style={{ fontSize: 12, color: "rgba(244,240,232,0.45)", fontFamily: "monospace" }}>{logs.length} sự kiện</span>
+            <span style={{ fontSize: 12, color: "#666666", fontFamily: "monospace" }}>{logs.length} sự kiện</span>
           </div>
 
           <div style={{ maxHeight: 310, overflowY: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, background: "transparent" }}>
               <thead>
-                <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", color: "rgba(244,240,232,0.45)", textAlign: "left" }}>
+                <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.08)", color: "#666666", textAlign: "left" }}>
                   <th style={{ padding: "6px 8px" }}>Thời gian</th>
                   <th style={{ padding: "6px 8px" }}>Người gửi</th>
                   <th style={{ padding: "6px 8px" }}>Lệnh</th>
@@ -755,17 +755,17 @@ export default function TelegramManagementPage() {
                   const isReject = log.status === "REJECTED";
 
                   return (
-                    <tr key={log.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                      <td style={{ padding: "8px 8px", color: "rgba(244,240,232,0.5)", fontSize: 11, fontFamily: "monospace" }}>
+                    <tr key={log.id} style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+                      <td style={{ padding: "8px 8px", color: "#666666", fontSize: 11, fontFamily: "monospace" }}>
                         {log.created_at ? fmtTime(log.created_at) : "—"}
                       </td>
                       <td style={{ padding: "8px 8px" }}>
                         <b>{log.username}</b>
-                        <div style={{ fontSize: 10, color: "rgba(244,240,232,0.35)", fontFamily: "monospace" }}>
+                        <div style={{ fontSize: 10, color: "#666666", fontFamily: "monospace" }}>
                           ID: {log.chat_id}
                         </div>
                       </td>
-                      <td style={{ padding: "8px 8px", fontFamily: "monospace", color: "#B7A4FF" }}>{log.command}</td>
+                      <td style={{ padding: "8px 8px", fontFamily: "monospace", color: "#0070f3" }}>{log.command}</td>
                       <td style={{ padding: "8px 8px" }}>
                         <span
                           style={{
@@ -774,7 +774,7 @@ export default function TelegramManagementPage() {
                             fontSize: 10,
                             fontWeight: 700,
                             background: isOk ? "rgba(126,232,192,0.15)" : isReject ? "rgba(255,178,107,0.15)" : "rgba(255,125,140,0.15)",
-                            color: isOk ? "#7EE8C0" : isReject ? "#FFB26B" : "#FF7D8C",
+                            color: isOk ? "#0070f3" : isReject ? "#f5a623" : "#e5484d",
                           }}
                         >
                           {isOk ? "Thành công" : isReject ? "Từ chối" : "Lỗi"}
@@ -785,7 +785,7 @@ export default function TelegramManagementPage() {
                 })}
                 {logs.length === 0 && (
                   <tr>
-                    <td colSpan={4} style={{ padding: "20px 8px", textAlign: "center", color: "rgba(244,240,232,0.4)" }}>
+                    <td colSpan={4} style={{ padding: "20px 8px", textAlign: "center", color: "#666666" }}>
                       Chưa có nhật ký hoạt động nào.
                     </td>
                   </tr>
@@ -812,8 +812,8 @@ export default function TelegramManagementPage() {
         >
           <div
             style={{
-              background: "#13141C",
-              border: "1px solid rgba(255,255,255,0.15)",
+              background: "#ffffff",
+              border: "1px solid rgba(0,0,0,0.15)",
               borderRadius: 12,
               padding: 24,
               maxWidth: 500,
@@ -822,12 +822,12 @@ export default function TelegramManagementPage() {
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#fff" }}>
+              <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: "#171717" }}>
                  Thêm Quy tắc Tự động hóa mới
               </h3>
               <button
                 onClick={() => setShowAddRuleModal(false)}
-                style={{ background: "none", border: 0, color: "rgba(244,240,232,0.5)", fontSize: 18, cursor: "pointer" }}
+                style={{ background: "none", border: 0, color: "#666666", fontSize: 18, cursor: "pointer" }}
               >
                 
               </button>
@@ -835,7 +835,7 @@ export default function TelegramManagementPage() {
 
             <form onSubmit={handleCreateRule} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(244,240,232,0.75)", marginBottom: 4 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#666666", marginBottom: 4 }}>
                   Tên quy tắc *
                 </label>
                 <input
@@ -846,18 +846,18 @@ export default function TelegramManagementPage() {
                   onChange={(e) => setRuleName(e.target.value)}
                   style={{
                     width: "100%",
-                    background: "#1A1B25",
-                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "#fafafa",
+                    border: "1px solid rgba(0,0,0,0.12)",
                     borderRadius: 6,
                     padding: "8px 12px",
-                    color: "#fff",
+                    color: "#171717",
                     fontSize: 13,
                   }}
                 />
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(244,240,232,0.75)", marginBottom: 4 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#666666", marginBottom: 4 }}>
                   Loại quy tắc
                 </label>
                 <select
@@ -877,11 +877,11 @@ export default function TelegramManagementPage() {
                   }}
                   style={{
                     width: "100%",
-                    background: "#1A1B25",
-                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "#fafafa",
+                    border: "1px solid rgba(0,0,0,0.12)",
                     borderRadius: 6,
                     padding: "8px 12px",
-                    color: "#fff",
+                    color: "#171717",
                     fontSize: 13,
                   }}
                 >
@@ -894,7 +894,7 @@ export default function TelegramManagementPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 12 }}>
                 <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(244,240,232,0.75)", marginBottom: 4 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#666666", marginBottom: 4 }}>
                     Ngưỡng kích hoạt
                   </label>
                   <input
@@ -904,11 +904,11 @@ export default function TelegramManagementPage() {
                     onChange={(e) => setRuleThreshold(e.target.value)}
                     style={{
                       width: "100%",
-                      background: "#1A1B25",
-                      border: "1px solid rgba(255,255,255,0.12)",
+                      background: "#fafafa",
+                      border: "1px solid rgba(0,0,0,0.12)",
                       borderRadius: 6,
                       padding: "8px 12px",
-                      color: "#fff",
+                      color: "#171717",
                       fontSize: 13,
                       fontFamily: "monospace",
                     }}
@@ -916,7 +916,7 @@ export default function TelegramManagementPage() {
                 </div>
 
                 <div>
-                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(244,240,232,0.75)", marginBottom: 4 }}>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#666666", marginBottom: 4 }}>
                     Đơn vị tiền tệ
                   </label>
                   <select
@@ -924,11 +924,11 @@ export default function TelegramManagementPage() {
                     onChange={(e) => setRuleCurrency(e.target.value)}
                     style={{
                       width: "100%",
-                      background: "#1A1B25",
-                      border: "1px solid rgba(255,255,255,0.12)",
+                      background: "#fafafa",
+                      border: "1px solid rgba(0,0,0,0.12)",
                       borderRadius: 6,
                       padding: "8px 12px",
-                      color: "#fff",
+                      color: "#171717",
                       fontSize: 13,
                     }}
                   >
@@ -939,7 +939,7 @@ export default function TelegramManagementPage() {
               </div>
 
               <div>
-                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "rgba(244,240,232,0.75)", marginBottom: 4 }}>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 600, color: "#666666", marginBottom: 4 }}>
                   Hành động thực thi
                 </label>
                 <select
@@ -947,11 +947,11 @@ export default function TelegramManagementPage() {
                   onChange={(e) => setRuleAction(e.target.value)}
                   style={{
                     width: "100%",
-                    background: "#1A1B25",
-                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "#fafafa",
+                    border: "1px solid rgba(0,0,0,0.12)",
                     borderRadius: 6,
                     padding: "8px 12px",
-                    color: "#fff",
+                    color: "#171717",
                     fontSize: 13,
                   }}
                 >
@@ -966,9 +966,9 @@ export default function TelegramManagementPage() {
                   type="button"
                   onClick={() => setShowAddRuleModal(false)}
                   style={{
-                    background: "#1A1B25",
-                    color: "rgba(244,240,232,0.7)",
-                    border: "1px solid rgba(255,255,255,0.12)",
+                    background: "#fafafa",
+                    color: "#666666",
+                    border: "1px solid rgba(0,0,0,0.12)",
                     borderRadius: 6,
                     padding: "8px 16px",
                     fontSize: 13,
@@ -981,8 +981,8 @@ export default function TelegramManagementPage() {
                   type="submit"
                   disabled={creatingRule}
                   style={{
-                    background: "#B7A4FF",
-                    color: "#0B0C12",
+                    background: "#0070f3",
+                    color: "#fff",
                     border: 0,
                     borderRadius: 6,
                     padding: "8px 18px",

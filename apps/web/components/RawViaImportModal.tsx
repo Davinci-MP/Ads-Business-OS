@@ -526,12 +526,12 @@ export default function RawViaImportModal({
                                 </span>
                               )}
                               {row.hasEaag && (
-                                <span className="rounded bg-indigo-950 px-1.5 py-0.5 text-[9px] font-bold text-indigo-400 border border-indigo-800/40">
+                                <span className="rounded bg-[#eef4ff] px-1.5 py-0.5 text-[9px] font-bold text-indigo-400 border border-indigo-800/40">
                                   EAAG ✓
                                 </span>
                               )}
                               {row.hasEaab && (
-                                <span className="rounded bg-purple-950 px-1.5 py-0.5 text-[9px] font-bold text-purple-400 border border-purple-800/40">
+                                <span className="rounded bg-[#eef4ff] px-1.5 py-0.5 text-[9px] font-bold text-purple-400 border border-purple-800/40">
                                   EAAB ✓
                                 </span>
                               )}
@@ -576,7 +576,7 @@ export default function RawViaImportModal({
 
             {/* Progress indicator */}
             {isSubmitting && (
-              <div className="rounded-xl border border-indigo-500/40 bg-indigo-950/40 p-4 space-y-2 animate-pulse">
+              <div className="rounded-xl border border-indigo-500/40 bg-[#eef4ff] p-4 space-y-2 animate-pulse">
                 <div className="flex items-center justify-between text-xs font-bold text-indigo-300">
                   <span>{stepLabel}</span>
                   <span>{currentStep}/4</span>

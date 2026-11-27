@@ -1102,7 +1102,7 @@ def extension_ingest_endpoint(
 
 @router.get("/download-extension")
 def download_extension_zip() -> Response:
-    """Đóng gói và tải về toàn bộ tiện ích Chrome Extension ADSOS PRO (.zip) để gửi khách hàng hoặc cài đặt."""
+    """Đóng gói và tải về toàn bộ tiện ích Chrome Extension metaOs (.zip)."""
     ext_dir = None
     for candidate in [
         Path("extensions/adsos-check-bridge").resolve(),
@@ -1131,7 +1131,7 @@ def download_extension_zip() -> Response:
         content=buf.getvalue(),
         media_type="application/zip",
         headers={
-            "Content-Disposition": 'attachment; filename="adsos-check-pro-extension.zip"',
+            "Content-Disposition": 'attachment; filename="metaos-extension.zip"',
         },
     )
 

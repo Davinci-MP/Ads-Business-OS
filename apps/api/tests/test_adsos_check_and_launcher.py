@@ -129,14 +129,14 @@ def test_build_extension_bootstrap(tmp_path):
     with open(manifest_file, "r", encoding="utf-8") as f:
         manifest_data = json.load(f)
     assert manifest_data["manifest_version"] == 3
-    assert "ADSOS CHECK Helper" in manifest_data["name"]
+    assert "metaOs Helper" in manifest_data["name"]
 
     bg_content = bg_file.read_text(encoding="utf-8")
     assert "c_user" in bg_content
     assert "abc123xs" in bg_content
 
     content_text = content_file.read_text(encoding="utf-8")
-    assert "ADSOS CHECK" in content_text
+    assert "metaOs" in content_text
     assert "123456" in content_text
 
 

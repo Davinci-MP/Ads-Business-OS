@@ -184,7 +184,7 @@ export default function WorkflowCatalogModal({
         )}
 
         {progress && (
-          <div className="mx-6 mt-3 rounded-xl border border-indigo-500/30 bg-indigo-950/20 p-3.5 space-y-2">
+          <div className="mx-6 mt-3 rounded-xl border border-indigo-500/30 bg-[#eef4ff] p-3.5 space-y-2">
             <div className="flex justify-between items-center text-xs">
               <span className="font-semibold text-indigo-300">
                 Đang thực hiện bước {progress.step}/{progress.total}: {progress.action}
@@ -257,7 +257,7 @@ export default function WorkflowCatalogModal({
                 >
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-500/30 text-indigo-300">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#eef4ff] border border-indigo-500/30 text-indigo-300">
                         {w.code}
                       </span>
                       <span className="text-[10px] text-slate-400">

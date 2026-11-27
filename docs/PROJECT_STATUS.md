@@ -1,5 +1,79 @@
 # PROJECT_STATUS.md — Trạng thái dự án
 
+## Cập nhật 2026-11-27 — Turso (D-066), cấu hình deploy, dọn rác & nền tảng giao diện Vercel
+
+- **Database Turso/libSQL (D-066):** thêm `requirements-turso.txt` (`sqlalchemy-libsql`), cải thiện `app/db.py` (pool_pre_ping + check_same_thread cho SQLite-family). Nghiệm thu: **648 pass / 1 fail** (fail là test flaky `test_prepaid` đã biết, chạy riêng pass) — thay đổi db.py còn **giảm flaky từ 11 xuống 1**. Ghi quyết định D-066, cập nhật AGENTS.md + PROJECT_ARCHITECTURE §5.
+- **Cấu hình deploy:** `docs/DEPLOYMENT.md` (Vercel frontend + backend trên server riêng + Turso), `infra/Caddyfile` (HTTPS api.vextech.vn, chặn /docs & /exchange ngoài IP tin cậy), cập nhật `.env.example` (Turso URL, OAuth HTTPS redirect, EXCHANGE_UI_ORIGINS), thêm `apps/web/.env.example`.
+- **Dọn rác agent cũ:** xóa toàn bộ log/dump test/build, `.lock` SQLite tạm, `fix_staff_tables.py`, `page.tsx.tmp`; cập nhật `.gitignore` chống tái diễn. Thư mục `.review-*/`, `.test-*/` bị permission-denied — chủ dự án tự xóa.
+- **Nền tảng giao diện Vercel:** retheme token tập trung trong `admin.css` (sáng mặc định: nền trắng, viền #eaeaea, accent #0070f3, primary đen; tối: nền #000) + font **Geist/Geist Mono** (next/font) + mặc định theme sáng (layout/shell). Nav active và nút primary đổi sang kiểu Vercel. Trang `/login` đã chuyển sang token (preview xác nhận). Build Next.js 32/32 route PASS.
+- **Còn lại:** các trang nhiều màu hardcode cần polish từng trang để khớp Vercel hoàn toàn (như đã làm với login); xem dashboard thật cần backend + đăng nhập.
+
+# PROJECT_STATUS.md — Trạng thái dự án
+
+## Cập nhật 2026-11-21 — Khắc phục triệt để lỗi Gemini `thought_signature` HTTP 400 trong AI Copilot
+
+- **Nguyên nhân gốc rễ lỗi `Function call is missing a thought_signature in functionCall parts`:**
+  - Chuẩn REST API v1beta của Google Gemini (`generateContent`) khi model trả về các công cụ cần gọi (`functionCall`) kèm theo chữ ký `thoughtSignature` và các phần tử suy nghĩ (`thought` parts).
+  - Trước đây, `orchestrator.py` tách từng công cụ trong một lượt gọi thành nhiều lượt `assistant` - `tool` rời rạc và tự tái tạo lại `functionCall` mà làm mất `thoughtSignature`, đồng thời không gom kết quả phản hồi của tất cả công cụ vào một lượt `user` duy nhất theo chuẩn Gemini v1beta.
+  - Khi người dùng gửi lịch sử trò chuyện (`history`), các lượt gọi tool dang dở không có chữ ký hợp lệ cũng gây lỗi khi Gemini xác thực payload hội thoại.
+
+- **Giải pháp xử lý:**
+  1. **Bảo toàn nguyên vẹn `raw_content` (`base.py`, `gemini.py`):**
+     - Bổ sung trường `raw_content` vào `LLMResponse` và `LLMMessage` để lưu trữ đối tượng `candidate["content"]` nguyên bản từ Gemini.
+     - Khi gửi payload sang Gemini, nếu tin nhắn có `raw_content`, toàn bộ các phần tử bao gồm `thoughtSignature`, `thought` (nội dung suy nghĩ nội bộ) và danh sách `functionCall` được giữ nguyên vẹn 100%, không bị phân mảnh hay tái tạo thiếu trường.
+  2. **Gom lượt phản hồi Tool Call theo chuẩn Gemini REST v1beta (`orchestrator.py`):**
+     - Khi model trả về một hoặc nhiều công cụ cần gọi trong cùng một lượt, `orchestrator.py` thực thi tuần tự các công cụ, khử trùng dữ liệu an toàn bằng `sanitize_data_for_ai()`.
+     - Gom toàn bộ kết quả vào một lượt tin nhắn `role="user"` duy nhất chứa danh sách `functionResponse` đầy đủ tương ứng với tất cả các `functionCall`.
+     - Cập nhật cả `OllamaProvider` và `MockLLMProvider` tương thích với cấu trúc gom lượt này.
+  3. **Làm sạch lịch sử đa lượt (Multi-turn Chat History):**
+     - Bỏ qua các lượt gọi công cụ dang dở hoặc tin nhắn rỗng từ client, chỉ giữ lại các cặp hội thoại text chuẩn giữa người dùng và trợ lý để không làm rách chuỗi hội thoại khi gửi lên Gemini.
+  4. **Kiểm thử & Khởi động Backend:**
+     - Bổ sung các unit test chuyên biệt trong `tests/test_ai_orchestrator.py`: bảo toàn `thoughtSignature`, làm sạch lịch sử đa lượt, gom nhiều công cụ trong một lượt.
+     - Khởi chạy thành công Backend Server trên `127.0.0.1:8000` (uvicorn hot-reload).
+     - Kiểm thử trực tiếp gọi live tool `get_customers_summary` và `get_system_overview` thành công với Google Gemini API.
+     - Frontend Next.js build đạt 32/32 route thành công.
+
+- **AI Orchestrator dùng chung (`apps/api/app/services/ai/`):**
+  - Xây dựng kiến trúc AI Orchestrator đa nền tảng kết nối trực tiếp với FastAPI backend.
+  - Hỗ trợ linh hoạt LLM Provider qua biến môi trường `LLM_PROVIDER`:
+    - `gemini`: Kết nối Google Gemini API (mặc định `gemini-2.0-flash`), cấu hình qua `GEMINI_API_KEY`.
+    - `ollama`: Kết nối mô hình mã nguồn mở chạy local trên máy trạm (`http://localhost:11434`), cấu hình qua `OLLAMA_MODEL` và `OLLAMA_BASE_URL`.
+    - `mock`: Chế độ giả lập phục vụ kiểm thử đơn vị và chạy CI/CD offline.
+  - Phân tách tuyệt đối 2 bộ công cụ (Tools) với phân quyền RBAC và ngữ cảnh:
+    - **`STAFF_TOOLS`**: Dành riêng cho nhân sự trên Web CRM (yêu cầu token JWT xác thực nhân viên). Bao gồm: `get_system_overview`, `search_campaigns`, `get_campaign_details`, `get_customers_summary`, `get_ad_accounts`, `get_vias_status` (chỉ đếm số lượng, tuyệt đối không truy cập credentials), `get_recent_activity_logs`.
+    - **`CUSTOMER_TOOLS`**: Dành cho khách hàng trên Telegram, **khóa cứng tuyệt đối theo `telegram_chat_id` / `customer_id`**. Ngăn chặn truy cập chéo giữa các khách hàng. Bao gồm: `get_my_balance`, `get_my_campaigns`, `get_my_ad_accounts`, `get_my_support_tasks`, `create_support_request`, `get_deposit_instructions`.
+  - Bộ làm sạch dữ liệu (**Data Sanitizer**): Khử trùng đệ quy mọi cấu trúc dữ liệu trước khi gửi sang LLM. Lọc bỏ 100% các trường nhạy cảm (`password`, `2fa_secret`, `cookie`, `token`, `master_key`, `credentials`) và regex che giấu token Meta (`EAAB...`), Bearer token, Telegram token, cookie header.
+
+- **Telegram Bot Auto-Switching (Polling vs Webhook):**
+  - Tự động bật tiến trình background long-polling khi `ENV=development` hoặc `APP_ENV=local/dev`, cho phép kiểm thử trực tiếp trên máy cá nhân không cần domain hay HTTPS/SSL.
+  - Tự động chuyển sang chế độ nhận Webhook tại `/api/v1/telegram/webhook` (kèm xác thực Secret Token) khi `ENV=production`.
+  - Cơ chế port-lock (`settings.telegram_polling_lock_port: 8913`) chống chạy trùng lặp giữa nhiều worker uvicorn.
+  - Tích hợp lệnh `/ai <câu hỏi>` và tự động kích hoạt AI Copilot cho các câu hỏi ngôn ngữ tự nhiên từ khách hàng.
+
+- **Web CRM AI Copilot Drawer (`apps/web/`):**
+  - Thiết kế ngăn kéo slide-over bên phải chuẩn **Twenty CRM** (`AiCopilotDrawer.tsx`):
+    - Khung chat trượt mượt mà từ mép phải với backdrop làm mờ.
+    - Header hiển thị trạng thái kết nối LLM Provider & Model, số lượng tools khả dụng.
+    - Gợi ý câu hỏi nhanh (Quick Prompts): báo cáo hôm nay, kiểm tra chiến dịch, số dư, dàn VIA.
+    - Hiển thị nhãn công cụ đã thực thi (`🔧 get_system_overview`).
+    - Nút mở nhanh trên Top Header (`Ctrl+K`) và Nút nổi (Floating Action Button) ở góc dưới bên phải màn hình.
+  - Endpoint REST API bảo vệ: `POST /api/v1/copilot/chat` và `GET /api/v1/copilot/status`.
+
+- **Kiểm thử & Nghiệm thu:**
+  - 100% test mới đạt: `test_ai_sanitizer.py`, `test_ai_orchestrator.py`, `test_telegram_polling_mode.py`, `test_copilot_api.py`.
+  - Toàn bộ backend test suite đạt 20/20 test liên quan và chạy ổn định.
+  - Next.js build (`npm.cmd run build`) hoàn thành thành công 32/32 route tĩnh/động không lỗi TypeScript hay CSS.
+
+## Cập nhật 2026-11-20 — Extension metaOs và backend tương thích trên ADS Business OS
+
+- Thay gói `extensions/adsos-check-bridge/` bằng extension Manifest V3 metaOs 2.2.5; toàn bộ endpoint nền tảng trỏ về `http://127.0.0.1:8000`, icon/tên/trang mở và gói tải đổi sang thương hiệu metaOs.
+- Bổ sung bridge còn thiếu `checkLive`, `getAccessToken`, `getTokens` và đồng bộ session định kỳ vào endpoint D-065 `extension-ingest`; cookie/token tiếp tục được mã hóa Fernet trong `ViaProfile`/`BrowserNode`.
+- Dựng các trang tương thích `/metaos`, `/popup`, `/bm-popup.html`, `/ext-runner` cùng API tenant/shield, chia sẻ báo cáo, snapshot append-only chống trùng và hàng đợi chỉnh sửa có claim/idempotent result.
+- Thêm migration reversible `x8y9z0a1b2c3_metaos_extension_backend.py` cho liên kết chia sẻ, snapshot và lệnh chỉnh sửa; đã kiểm tra `upgrade -> downgrade -> upgrade` trên SQLite tạm riêng.
+- Lệnh chỉnh sửa Meta bị chặn khi `ADSOS_META_WRITES_ENABLED=0`. AI và webhook Zalo là tích hợp tùy chọn qua env, thiếu cấu hình sẽ trả `503` thay vì giả lập. Loại bỏ fallback tự chế token EAAB từ cookie; cookie-only vẫn là phiên LIVE nhưng token giữ `NONE` cho tới khi lấy được token thật.
+- Cập nhật modal quản lý/tải extension trên web thành metaOs và đổi file tải thành `metaos-extension.zip`; helper theo VIA cũng hiển thị thương hiệu metaOs.
+- Nghiệm thu: 38/38 test extension/CDP/launcher đạt; toàn bộ backend đạt **634/634 test** (1 cảnh báo deprecation Starlette/httpx); `node --check` đạt cho toàn bộ JS, manifest hợp lệ; build Next.js đạt đủ 32/32 route.
+
 ## Cập nhật 2026-11-13 — Sửa thứ tự React Hooks trong modal nhập VIA
 
 - Chuyển nhánh đóng sớm của `RawViaImportModal` xuống sau `useMemo(summaryTotals)`, bảo đảm số lượng và thứ tự Hooks không thay đổi khi mở/đóng modal.

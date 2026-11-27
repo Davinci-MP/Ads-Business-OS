@@ -1,0 +1,24 @@
+# Reverse proxy HTTPS cho BACKEND trên server riêng (vextech) — D-066.
+# Caddy tự xin/gia hạn chứng chỉ Let's Encrypt cho api.vextech.vn.
+# Chạy: caddy run --config infra/Caddyfile
+# Yêu cầu: DNS api.vextech.vn trỏ về server; mở cổng 80 + 443.
+
+api.vextech.vn {
+	encode zstd gzip
+
+	# Backend FastAPI (uvicorn) chạy nội bộ cổng 8000
+	reverse_proxy 127.0.0.1:8000
+
+	# An toàn: không mở tài liệu API và endpoint quản trị ví ra công khai.
+	# Giới hạn theo IP công ty (sửa dải IP cho đúng), chặn phần còn lại.
+	@admin path /docs /openapi.json /redoc /api/v1/exchange/*
+	handle @admin {
+		@trusted remote_ip 127.0.0.1 10.0.0.0/8 192.168.0.0/16
+		handle @trusted {
+			reverse_proxy 127.0.0.1:8000
+		}
+		respond "Forbidden" 403
+	}
+}
+
+# Frontend đặt trên Vercel (ads.vextech.vn → Vercel), KHÔNG proxy ở đây.

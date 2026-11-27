@@ -53,14 +53,14 @@ export default function UnifiedOverviewWidget() {
     <div className="w-full bg-[#181818] p-5 rounded-[8px] border border-[#282828] shadow-[0_8px_8px_rgba(0,0,0,0.3)] mb-6 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#282828] pb-3">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#1ed760] animate-pulse" />
+          <span className="w-2.5 h-2.5 rounded-full bg-[#0070f3] animate-pulse" />
           <h2 className="text-sm font-bold text-white tracking-tight m-0 uppercase">
             Hệ Thống Kết Nối Đa Nền Tảng (Unified Platform Hub)
           </h2>
         </div>
         <div className="flex items-center gap-2 text-xs">
           <span className="text-[#b3b3b3]">Chế độ:</span>
-          <span className="px-3 py-0.5 rounded-full font-bold uppercase tracking-[1.4px] bg-[#1ed760]/15 text-[#1ed760] border border-[#1ed760]/30 text-[10px]">
+          <span className="px-3 py-0.5 rounded-full font-bold uppercase tracking-[1.4px] bg-[#0070f3]/15 text-[#0070f3] border border-[#0070f3]/30 text-[10px]">
             {data.platform_mode.toUpperCase()}
           </span>
           {stats.pending_client_tasks > 0 && (
@@ -81,9 +81,9 @@ export default function UnifiedOverviewWidget() {
           <div>
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-[#b3b3b3] uppercase tracking-wider">Meta Ads</span>
-              <span className="w-2 h-2 rounded-full bg-[#1ed760]" />
+              <span className="w-2 h-2 rounded-full bg-[#0070f3]" />
             </div>
-            <div className="text-xs font-mono font-bold text-[#1ed760] mt-1">
+            <div className="text-xs font-mono font-bold text-[#0070f3] mt-1">
               v{connectors.meta_ads.version}
             </div>
           </div>
@@ -99,7 +99,7 @@ export default function UnifiedOverviewWidget() {
               <span className="text-[11px] font-bold text-[#b3b3b3] uppercase tracking-wider">Binance</span>
               <span
                 className={`w-2 h-2 rounded-full ${
-                  connectors.binance.connected ? "bg-[#1ed760]" : "bg-[#727272]"
+                  connectors.binance.connected ? "bg-[#0070f3]" : "bg-[#727272]"
                 }`}
               />
             </div>
@@ -119,11 +119,11 @@ export default function UnifiedOverviewWidget() {
               <span className="text-[11px] font-bold text-[#b3b3b3] uppercase tracking-wider">PingPong VCC</span>
               <span
                 className={`w-2 h-2 rounded-full ${
-                  connectors.pingpong.connected ? "bg-[#1ed760]" : "bg-[#727272]"
+                  connectors.pingpong.connected ? "bg-[#0070f3]" : "bg-[#727272]"
                 }`}
               />
             </div>
-            <div className="text-xs font-mono font-bold text-[#1ed760] mt-1 truncate">
+            <div className="text-xs font-mono font-bold text-[#0070f3] mt-1 truncate">
               {connectors.pingpong.connected ? connectors.pingpong.label || "Đang kết nối" : "Chưa cấu hình"}
             </div>
           </div>
@@ -139,7 +139,7 @@ export default function UnifiedOverviewWidget() {
               <span className="text-[11px] font-bold text-[#b3b3b3] uppercase tracking-wider">TRON TRC20</span>
               <span
                 className={`w-2 h-2 rounded-full ${
-                  connectors.tron.configured ? "bg-[#1ed760]" : "bg-[#727272]"
+                  connectors.tron.configured ? "bg-[#0070f3]" : "bg-[#727272]"
                 }`}
               />
             </div>
@@ -155,7 +155,7 @@ export default function UnifiedOverviewWidget() {
           <div>
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-[#b3b3b3] uppercase tracking-wider">Google Sheets</span>
-              <span className="w-2 h-2 rounded-full bg-[#1ed760]" />
+              <span className="w-2 h-2 rounded-full bg-[#0070f3]" />
             </div>
             <div className="text-xs font-mono font-bold text-white mt-1">
               {connectors.sheets.active_sources} Nguồn báo cáo
@@ -171,7 +171,7 @@ export default function UnifiedOverviewWidget() {
               <span className="text-[11px] font-bold text-[#b3b3b3] uppercase tracking-wider">Telegram AI</span>
               <span
                 className={`w-2 h-2 rounded-full ${
-                  connectors.telegram.configured ? "bg-[#1ed760]" : "bg-[#727272]"
+                  connectors.telegram.configured ? "bg-[#0070f3]" : "bg-[#727272]"
                 }`}
               />
             </div>

@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any, Optional
 from uuid import uuid4
 
-from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, Boolean, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -33,6 +33,72 @@ class ExtensionClientKey(Base):
 
     # Relationship
     client = relationship("Customer", foreign_keys=[client_id])
+
+
+class ExtensionReportShare(Base):
+    """Liên kết báo cáo Ads do extension metaOs đồng bộ định kỳ."""
+
+    __tablename__ = "extension_report_shares"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=lambda: str(uuid4()), nullable=False
+    )
+    client_key_id: Mapped[Optional[int]] = mapped_column(
+        ForeignKey("extension_client_keys.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    account_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    account_name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    currency: Mapped[str] = mapped_column(String(16), default="", nullable=False)
+    scope_type: Mapped[str] = mapped_column(String(32), default="account", nullable=False)
+    campaign_ids: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="active", index=True, nullable=False)
+    last_heartbeat_at: Mapped[Optional[datetime]] = mapped_column(UTCDateTime(), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        UTCDateTime(), default=utcnow, onupdate=utcnow, nullable=False
+    )
+
+
+class ExtensionReportSnapshot(Base):
+    """Snapshot báo cáo append-only; hash chống ghi trùng khi extension retry."""
+
+    __tablename__ = "extension_report_snapshots"
+    __table_args__ = (
+        UniqueConstraint("share_id", "content_hash", name="uq_extension_share_snapshot_hash"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    share_id: Mapped[int] = mapped_column(
+        ForeignKey("extension_report_shares.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, nullable=False)
+
+
+class ExtensionReportEdit(Base):
+    """Lệnh sửa báo cáo/campaign chờ extension thực thi và báo kết quả."""
+
+    __tablename__ = "extension_report_edits"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    public_id: Mapped[str] = mapped_column(
+        String(36), unique=True, index=True, default=lambda: str(uuid4()), nullable=False
+    )
+    share_id: Mapped[int] = mapped_column(
+        ForeignKey("extension_report_shares.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    target_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    account_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    currency: Mapped[str] = mapped_column(String(16), default="", nullable=False)
+    action: Mapped[str] = mapped_column(String(32), nullable=False)
+    params: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    status: Mapped[str] = mapped_column(String(32), default="PENDING", index=True, nullable=False)
+    result_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    claimed_at: Mapped[Optional[datetime]] = mapped_column(UTCDateTime(), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime(), default=utcnow, nullable=False)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(UTCDateTime(), nullable=True)
 
 
 class CampaignTemplate(Base):

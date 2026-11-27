@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>metaOs Extension Hub</title>
+  <link rel="stylesheet" href="/metaos-assets/style.css">
+</head>
+<body>
+<main>
+  <section class="shell">
+    <header class="hero">
+      <div class="brand"><div class="logo">mO</div><div><h1>metaOs Extension Hub</h1><p class="muted">Cầu nối phiên Meta với Ads Business OS trên máy này.</p></div></div>
+    </header>
+    <div class="content">
+      <div class="grid">
+        <article class="card"><h2>Kết nối</h2><div class="status"><i id="serverDot" class="dot"></i><span id="serverStatus">Đang kiểm tra máy chủ…</span></div><div class="status" style="margin-top:10px"><i id="extensionDot" class="dot"></i><span id="extensionStatus">Đang kiểm tra extension…</span></div></article>
+        <article class="card"><h2>Client Key</h2><label for="clientKey">Khóa do Ads Business OS cấp</label><input id="clientKey" autocomplete="off" placeholder="ADSOS-CLI-…"><div class="actions"><button id="saveKey" class="secondary">Lưu khóa</button></div></article>
+        <article class="card"><h2>Đồng bộ phiên hiện tại</h2><p class="muted">Đọc phiên Facebook từ Chrome và gửi vào kho mã hóa D-065 của backend cục bộ.</p><div class="actions"><button id="syncNow">Đồng bộ ngay</button></div></article>
+        <article class="card"><h2>Quản trị</h2><p class="muted">Mở dashboard Ads Business OS để quản lý VIA, TKQC, BM và hàng đợi lệnh.</p><div class="actions"><a class="button secondary" href="http://127.0.0.1:3000" target="_blank" rel="noreferrer">Mở dashboard</a></div></article>
+      </div>
+      <article class="card" style="margin-top:14px"><h2>Kết quả</h2><pre id="output">Sẵn sàng.</pre></article>
+    </div>
+  </section>
+</main>
+<script src="/metaos-assets/common.js"></script>
+<script src="/metaos-assets/index.js"></script>
+</body>
+</html>

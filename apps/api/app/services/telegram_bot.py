@@ -184,16 +184,43 @@ class TelegramBotAgent:
                 username=raw_tg_username,
             )
         else:
-            from app.services.task_dispatcher import dispatch_client_message
-            res = dispatch_client_message(
-                session=session,
-                chat_id=str(chat_id),
-                username=from_user.get("username"),
-                sender_name=sender_name,
-                message_text=text,
-                telegram_connector=self.telegram,
-            )
-            reply_text = res["reply_text"]
+            from app.services.task_dispatcher import classify_client_message, dispatch_client_message
+            task_type, _, _ = classify_client_message(text)
+            if task_type in (
+                "ADD_MAIL_TO_BM",
+                "ADD_AD_ACCOUNT",
+                "SETTLE_DEBT",
+                "TOPUP_BUDGET",
+            ):
+                res = dispatch_client_message(
+                    session=session,
+                    chat_id=str(chat_id),
+                    username=from_user.get("username"),
+                    sender_name=sender_name,
+                    message_text=text,
+                    telegram_connector=self.telegram,
+                )
+                reply_text = res["reply_text"]
+            else:
+                # Gửi tới AI Orchestrator với CUSTOMER_TOOLS (khóa cứng theo telegram_chat_id)
+                from app.services.ai.orchestrator import AIOrchestrator
+                ai_res = AIOrchestrator().process_chat(
+                    db=session,
+                    message=text,
+                    role="customer",
+                    telegram_chat_id=str(chat_id),
+                )
+                reply_text = ai_res.get("reply") or ""
+                if not reply_text:
+                    res = dispatch_client_message(
+                        session=session,
+                        chat_id=str(chat_id),
+                        username=from_user.get("username"),
+                        sender_name=sender_name,
+                        message_text=text,
+                        telegram_connector=self.telegram,
+                    )
+                    reply_text = res["reply_text"]
         if reply_text:
             self.telegram.send_message(chat_id, reply_text)
             # Ghi Activity Log
@@ -262,6 +289,18 @@ class TelegramBotAgent:
                 return result["message"]
             elif cmd in ("/set_bm", "/setbm", "/bm_pref"):
                 return self._cmd_set_bm(session, args, actor=actor)
+            elif cmd in ("/ai", "/copilot", "/hoi"):
+                prompt = " ".join(args).strip()
+                if not prompt:
+                    return "⚠️ Cú pháp: <code>/ai &lt;câu hỏi của bạn&gt;</code> (vd: <code>/ai số dư của tôi</code>)"
+                from app.services.ai.orchestrator import AIOrchestrator
+                res = AIOrchestrator().process_chat(
+                    db=session,
+                    message=prompt,
+                    role="customer",
+                    telegram_chat_id=chat_id,
+                )
+                return res.get("reply") or "Không có phản hồi từ AI."
             elif cmd in ("/status", "/trangthai"):
                 return self._cmd_status()
             else:
@@ -280,6 +319,7 @@ class TelegramBotAgent:
             "Danh sách lệnh được hỗ trợ:\n"
             "• <code>/tk</code> hoặc <code>/accounts</code>: Xem danh sách tài khoản quảng cáo và tình trạng cước.\n"
             "• <code>/baocao [account_id] [preset]</code>: Báo cáo hiệu suất (preset: <i>today, yesterday, last_7d, this_month</i>).\n"
+            "• <code>/ai &lt;câu hỏi&gt;</code>: Trợ lý AI Copilot (tra cứu số dư ví, chiến dịch, hướng dẫn nạp tiền).\n"
             "• <code>set ads tài khoản ID: &lt;act_id&gt; theo &lt;tên_chiến_dịch&gt;</code> hoặc <code>/setcamp &lt;act_id&gt; &lt;tên_chiến_dịch&gt;</code>:\n"
             "  Xác thực quyền sở hữu rồi xếp lệnh cho Chrome Extension; chiến dịch mới luôn là <b>PAUSED</b>.\n"
             "• <code>/status</code>: Kiểm tra trạng thái hệ thống.\n\n"

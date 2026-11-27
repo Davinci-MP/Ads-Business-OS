@@ -719,7 +719,7 @@ export default function SheetsPage() {
               className={`rounded-xl px-4 py-2 text-xs sm:text-sm font-semibold transition flex items-center gap-2 shadow-lg ${
                 showAddSourceForm
                   ? "bg-slate-800 text-slate-200 border border-[#333333] hover:bg-slate-700"
-                  : "bg-[#1ed760] text-black font-bold hover:bg-indigo-500 shadow-indigo-600/20"
+                  : "bg-[#0070f3] text-black font-bold hover:bg-indigo-500 shadow-indigo-600/20"
               }`}
             >
               <span>{showAddSourceForm ? " Đóng Form Thêm" : " Thêm Sheet Tháng Mới"}</span>
@@ -777,7 +777,7 @@ export default function SheetsPage() {
             </div>
             <div className="flex flex-wrap items-center gap-1.5 pt-1">
               {selected?.is_default && (
-                <span className="rounded-full bg-[#1ed760]/10 border border-[#1ed760]/30 px-2 py-0.5 text-[10px] font-semibold text-[#1ed760]">
+                <span className="rounded-full bg-[#0070f3]/10 border border-[#0070f3]/30 px-2 py-0.5 text-[10px] font-semibold text-[#0070f3]">
                   ⭐ Mặc định
                 </span>
               )}
@@ -918,7 +918,7 @@ export default function SheetsPage() {
                         setConflict(false);
                         setReplace(false);
                       }}
-                      className="mt-1 w-full rounded-xl border border-[#333333] bg-[#1f1f1f] px-3 py-2 text-xs text-slate-100 focus:border-[#1ed760] focus:outline-none"
+                      className="mt-1 w-full rounded-xl border border-[#333333] bg-[#1f1f1f] px-3 py-2 text-xs text-slate-100 focus:border-[#0070f3] focus:outline-none"
                     >
                       <option value="">Chọn…</option>
                       {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, "0")).map((m) => (
@@ -941,7 +941,7 @@ export default function SheetsPage() {
                         setConflict(false);
                         setReplace(false);
                       }}
-                      className="mt-1 w-full rounded-xl border border-[#333333] bg-[#1f1f1f] px-3 py-2 text-xs text-slate-100 focus:border-[#1ed760] focus:outline-none"
+                      className="mt-1 w-full rounded-xl border border-[#333333] bg-[#1f1f1f] px-3 py-2 text-xs text-slate-100 focus:border-[#0070f3] focus:outline-none"
                     />
                     {formErrors.year && <span className="text-[11px] text-rose-400">{formErrors.year}</span>}
                   </label>
@@ -953,7 +953,7 @@ export default function SheetsPage() {
                     value={workbook}
                     onChange={(e) => setWorkbook(e.target.value)}
                     placeholder="https://docs.google.com/spreadsheets/d/… hoặc ID"
-                    className="mt-1 w-full rounded-xl border border-[#333333] bg-[#1f1f1f] px-3.5 py-2 text-xs text-slate-100 placeholder-slate-500 focus:border-[#1ed760] focus:outline-none"
+                    className="mt-1 w-full rounded-xl border border-[#333333] bg-[#1f1f1f] px-3.5 py-2 text-xs text-slate-100 placeholder-slate-500 focus:border-[#0070f3] focus:outline-none"
                   />
                   {formErrors.workbook && <span className="text-[11px] text-rose-400">{formErrors.workbook}</span>}
                 </label>
@@ -967,7 +967,7 @@ export default function SheetsPage() {
                       setNameEdited(true);
                     }}
                     placeholder="Báo cáo tháng 10/2026"
-                    className="mt-1 w-full rounded-xl border border-[#333333] bg-[#1f1f1f] px-3.5 py-2 text-xs text-slate-100 placeholder-slate-500 focus:border-[#1ed760] focus:outline-none"
+                    className="mt-1 w-full rounded-xl border border-[#333333] bg-[#1f1f1f] px-3.5 py-2 text-xs text-slate-100 placeholder-slate-500 focus:border-[#0070f3] focus:outline-none"
                   />
                   {formErrors.name && <span className="text-[11px] text-rose-400">{formErrors.name}</span>}
                 </label>
@@ -1038,7 +1038,7 @@ export default function SheetsPage() {
               <select
                 value={selectedId}
                 onChange={(e) => setSelectedId(e.target.value)}
-                className="rounded-xl border border-[#333333] bg-[#1f1f1f] px-2.5 py-1 text-xs text-slate-100 focus:border-[#1ed760] focus:outline-none"
+                className="rounded-xl border border-[#333333] bg-[#1f1f1f] px-2.5 py-1 text-xs text-slate-100 focus:border-[#0070f3] focus:outline-none"
                 aria-label="Chọn nguồn báo cáo"
               >
                 {sources.map((s) => (
@@ -1059,7 +1059,7 @@ export default function SheetsPage() {
                     onClick={() => setSelectedId(String(source.id))}
                     className={`rounded-xl border p-4 transition-all duration-200 cursor-pointer space-y-3 ${
                       isCurrent
-                        ? "border-[#1ed760] bg-indigo-950/20 ring-1 ring-indigo-500/40 shadow-lg shadow-indigo-500/10"
+                        ? "border-[#0070f3] bg-[#eef4ff] ring-1 ring-indigo-500/40 shadow-lg shadow-indigo-500/10"
                         : "border-[#282828]/80 bg-slate-900/60 hover:border-[#333333] hover:bg-slate-800/40"
                     }`}
                   >
@@ -1068,7 +1068,7 @@ export default function SheetsPage() {
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-sm font-bold text-white">{source.period}</span>
                           {source.is_default && (
-                            <span className="rounded-full bg-[#1ed760]/10 border border-[#1ed760]/30 px-2 py-0.2 text-[10px] font-semibold text-[#1ed760]">
+                            <span className="rounded-full bg-[#0070f3]/10 border border-[#0070f3]/30 px-2 py-0.2 text-[10px] font-semibold text-[#0070f3]">
                               ⭐ Mặc định
                             </span>
                           )}
@@ -1160,7 +1160,7 @@ export default function SheetsPage() {
               onClick={() => setActiveTab("tabs")}
               className={`rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
                 activeTab === "tabs"
-                  ? "bg-[#1ed760] text-black font-bold shadow-lg shadow-indigo-600/30 font-bold"
+                  ? "bg-[#0070f3] text-black font-bold shadow-lg shadow-indigo-600/30 font-bold"
                   : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
               }`}
             >
@@ -1173,7 +1173,7 @@ export default function SheetsPage() {
               onClick={() => setActiveTab("warnings")}
               className={`rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
                 activeTab === "warnings"
-                  ? "bg-[#1ed760] text-black font-bold shadow-lg shadow-indigo-600/30 font-bold"
+                  ? "bg-[#0070f3] text-black font-bold shadow-lg shadow-indigo-600/30 font-bold"
                   : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
               }`}
             >
@@ -1191,7 +1191,7 @@ export default function SheetsPage() {
               onClick={() => setActiveTab("snapshots")}
               className={`rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
                 activeTab === "snapshots"
-                  ? "bg-[#1ed760] text-black font-bold shadow-lg shadow-indigo-600/30 font-bold"
+                  ? "bg-[#0070f3] text-black font-bold shadow-lg shadow-indigo-600/30 font-bold"
                   : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
               }`}
             >
@@ -1204,7 +1204,7 @@ export default function SheetsPage() {
               onClick={() => setActiveTab("history")}
               className={`rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-2 ${
                 activeTab === "history"
-                  ? "bg-[#1ed760] text-black font-bold shadow-lg shadow-indigo-600/30 font-bold"
+                  ? "bg-[#0070f3] text-black font-bold shadow-lg shadow-indigo-600/30 font-bold"
                   : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
               }`}
             >
@@ -1286,7 +1286,7 @@ export default function SheetsPage() {
                         value={customerFilter}
                         onChange={(e) => setCustomerFilter(e.target.value)}
                         placeholder=" Tìm tên tab khách hàng..."
-                        className="w-full rounded-xl border border-[#333333] bg-[#1f1f1f] px-3 py-1.5 text-xs text-slate-100 placeholder-slate-400 focus:border-[#1ed760] focus:outline-none"
+                        className="w-full rounded-xl border border-[#333333] bg-[#1f1f1f] px-3 py-1.5 text-xs text-slate-100 placeholder-slate-400 focus:border-[#0070f3] focus:outline-none"
                       />
                     </div>
                   </div>
@@ -1393,7 +1393,7 @@ export default function SheetsPage() {
                                   <button
                                     type="button"
                                     onClick={() => setInspectedCustomer(c)}
-                                    className="rounded-lg border border-[#333333] bg-slate-800 hover:bg-slate-700 px-2.5 py-1 text-[11px] font-medium text-[#1ed760] transition"
+                                    className="rounded-lg border border-[#333333] bg-slate-800 hover:bg-slate-700 px-2.5 py-1 text-[11px] font-medium text-[#0070f3] transition"
                                   >
                                     Chi tiết tab
                                   </button>
@@ -1422,7 +1422,7 @@ export default function SheetsPage() {
 
                   <div className="flex flex-wrap items-center gap-2">
                     <input
-                      className="grow rounded-xl border border-[#333333] bg-[#1f1f1f] px-3.5 py-2 text-xs text-slate-100 placeholder-slate-400 focus:border-[#1ed760] focus:outline-none"
+                      className="grow rounded-xl border border-[#333333] bg-[#1f1f1f] px-3.5 py-2 text-xs text-slate-100 placeholder-slate-400 focus:border-[#0070f3] focus:outline-none"
                       placeholder="https://docs.google.com/spreadsheets/d/… hoặc ID"
                       value={spreadsheetInput}
                       onChange={(e) => setSpreadsheetInput(e.target.value)}
@@ -1631,7 +1631,7 @@ export default function SheetsPage() {
                                 <tr key={col.column_letter} className="hover:bg-slate-800/40">
                                   <td className="p-2.5 font-bold font-mono text-white">{col.column_letter}</td>
                                   <td className="p-2.5 text-slate-200">{col.header}</td>
-                                  <td className="p-2.5 font-medium text-[#1ed760]">{proposal?.role ?? "—"}</td>
+                                  <td className="p-2.5 font-medium text-[#0070f3]">{proposal?.role ?? "—"}</td>
                                   <td className="p-2.5 text-slate-400">
                                     {proposal?.target ? `${proposal.target.area} · ${proposal.target.field}` : "—"}
                                   </td>
@@ -1685,7 +1685,7 @@ export default function SheetsPage() {
                             {mappings.map((m) => (
                               <tr key={m.id} className="hover:bg-slate-800/40">
                                 <td className="p-2.5 font-medium text-white">{m.sheet_name}</td>
-                                <td className="p-2.5 font-mono text-[#1ed760]">{m.column_letter}</td>
+                                <td className="p-2.5 font-mono text-[#0070f3]">{m.column_letter}</td>
                                 <td className="p-2.5 text-slate-300">{m.header}</td>
                                 <td className="p-2.5 text-slate-300">{m.role ?? "—"}</td>
                                 <td className="p-2.5">
@@ -1873,7 +1873,7 @@ export default function SheetsPage() {
                       setSnapshotId(e.target.value);
                       setAcknowledge(false);
                     }}
-                    className="rounded-xl border border-[#333333] bg-[#1f1f1f] px-3 py-1.5 text-xs text-slate-100 focus:border-[#1ed760] focus:outline-none"
+                    className="rounded-xl border border-[#333333] bg-[#1f1f1f] px-3 py-1.5 text-xs text-slate-100 focus:border-[#0070f3] focus:outline-none"
                   >
                     {snapshots.map((item) => (
                       <option value={item.id} key={item.id}>
@@ -1985,7 +1985,7 @@ export default function SheetsPage() {
                   <select
                     value={sheetId}
                     onChange={(e) => setSheetId(e.target.value)}
-                    className="rounded-xl border border-[#333333] bg-[#1f1f1f] px-3 py-1.5 text-xs text-slate-100 focus:border-[#1ed760] focus:outline-none"
+                    className="rounded-xl border border-[#333333] bg-[#1f1f1f] px-3 py-1.5 text-xs text-slate-100 focus:border-[#0070f3] focus:outline-none"
                   >
                     <option value="">Chọn tab khách…</option>
                     {(snapshot?.report?.customers ?? [])
@@ -2000,7 +2000,7 @@ export default function SheetsPage() {
                   <select
                     value={customerId}
                     onChange={(e) => setCustomerId(e.target.value)}
-                    className="rounded-xl border border-[#333333] bg-[#1f1f1f] px-3 py-1.5 text-xs text-slate-100 focus:border-[#1ed760] focus:outline-none"
+                    className="rounded-xl border border-[#333333] bg-[#1f1f1f] px-3 py-1.5 text-xs text-slate-100 focus:border-[#0070f3] focus:outline-none"
                   >
                     <option value="">Chọn khách nội bộ…</option>
                     {customers.map((c) => (
@@ -2055,7 +2055,7 @@ export default function SheetsPage() {
                       setPreviousId(e.target.value);
                       setRollover(null);
                     }}
-                    className="rounded-xl border border-[#333333] bg-[#1f1f1f] px-3 py-1.5 text-xs text-slate-100 focus:border-[#1ed760] focus:outline-none"
+                    className="rounded-xl border border-[#333333] bg-[#1f1f1f] px-3 py-1.5 text-xs text-slate-100 focus:border-[#0070f3] focus:outline-none"
                   >
                     <option value="">Chọn nguồn kỳ trước đã chốt…</option>
                     {sources

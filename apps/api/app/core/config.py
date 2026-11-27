@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Optional
 
 from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,7 +13,10 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
     )
 
-    app_env: str = "local"
+    app_env: str = Field(
+        default="local",
+        validation_alias=AliasChoices("APP_ENV", "ADSOS_APP_ENV", "ENV"),
+    )
     database_url: str = "sqlite:///./adsos.db"
     staff_auth_secret: str = ""
     staff_access_token_expires_minutes: int = 480
@@ -70,6 +74,42 @@ class Settings(BaseSettings):
     exchange_scheduler_enabled: bool = False
     exchange_scheduler_lock_port: int = 8912
     exchange_sync_interval_minutes: int = 30
+    # metaOs Extension compatibility server. Public base may be HTTPS in staging/production;
+    # local defaults to the request origin so tests and localhost need no extra config.
+    extension_public_base_url: str = ""
+    ai_api_url: str = ""
+    ai_api_key: str = ""
+    ai_model: str = ""
+    # Cấu hình AI Copilot & LLM Orchestrator (D-066)
+    llm_provider: str = Field(
+        default="gemini",
+        validation_alias=AliasChoices("LLM_PROVIDER", "ADSOS_LLM_PROVIDER"),
+    )
+    gemini_api_key: str = Field(
+        default="",
+        validation_alias=AliasChoices("GEMINI_API_KEY", "ADSOS_GEMINI_API_KEY", "AI_API_KEY", "ADSOS_AI_API_KEY"),
+    )
+    gemini_model: str = Field(
+        default="gemini-3-flash-preview",
+        validation_alias=AliasChoices("GEMINI_MODEL", "ADSOS_GEMINI_MODEL", "AI_MODEL", "ADSOS_AI_MODEL"),
+    )
+    ollama_base_url: str = Field(
+        default="http://localhost:11434",
+        validation_alias=AliasChoices("OLLAMA_BASE_URL", "ADSOS_OLLAMA_BASE_URL"),
+    )
+    ollama_model: str = Field(
+        default="llama3",
+        validation_alias=AliasChoices("OLLAMA_MODEL", "ADSOS_OLLAMA_MODEL"),
+    )
+    # Telegram Bot Polling (ENV=development/local) vs Webhook (ENV=production)
+    telegram_polling_enabled: Optional[bool] = Field(
+        default=None,
+        validation_alias=AliasChoices("TELEGRAM_POLLING_ENABLED", "ADSOS_TELEGRAM_POLLING_ENABLED"),
+    )
+    telegram_polling_lock_port: int = 8913
+    telegram_polling_interval_seconds: float = 1.0
+    zalo_notify_url: str = ""
+    zalo_notify_token: str = ""
 
 
 @lru_cache

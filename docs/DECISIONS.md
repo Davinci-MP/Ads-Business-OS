@@ -209,3 +209,9 @@ Chủ dự án yêu cầu trang kết nối Binance trước, mở rộng OKX/ME
 | # | Quyết định |
 |---|---|
 | D-064 | Chủ dự án yêu cầu mọi thao tác tạo hoặc đổi trạng thái campaign phải được backend ghi vào `remote_via_commands`; backend không gọi Meta write API và không được giả lập kết quả thành công. Chrome Extension là thành phần duy nhất nhận lệnh, gọi Graph API v26 và báo kết quả. Campaign mới bắt buộc tạo ở trạng thái `PAUSED`. Lệnh Telegram `/setcamp` chỉ được xếp sau khi `telegram_chat_id` liên kết khách hàng và TKQC thuộc đúng khách; Extension Client Key có `client_id` chỉ được nhận/báo cáo lệnh của khách đó. |
+
+## Đã duyệt — 2026-11-27: Turso/libSQL cho production và kiến trúc deploy Vercel
+
+| # | Quyết định |
+|---|---|
+| D-066 | Chủ dự án chọn **Turso (libSQL, họ SQLite)** làm database production qua `ADSOS_DATABASE_URL=sqlite+libsql://...` (driver `sqlalchemy-libsql`), nới quy tắc "production bắt buộc Postgres" trong AGENTS.md/PROJECT_ARCHITECTURE §5 — Postgres vẫn được hỗ trợ. Lý do: quy mô một người vận hành/31 khách phù hợp mô hình đơn-writer của libSQL, và trùng khớp baseline test SQLite hiện có. Ràng buộc giữ nguyên: tiền bằng `Decimal`/`ROUND_HALF_UP`, append-only + unique key chống ghi trùng, migration reversible phải chạy thử trên một DB Turso riêng trước khi áp production. Kiến trúc deploy: **frontend Next.js trên Vercel**, **backend FastAPI trên server riêng (vextech)** vì cần tiến trình thường trực cho APScheduler/WebSocket (không chạy được trên serverless), **DB Turso**. OAuth redirect URI dùng domain backend HTTPS thật; `ADSOS_EXCHANGE_UI_ORIGINS` thêm domain frontend. Chưa bật ghi tiền thật (`ADSOS_META_WRITES_ENABLED=0`, `customer_sheets_writes_enabled` tắt) cho tới khi các câu hỏi nghiệp vụ còn treo được chốt; giai đoạn đầu chạy `APP_ENV=staging`. |

@@ -1,65 +1,103 @@
 {
-  "manifest_version": 3,
-  "name": "ADSOS CHECK PRO — Quản Lý TKQC, BM & Auto Set Camp",
-  "version": "2.6.1",
-  "description": "Tiện ích kiểm tra tài nguyên quảng cáo Meta, Business Manager, thẻ thanh toán, bảo mật quản trị và điều phối Set Camp tự động từ xa.",
-  "permissions": [
-    "cookies",
-    "storage",
-    "tabs",
-    "activeTab",
-    "scripting",
-    "unlimitedStorage",
-    "alarms",
-    "offscreen",
-    "declarativeNetRequest",
-    "declarativeNetRequestWithHostAccess",
-    "proxy",
-    "webRequest",
-    "webRequestAuthProvider"
-  ],
-  "host_permissions": [
-    "<all_urls>",
-    "*://*.facebook.com/*",
-    "https://business.facebook.com/*",
-    "https://adsmanager.facebook.com/*"
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["fb-opt-main.js", "fb-opt-relay.js", "bridge-main.js"],
-      "matches": ["*://*.facebook.com/*", "*://*.messenger.com/*"]
+    "name": "metaOs",
+    "version": "2.2.5",
+    "manifest_version": 3,
+    "description": "metaOs — Công cụ hỗ trợ quản lý tài khoản và quảng cáo Meta",
+    "homepage_url": "http://127.0.0.1:8000/metaos",
+    "icons": {
+        "16": "img/icon-16.png",
+        "48": "img/icon-48.png",
+        "128": "img/icon-128.png"
     },
-    {
-      "resources": ["bridge-main.js"],
-      "matches": ["*://localhost/*", "*://127.0.0.1/*"]
-    }
-  ],
-  "action": {
-    "default_popup": "popup.html",
-    "default_title": "ADSOS CHECK PRO"
-  },
-  "background": {
-    "service_worker": "background.js"
-  },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "run_at": "document_start",
-      "all_frames": true
+    "action": {
+        "default_title": "metaOs",
+        "default_icon": {
+            "16": "img/icon-16.png",
+            "48": "img/icon-48.png",
+            "128": "img/icon-128.png"
+        }
     },
-    {
-      "matches": ["*://*.facebook.com/*", "*://*.messenger.com/*"],
-      "js": ["fb-opt-main.js"],
-      "run_at": "document_start",
-      "world": "MAIN",
-      "all_frames": true
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'self'; frame-src http://localhost:* http://127.0.0.1:*"
     },
-    {
-      "matches": ["*://*.facebook.com/*", "*://*.messenger.com/*"],
-      "js": ["fb-opt-relay.js"],
-      "run_at": "document_start",
-      "all_frames": true
-    }
-  ]
+    "content_scripts": [
+        {
+            "js": [
+                "js/content.js"
+            ],
+            "css": [
+                "css/smile.css"
+            ],
+            "matches": [
+                "<all_urls>"
+            ],
+            "run_at": "document_start",
+            "all_frames": true
+        },
+        {
+            "js": [
+                "js/login.js"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        },
+        {
+            "js": [
+                "js/fb-opt-main.js"
+            ],
+            "world": "MAIN",
+            "matches": [
+                "*://*.facebook.com/*",
+                "*://*.messenger.com/*"
+            ],
+            "run_at": "document_start",
+            "all_frames": true
+        },
+        {
+            "js": [
+                "js/fb-opt-relay.js"
+            ],
+            "matches": [
+                "*://*.facebook.com/*",
+                "*://*.messenger.com/*"
+            ],
+            "run_at": "document_start",
+            "all_frames": true
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "js/bridge-main.js",
+                "img/icon-48.png",
+                "img/icon-16.png",
+                "img/icon-128.png"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        }
+    ],
+    "background": {
+        "service_worker": "js/background.js"
+    },
+    "permissions": [
+        "tabs",
+        "cookies",
+        "activeTab",
+        "storage",
+        "unlimitedStorage",
+        "scripting",
+        "alarms",
+        "offscreen",
+        "declarativeNetRequest",
+        "declarativeNetRequestWithHostAccess",
+        "proxy",
+        "webRequest",
+        "webRequestAuthProvider"
+    ],
+    "host_permissions": [
+        "<all_urls>"
+    ]
 }
