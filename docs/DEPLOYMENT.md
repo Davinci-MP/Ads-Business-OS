@@ -92,3 +92,19 @@ $env:ADSOS_DATABASE_URL = "sqlite+libsql://...staging...&secure=true"
 - Không để secret rỗng khi mở ra Internet; không commit `.env`/cert (đã có trong `.gitignore`).
 - Caddyfile đã chặn `/docs`, `/api/v1/exchange/*` ngoài dải IP tin cậy — chỉnh dải IP cho đúng công ty bạn.
 - `App Secret`, `authToken` Turso, master key: chỉ ở env phía backend, không ra frontend/log.
+
+## 8. Backend trên Railway (chọn 2026-11-28 — vì hạ tầng là Vercel + Turso)
+
+Vercel là serverless, không chạy được APScheduler/tiến trình nền của FastAPI. Backend đặt trên **Railway** (tiến trình thường trực, nối Git như Vercel); DB **Turso**; frontend **Vercel**.
+
+Repo đã sẵn: `apps/api/Dockerfile` (cài `requirements-turso.txt`, CMD chạy `alembic upgrade head` rồi uvicorn theo `$PORT`) và `apps/api/railway.json` (healthcheck `/health`, 1 replica).
+
+**Các bước (Railway dashboard):**
+1. New Project → Deploy from GitHub repo → chọn `Davinci-MP/Ads-Business-OS`.
+2. Service Settings → **Root Directory = `apps/api`** (monorepo).
+3. Variables → đặt secret: `ADSOS_APP_ENV=staging`, `ADSOS_DATABASE_URL=sqlite+libsql://…turso.io/?authToken=…&secure=true`, `FACEBOOK_APP_ID`, `FACEBOOK_APP_SECRET`, `FACEBOOK_REDIRECT_URI=https://<railway-domain>/api/v1/oauth/facebook/callback`, `ADSOS_EXCHANGE_UI_ORIGINS=https://ads.vextech.vn`, `ADSOS_STAFF_AUTH_SECRET`, `ADSOS_EXCHANGE_MASTER_KEY`, `ADSOS_EXCHANGE_ADMIN_TOKEN`.
+4. Deploy. Railway build Dockerfile → chạy migration lên Turso → start uvicorn.
+5. Settings → Networking → **Generate Domain** (hoặc gắn `api.vextech.vn`). Kiểm `https://<domain>/health` → `{"status":"ok"}`.
+6. Trên **Vercel** đặt `NEXT_PUBLIC_API_URL=https://<railway-domain>`; trên **Meta** thêm redirect URI đúng domain Railway.
+
+> `numReplicas=1`: APScheduler + single-flight cần đúng 1 instance. Nếu build `libsql-experimental` lỗi thiếu wheel, đổi base trong Dockerfile sang `python:3.12` (full).
