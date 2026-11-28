@@ -180,32 +180,82 @@ def test_callback_huy_cap_quyen_giu_nguyen_token(oauth_client, db):
     assert stored.token_status == "ACTIVE"
 
 
-def test_callback_uid_khong_khop_khong_luu_token(oauth_client, db):
-    via = _add_via(db, "910000000005", token_status="NONE")
-    _, state = _login_and_state(oauth_client, via.id)
+def _callback_voi_me(oauth_client, via_id: int, me_payload: dict):
+    """Chạy callback với Meta giả: đổi token thành công, /me trả ``me_payload``."""
+    _, state = _login_and_state(oauth_client, via_id)
 
     def handler(request: httpx.Request) -> httpx.Response:
         if request.url.path.endswith("/oauth/access_token"):
-            token = "token-dai-han-khac" if request.url.params.get("grant_type") else "token-ngan"
+            token = "token-dai-han-moi" if request.url.params.get("grant_type") else "token-ngan"
             return httpx.Response(200, json={"access_token": token, "expires_in": 3600})
-        return httpx.Response(200, json={"id": "uid-khac"})
+        return httpx.Response(200, json=me_payload)
 
     async def override_http_client():
         async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
             yield client
 
     app.dependency_overrides[get_oauth_http_client] = override_http_client
-    response = oauth_client.get(
+    return oauth_client.get(
         "/api/v1/oauth/facebook/callback",
         params={"code": "ma-uy-quyen", "state": state},
         follow_redirects=False,
     )
 
+
+def test_callback_lan_dau_lien_ket_app_scoped_id_khac_uid_that(oauth_client, db):
+    """/me trả app-scoped ID (khác UID thật) → vẫn lưu token và liên kết ID + tên."""
+    via = _add_via(db, "61594426076661", token_status="NONE")
+    response = _callback_voi_me(oauth_client, via.id, {"id": "asid-123", "name": "Nguyen Van A"})
+
+    assert response.headers["location"].endswith("/vias?success=true")
+    db.expire_all()
+    stored = db.get(ViaProfile, via.id)
+    assert stored.access_token == "token-dai-han-moi"
+    assert stored.token_status == "ACTIVE"
+    assert stored.meta_app_user_id == "asid-123"
+    assert stored.meta_user_name == "Nguyen Van A"
+
+
+def test_callback_cap_lai_bang_tai_khoan_khac_bi_tu_choi(oauth_client, db):
+    """VIA đã liên kết ID → lần sau đăng nhập tài khoản khác không được thay token."""
+    via = _add_via(db, "910000000005", token_status="ACTIVE")
+    via.meta_app_user_id = "asid-da-lien-ket"
+    db.commit()
+    response = _callback_voi_me(oauth_client, via.id, {"id": "asid-khac", "name": "Nguoi Khac"})
+
     assert response.status_code == 303
+    assert response.headers["location"].endswith("/vias?success=false&oauth_error=uid_mismatch")
+    db.expire_all()
+    stored = db.get(ViaProfile, via.id)
+    assert stored.access_token == "token-cu"
+    assert stored.meta_app_user_id == "asid-da-lien-ket"
+
+
+def test_callback_cap_lai_dung_tai_khoan_da_lien_ket(oauth_client, db):
+    via = _add_via(db, "910000000006", token_status="EXPIRED")
+    via.meta_app_user_id = "asid-cu"
+    db.commit()
+    response = _callback_voi_me(oauth_client, via.id, {"id": "asid-cu", "name": "Ten Moi"})
+
+    assert response.headers["location"].endswith("/vias?success=true")
+    db.expire_all()
+    stored = db.get(ViaProfile, via.id)
+    assert stored.access_token == "token-dai-han-moi"
+    assert stored.meta_user_name == "Ten Moi"
+
+
+def test_callback_tai_khoan_da_gan_via_khac_bi_tu_choi(oauth_client, db):
+    other = _add_via(db, "910000000007", token_status="ACTIVE")
+    other.meta_app_user_id = "asid-chung"
+    db.commit()
+    via = _add_via(db, "910000000008", token_status="NONE")
+    response = _callback_voi_me(oauth_client, via.id, {"id": "asid-chung"})
+
     assert response.headers["location"].endswith(
-        "/vias?success=false&oauth_error=uid_mismatch"
+        "/vias?success=false&oauth_error=account_linked_elsewhere"
     )
     db.expire_all()
     stored = db.get(ViaProfile, via.id)
     assert stored.access_token == "token-cu"
     assert stored.token_status == "NONE"
+    assert stored.meta_app_user_id is None

@@ -330,6 +330,9 @@ class ViaProfile(Base):
 
     # Trạng thái Token: ACTIVE, EXPIRED, CHECKPOINT, NONE
     token_status: Mapped[str] = mapped_column(String(32), default="NONE", index=True)
+    # app-scoped user ID mà /me trả về khi cấp quyền OAuth (khác UID thật); unique.
+    meta_app_user_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True, index=True)
+    meta_user_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     # Trạng thái Login tự động: READY, LOGGING_IN, CHECKPOINT, WRONG_PASS, PENDING
     login_status: Mapped[str] = mapped_column(String(32), default="READY", index=True)

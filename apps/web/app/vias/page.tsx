@@ -42,7 +42,9 @@ const EMPTY_STATS: ViaStats = {
 const OAUTH_ERRORS: Record<string, string> = {
   access_denied: "Bạn đã hủy cấp quyền Meta. Dữ liệu VIA không thay đổi.",
   uid_mismatch:
-    "Tài khoản Facebook vừa đăng nhập không khớp UID của VIA. Hãy đăng nhập đúng tài khoản có UID đó rồi thử lại. Token không được lưu.",
+    "VIA này đã liên kết với một tài khoản Facebook khác lúc cấp quyền lần đầu. Hãy đăng nhập đúng tài khoản đó rồi thử lại. Token không được lưu.",
+  account_linked_elsewhere:
+    "Tài khoản Facebook vừa đăng nhập đã được liên kết với một VIA khác. Mỗi tài khoản Facebook chỉ gắn với một VIA. Token không được lưu.",
   missing_code: "Meta không trả mã cấp quyền. Vui lòng thử lại.",
   meta_error: "Meta báo lỗi khi cấp quyền. Kiểm tra App Roles và Valid OAuth Redirect URIs trong ứng dụng Meta.",
   via_not_found: "Không tìm thấy VIA cần cấp quyền (có thể đã bị xóa).",
@@ -649,6 +651,11 @@ export default function ViasFarmPage() {
                             <td>
                               <div className="via-connect">
                                 <TokenStatus status={via.token_status} />
+                                {via.meta_user_name && (
+                                  <span className="table-muted" title="Tài khoản Facebook đã liên kết qua OAuth">
+                                    FB: {via.meta_user_name}
+                                  </span>
+                                )}
                                 {authorized ? (
                                   <>
                                     {expires && <span className="table-muted">Hết hạn: {expires}</span>}
