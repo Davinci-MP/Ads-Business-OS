@@ -3,22 +3,7 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
-
-
-def _normalize_url(raw: str) -> str:
-    """Chuẩn hóa scheme để SQLAlchemy dùng đúng driver.
-
-    Railway/Neon/Supabase cấp Postgres URL dạng `postgres://` hoặc `postgresql://`
-    (SQLAlchemy mặc định psycopg2). Ép sang `postgresql+psycopg://` để dùng psycopg3
-    (có trong requirements-postgres.txt).
-    """
-    if raw.startswith("postgresql+"):
-        return raw
-    if raw.startswith("postgresql://"):
-        return "postgresql+psycopg://" + raw[len("postgresql://"):]
-    if raw.startswith("postgres://"):
-        return "postgresql+psycopg://" + raw[len("postgres://"):]
-    return raw
+from app.core.db_url import normalize_database_url
 
 
 def _build_engine():
@@ -29,7 +14,7 @@ def _build_engine():
       libsql_experimental.connect("libsql://host", auth_token=...) — giữ để dự phòng.
     - SQLite file (local/test): check_same_thread=False cho scheduler nhiều luồng.
     """
-    url = make_url(_normalize_url(settings.database_url))
+    url = make_url(normalize_database_url(settings.database_url))
     driver = url.drivername or ""
 
     if driver.startswith("sqlite+libsql") and url.host:
