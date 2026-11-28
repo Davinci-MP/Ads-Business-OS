@@ -29,7 +29,17 @@ def _seed_default_owner() -> None:
     try:
         existing = session.query(StaffUser).filter_by(username="admin").first()
         if not existing:
-            pw = os.getenv("ADSOS_DEFAULT_OWNER_PASSWORD", "Admin@123")
+            # Không dùng mật khẩu cứng ngoài local: môi trường thật phải đặt
+            # ADSOS_DEFAULT_OWNER_PASSWORD (tránh tài khoản admin mật khẩu mặc định đã lộ).
+            app_env = (os.getenv("APP_ENV") or os.getenv("ADSOS_APP_ENV") or os.getenv("ENV") or "local").strip().lower()
+            pw = os.getenv("ADSOS_DEFAULT_OWNER_PASSWORD", "")
+            if not pw:
+                if app_env != "local":
+                    raise RuntimeError(
+                        "Chưa đặt ADSOS_DEFAULT_OWNER_PASSWORD. Môi trường thật không dùng mật khẩu "
+                        "admin mặc định; hãy đặt biến này rồi deploy lại."
+                    )
+                pw = "Admin@123"  # chỉ dùng cho máy local/dev
             admin = StaffUser(
                 username="admin",
                 full_name="Administrator",
