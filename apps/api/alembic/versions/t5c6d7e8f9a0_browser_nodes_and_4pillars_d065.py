@@ -50,7 +50,7 @@ def upgrade() -> None:
         sa.Column("steps", sa.JSON(), nullable=False),
         sa.Column("jitter_min_ms", sa.Integer(), server_default="1000", nullable=False),
         sa.Column("jitter_max_ms", sa.Integer(), server_default="3000", nullable=False),
-        sa.Column("is_builtin", sa.Boolean(), server_default=sa.text("0"), nullable=False),
+        sa.Column("is_builtin", sa.Boolean(), server_default=sa.false(), nullable=False),
         sa.Column("created_at", sa.DateTime(), server_default=sa.text("CURRENT_TIMESTAMP"), nullable=False),
     )
     op.create_index("ix_workflow_templates_code", "workflow_templates", ["code"], unique=True)
@@ -78,7 +78,7 @@ def upgrade() -> None:
         batch.add_column(sa.Column("hidden_limit", sa.Float(), server_default="0.0", nullable=False))
         batch.add_column(sa.Column("funding_source_summary", sa.String(length=255), nullable=True))
         batch.add_column(sa.Column("card_bin", sa.String(length=32), nullable=True))
-        batch.add_column(sa.Column("location_verified", sa.Boolean(), server_default=sa.text("0"), nullable=False))
+        batch.add_column(sa.Column("location_verified", sa.Boolean(), server_default=sa.false(), nullable=False))
         batch.add_column(sa.Column("appeal_status", sa.String(length=64), server_default="NONE", nullable=False))
         batch.add_column(sa.Column("pixel_list", sa.JSON(), nullable=True))
 
@@ -103,10 +103,12 @@ def upgrade() -> None:
                     "steps": json.dumps(item["steps"]),
                     "jitter_min": item["jitter_min_ms"],
                     "jitter_max": item["jitter_max_ms"],
-                    "is_builtin": 1,
+                    "is_builtin": True,
                 },
             )
-    except Exception:
+    except ImportError:
+        # Thiếu module preset thì bỏ qua seed; lỗi SQL thật phải nổi lên
+        # (trên Postgres, nuốt lỗi sẽ làm hỏng cả transaction của migration).
         pass
 
 

@@ -19,7 +19,7 @@ def upgrade() -> None:
         sa.Column("wallet_address", sa.String(128), nullable=False),
         sa.Column("network", sa.String(32), nullable=False),
         sa.Column("contract", sa.String(64), nullable=False),
-        sa.Column("auto_sync", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+        sa.Column("auto_sync", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("last_checked_at", sa.DateTime(timezone=True)),
         sa.Column("last_ok_at", sa.DateTime(timezone=True)),
         sa.Column("last_error", sa.Text()),

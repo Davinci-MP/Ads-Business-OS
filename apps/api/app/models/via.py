@@ -537,7 +537,7 @@ class AdAccountSnapshot(Base):
     """Snapshot báo cáo TKQC append-only (unique act_id + snapshot_at), phục vụ dashboard & portal."""
 
     __tablename__ = "ad_account_snapshots"
-    __table_args__ = (UniqueConstraint("act_id", "snapshot_at", name="uq_snapshot"),)
+    __table_args__ = (UniqueConstraint("act_id", "snapshot_at", name="uq_ad_account_snapshot"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     ad_account_id: Mapped[Optional[int]] = mapped_column(

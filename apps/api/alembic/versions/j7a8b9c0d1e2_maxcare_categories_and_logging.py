@@ -37,8 +37,9 @@ def upgrade():
         batch_op.add_column(sa.Column("gender", sa.String(32), nullable=True))
         batch_op.add_column(sa.Column("birthday", sa.String(32), nullable=True))
         batch_op.add_column(sa.Column("note", sa.Text(), nullable=True))
+        # (tên constraint, bảng được tham chiếu, cột nguồn, cột đích) — bảng nguồn là via_profiles.
         batch_op.create_foreign_key(
-            "fk_via_profiles_category_id", "via_profiles", ["category_id"], ["via_categories.id"]
+            "fk_via_profiles_category_id", "via_categories", ["category_id"], ["id"]
         )
         batch_op.create_index("ix_via_profiles_category_id", ["category_id"])
 
@@ -67,7 +68,7 @@ def upgrade():
         sa.Column("snapshot_at", sa.DateTime(), nullable=False),
         sa.Column("source", sa.String(32), nullable=False, server_default="MAXCARE_REPORT_SYNC"),
         sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.UniqueConstraint("act_id", "snapshot_at", name="uq_snapshot"),
+        sa.UniqueConstraint("act_id", "snapshot_at", name="uq_ad_account_snapshot"),
     )
     op.create_index("ix_ad_account_snapshots_act_id", "ad_account_snapshots", ["act_id"])
     op.create_index(
