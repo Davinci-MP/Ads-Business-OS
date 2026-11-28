@@ -215,3 +215,9 @@ Chủ dự án yêu cầu trang kết nối Binance trước, mở rộng OKX/ME
 | # | Quyết định |
 |---|---|
 | D-066 | Chủ dự án chọn **Turso (libSQL, họ SQLite)** làm database production qua `ADSOS_DATABASE_URL=sqlite+libsql://...` (driver `sqlalchemy-libsql`), nới quy tắc "production bắt buộc Postgres" trong AGENTS.md/PROJECT_ARCHITECTURE §5 — Postgres vẫn được hỗ trợ. Lý do: quy mô một người vận hành/31 khách phù hợp mô hình đơn-writer của libSQL, và trùng khớp baseline test SQLite hiện có. Ràng buộc giữ nguyên: tiền bằng `Decimal`/`ROUND_HALF_UP`, append-only + unique key chống ghi trùng, migration reversible phải chạy thử trên một DB Turso riêng trước khi áp production. Kiến trúc deploy: **frontend Next.js trên Vercel**, **backend FastAPI trên server riêng (vextech)** vì cần tiến trình thường trực cho APScheduler/WebSocket (không chạy được trên serverless), **DB Turso**. OAuth redirect URI dùng domain backend HTTPS thật; `ADSOS_EXCHANGE_UI_ORIGINS` thêm domain frontend. Chưa bật ghi tiền thật (`ADSOS_META_WRITES_ENABLED=0`, `customer_sheets_writes_enabled` tắt) cho tới khi các câu hỏi nghiệp vụ còn treo được chốt; giai đoạn đầu chạy `APP_ENV=staging`. |
+
+## Đã duyệt — 2026-11-28: đổi DB production Turso → Railway Postgres
+
+| # | Quyết định |
+|---|---|
+| D-067 | Chủ dự án chuyển DB production từ **Turso/libSQL (D-066)** sang **PostgreSQL trên Railway** (plugin Postgres cùng project). Lý do: driver `sqlalchemy-libsql` thiếu ổn định và khó vận hành trên Railway (token không tới driver, builder Railpack vs Dockerfile); `psycopg` + Postgres là đường chuẩn, ổn định. D-066 (Turso) bị thay thế cho production; code vẫn giữ nhánh libsql dự phòng. `db.py` tự chuẩn hóa `postgres://`/`postgresql://` → `postgresql+psycopg://`. Dockerfile cài `requirements-postgres.txt`. Giữ nguyên các ràng buộc tài chính và `APP_ENV=staging` + chưa ghi tiền thật tới khi chốt nghiệp vụ. |
