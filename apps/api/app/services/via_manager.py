@@ -2709,6 +2709,8 @@ def serialize_via_profile(via: ViaProfile, role: str = "STAFF") -> dict[str, Any
         "last_live_check_at": via.last_live_check_at.isoformat() if via.last_live_check_at else None,
         "last_token_refresh": via.last_token_refresh.isoformat() if via.last_token_refresh else None,
         "token_expires_at": via.token_expires_at.isoformat() if via.token_expires_at else None,
+        "meta_user_name": via.meta_user_name,
+        "meta_linked": bool(via.meta_app_user_id),
         "last_synced_at": via.last_synced_at.isoformat() if via.last_synced_at else None,
         "created_at": via.created_at.isoformat() if via.created_at else None,
         "updated_at": via.updated_at.isoformat() if via.updated_at else None,

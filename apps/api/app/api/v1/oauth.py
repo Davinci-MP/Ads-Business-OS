@@ -18,6 +18,7 @@ from urllib.parse import urlencode, urlsplit
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -239,11 +240,28 @@ async def facebook_callback(
         identity = await _get_meta_json(
             client,
             f"https://graph.facebook.com/{settings.meta_api_version}/me",
-            params=with_appsecret_proof({"fields": "id"}, long_token),
+            params=with_appsecret_proof({"fields": "id,name"}, long_token),
             headers={"Authorization": f"Bearer {long_token}"},
         )
-        if str(identity.get("id") or "") != via.uid:
+        # /me (Graph v2.0+) trả app-scoped user ID, KHÔNG phải UID thật của VIA, nên không so
+        # với via.uid được. Lần đầu: liên kết ID này vào VIA; các lần sau phải trùng ID đã liên kết.
+        meta_user_id = str(identity.get("id") or "").strip()
+        if not meta_user_id:
+            raise RuntimeError("Meta không trả về id người dùng")
+        if via.meta_app_user_id and via.meta_app_user_id != meta_user_id:
             return _callback_redirect(frontend_origin, success=False, reason="uid_mismatch")
+        linked_elsewhere = db.scalar(
+            select(ViaProfile.id).where(
+                ViaProfile.meta_app_user_id == meta_user_id, ViaProfile.id != via.id
+            )
+        )
+        if linked_elsewhere is not None:
+            return _callback_redirect(frontend_origin, success=False, reason="account_linked_elsewhere")
+
+        via.meta_app_user_id = meta_user_id
+        meta_user_name = str(identity.get("name") or "").strip()
+        if meta_user_name:
+            via.meta_user_name = meta_user_name[:255]
 
         refreshed_at = utcnow()
         via.access_token = long_token

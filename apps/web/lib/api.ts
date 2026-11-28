@@ -1061,6 +1061,9 @@ export type ViaProfile = {
   last_live_check_at: string | null;
   last_token_refresh: string | null;
   token_expires_at: string | null;
+  /** Tên tài khoản Facebook đã liên kết qua OAuth (từ /me). */
+  meta_user_name?: string | null;
+  meta_linked?: boolean;
   last_synced_at: string | null;
   created_at: string | null;
   updated_at: string | null;
