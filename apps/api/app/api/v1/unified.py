@@ -12,7 +12,7 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.local_admin import require_local_admin
+from app.core.local_admin import require_local_admin_or_owner
 from app.db import get_db
 from app.models.ad_account import AdAccount
 from app.models.campaign import Campaign
@@ -40,7 +40,7 @@ from app.models.sheet_reports import SheetReportSource
 from app.models.telegram import AutomationRule, TelegramBotConfig
 from app.services.task_dispatcher import TASK_TYPE_LABELS
 
-router = APIRouter(prefix="/unified", tags=["hop-nhat-he-thong"], dependencies=[Depends(require_local_admin)])
+router = APIRouter(prefix="/unified", tags=["hop-nhat-he-thong"], dependencies=[Depends(require_local_admin_or_owner)])
 
 
 # -----------------------------------------------------------------------------

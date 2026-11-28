@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from app.core.local_admin import require_local_admin
+from app.core.local_admin import require_local_admin_or_owner
 from app.db import get_db
 from app.models.customer import utcnow
 from app.models.extension_remote import BrowserNode, RemoteViaCommand
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/control-hub",
     tags=["control-hub"],
-    dependencies=[Depends(require_local_admin)],
+    dependencies=[Depends(require_local_admin_or_owner)],
 )
 
 

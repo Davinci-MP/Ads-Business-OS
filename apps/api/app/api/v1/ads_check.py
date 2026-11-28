@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.meta_proof import with_appsecret_proof
-from app.core.local_admin import require_local_admin
+from app.core.local_admin import require_local_admin_or_owner
 from app.core.security import get_current_staff, log_staff_action
 from app.db import get_db
 from app.models.customer import Customer
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/ads-check",
     tags=["ads-check-4pillars"],
-    dependencies=[Depends(require_local_admin)],
+    dependencies=[Depends(require_local_admin_or_owner)],
 )
 
 
@@ -532,7 +532,7 @@ def explore_super_targets(
 
     # Thử gọi Meta Graph API trực tiếp nếu có token
     access_token = settings.meta_access_token
-    if access_token and not settings.meta_use_mock:
+    if access_token:
         try:
             url = f"https://graph.facebook.com/{settings.meta_api_version}/search"
             params = {

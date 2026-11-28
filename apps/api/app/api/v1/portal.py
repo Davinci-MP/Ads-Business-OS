@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import desc, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.core.local_admin import require_local_admin
+from app.core.local_admin import require_local_admin_or_owner
 from app.db import get_db
 from app.models.ad_account import AdAccount, AdAccountAssignment
 from app.models.campaign import Campaign
@@ -222,7 +222,7 @@ def get_client_portal(
     }
 
 
-@router.post("/customers/{customer_id}/generate-token", dependencies=[Depends(require_local_admin)])
+@router.post("/customers/{customer_id}/generate-token", dependencies=[Depends(require_local_admin_or_owner)])
 def generate_portal_token(
     customer_id: int,
     db: Session = Depends(get_db),
@@ -254,7 +254,7 @@ def generate_portal_token(
     }
 
 
-@router.delete("/customers/{customer_id}/token", dependencies=[Depends(require_local_admin)])
+@router.delete("/customers/{customer_id}/token", dependencies=[Depends(require_local_admin_or_owner)])
 def revoke_portal_token(
     customer_id: int,
     db: Session = Depends(get_db),

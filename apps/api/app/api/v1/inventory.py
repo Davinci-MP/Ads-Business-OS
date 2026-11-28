@@ -11,7 +11,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.local_admin import require_local_admin
+from app.core.local_admin import require_local_admin_or_owner
 from app.db import get_db
 from app.models.customer import Customer
 from app.models.finance import AuditLog
@@ -26,7 +26,7 @@ from app.models.inventory import (
     InventoryItem,
 )
 
-router = APIRouter(prefix="/inventory", tags=["kho-tai-nguyen"], dependencies=[Depends(require_local_admin)])
+router = APIRouter(prefix="/inventory", tags=["kho-tai-nguyen"], dependencies=[Depends(require_local_admin_or_owner)])
 
 
 def _get_fernet() -> Optional[Fernet]:

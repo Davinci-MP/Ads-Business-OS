@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.connectors.meta import MetaAPIError, MetaAdsConnector
 from app.db import get_db
-from app.core.local_admin import require_local_admin
+from app.core.local_admin import require_local_admin_or_owner
 from app.services.meta_account_policy import set_violation_override, validate_account_policy
 from app.services.meta_risk import assert_account_unlocked
 from app.models.meta_tasks import MetaCampaignTask
@@ -21,7 +21,7 @@ from app.models.meta_risk import MetaAccountRisk
 from app.services.meta_campaign_builder import CampaignCreationRequest, validate_budget_cap
 from app.services.remote_commands import enqueue_extension_command, serialize_command
 
-router = APIRouter(prefix="/meta", tags=["meta-ads"], dependencies=[Depends(require_local_admin)])
+router = APIRouter(prefix="/meta", tags=["meta-ads"], dependencies=[Depends(require_local_admin_or_owner)])
 
 
 class ToggleStatusRequest(BaseModel):

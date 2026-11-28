@@ -8,6 +8,7 @@ import secrets
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
@@ -15,8 +16,10 @@ from sqlalchemy.orm import Session
 from app.connectors.meta import decrypt_token_if_encrypted, encrypt_meta_token
 from app.connectors.telegram import TelegramAPIError, TelegramBotConnector
 from app.core.config import settings
-from app.core.local_admin import require_local_admin
+from app.core.local_admin import require_local_admin_or_owner
 from app.db import get_db
+
+_tg_optional_bearer = HTTPBearer(auto_error=False)
 from app.models.telegram import AutomationRule, TelegramActivityLog, TelegramBotConfig
 from app.services.automation_rules import ensure_default_rules, evaluate_automation_rules
 from app.services.telegram_bot import TelegramBotAgent, get_configured_telegram_connector
@@ -26,13 +29,17 @@ router = APIRouter(prefix="/telegram", tags=["telegram-bot"])
 ADMIN_COMMANDS = {"/khoatkn", "/khoatk", "/set_bm", "/setbm", "/bm_pref"}
 
 
-def require_telegram_admin(request: Request) -> None:
-    """Yêu cầu quyền admin: hỗ trợ local loopback admin hoặc HTTP header x-admin-token."""
+def require_telegram_admin(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_tg_optional_bearer),
+    db: Session = Depends(get_db),
+) -> None:
+    """Quyền admin: header x-admin-token, HOẶC máy local / Client Key, HOẶC OWNER đăng nhập (JWT)."""
     admin_token = request.headers.get("x-admin-token") or request.headers.get("x-adsos-admin-token")
     if admin_token and getattr(settings, "exchange_admin_token", "") and len(settings.exchange_admin_token) >= 16:
         if secrets.compare_digest(admin_token, settings.exchange_admin_token):
             return
-    require_local_admin(request)
+    require_local_admin_or_owner(request, credentials, db)
 
 
 # --- Schemas ---
@@ -391,6 +398,7 @@ def dispatch_command_endpoint(
     req: DispatchCommandRequest,
     request: Request,
     db: Session = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials | None = Depends(_tg_optional_bearer),
 ) -> dict[str, Any]:
     """Kích hoạt và điều phối lệnh bot qua API (bắt buộc Chat ID thuộc Whitelist hoặc phiên Admin)."""
     connector = get_configured_telegram_connector(db)
@@ -398,7 +406,7 @@ def dispatch_command_endpoint(
 
     is_admin_session = False
     try:
-        require_telegram_admin(request)
+        require_telegram_admin(request, credentials, db)
         is_admin_session = True
     except HTTPException:
         is_admin_session = False
