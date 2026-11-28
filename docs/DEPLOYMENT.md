@@ -108,3 +108,18 @@ Repo đã sẵn: `apps/api/Dockerfile` (cài `requirements-turso.txt`, CMD chạ
 6. Trên **Vercel** đặt `NEXT_PUBLIC_API_URL=https://<railway-domain>`; trên **Meta** thêm redirect URI đúng domain Railway.
 
 > `numReplicas=1`: APScheduler + single-flight cần đúng 1 instance. Nếu build `libsql-experimental` lỗi thiếu wheel, đổi base trong Dockerfile sang `python:3.12` (full).
+
+## 9. DB production: Railway Postgres (chọn 2026-11-28, D-067 — thay Turso)
+
+Turso/libSQL gây lỗi driver khó khắc phục trên Railway. Chuyển sang **PostgreSQL** (plugin Railway cùng project), driver `psycopg`.
+
+**Các bước:**
+1. Railway project → **+ Create** → **Database** → **Add PostgreSQL**. Railway tạo service Postgres và tự cấp biến (`DATABASE_URL`, `PGHOST`...).
+2. Service backend **Ads-Business-OS** → **Variables** → đặt:
+   `ADSOS_DATABASE_URL = ${{Postgres.DATABASE_URL}}` (tham chiếu biến của service Postgres; tên service có thể là `Postgres`).
+   - Không cần đổi scheme thủ công: `db.py` tự chuyển `postgresql://` → `postgresql+psycopg://`.
+3. Giữ **Builder = Dockerfile** (Dockerfile nay cài `requirements-postgres.txt`).
+4. Deploy. Dockerfile chạy `alembic upgrade head` lên Postgres rồi uvicorn.
+5. Kiểm `https://<domain>/health` → `{"status":"ok"}`.
+
+> Không còn dùng `ADSOS_DATABASE_URL` kiểu Turso. Xóa biến Turso cũ (và revoke token Turso đã lộ).
