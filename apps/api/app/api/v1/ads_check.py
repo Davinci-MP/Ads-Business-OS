@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.meta_proof import with_appsecret_proof
 from app.core.local_admin import require_local_admin
 from app.core.security import get_current_staff, log_staff_action
 from app.db import get_db
@@ -541,7 +542,7 @@ def explore_super_targets(
                 "access_token": access_token,
             }
             with httpx.Client(timeout=8.0) as client:
-                resp = client.get(url, params=params)
+                resp = client.get(url, params=with_appsecret_proof(params))
                 if resp.status_code == 200:
                     data = resp.json().get("data", [])
                     for item in data:

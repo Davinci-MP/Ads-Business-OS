@@ -19,6 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.core.config import settings
+from app.core.meta_proof import with_appsecret_proof
 from app.db import SessionLocal
 from app.models.via import ViaProfile
 from app.services.via_manager import clean_meta_token, is_synthetic_meta_token
@@ -42,7 +43,7 @@ def validate_via_token(via: ViaProfile) -> TokenValidationResult:
     try:
         response = httpx.get(
             f"https://graph.facebook.com/{settings.meta_api_version}/me",
-            params={"fields": "id"},
+            params=with_appsecret_proof({"fields": "id"}, token),
             headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
             timeout=15.0,
         )

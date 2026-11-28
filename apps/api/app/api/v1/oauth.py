@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.local_admin import require_local_admin_or_owner
+from app.core.meta_proof import with_appsecret_proof
 from app.db import get_db
 from app.models.customer import utcnow
 from app.models.via import ViaProfile
@@ -238,7 +239,7 @@ async def facebook_callback(
         identity = await _get_meta_json(
             client,
             f"https://graph.facebook.com/{settings.meta_api_version}/me",
-            params={"fields": "id"},
+            params=with_appsecret_proof({"fields": "id"}, long_token),
             headers={"Authorization": f"Bearer {long_token}"},
         )
         if str(identity.get("id") or "") != via.uid:

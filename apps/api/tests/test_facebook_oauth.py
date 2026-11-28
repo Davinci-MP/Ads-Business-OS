@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
+
 from urllib.parse import parse_qs, urlparse
 
 import httpx
@@ -111,6 +114,10 @@ def test_callback_luu_token_dai_han_duoi_dang_ma_hoa(oauth_client, db):
         assert request.url.path.endswith("/me")
         assert request.headers["Authorization"] == "Bearer token-dai-han"
         assert "access_token" not in request.url.params
+        # App bật "Require App Secret": /me phải kèm appsecret_proof = HMAC-SHA256(token, secret).
+        assert request.url.params["appsecret_proof"] == hmac.new(
+            settings.facebook_app_secret.encode(), b"token-dai-han", hashlib.sha256
+        ).hexdigest()
         return httpx.Response(200, json={"id": via.uid})
 
     async def override_http_client():

@@ -16,6 +16,8 @@ from typing import Any, Callable, Optional
 
 import httpx
 
+from app.core.meta_proof import with_appsecret_proof
+
 from app.models.customer import utcnow
 from app.models.via import MaxcareActivityLog, ViaProfile
 from app.services.via_manager import decrypt_via_credentials
@@ -90,7 +92,7 @@ def _graph_post(
     with httpx.Client(timeout=15.0, transport=transport) as client:
         resp = client.post(
             f"https://graph.facebook.com/{api_version}/{path}",
-            params={"access_token": token, **fields},
+            params=with_appsecret_proof({"access_token": token, **fields}),
         )
         resp.raise_for_status()
         return resp.json()
