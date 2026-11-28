@@ -384,21 +384,30 @@ def create_via(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Tạo mới hoặc cập nhật 1 VIA Profile độc lập."""
-    via = create_or_update_via(
-        session=db,
-        uid=req.uid,
-        password=req.password,
-        profile_name=req.profile_name,
-        two_fa_secret=req.two_fa_secret,
-        email=req.email,
-        email_password=req.email_password,
-        backup_email=req.backup_email,
-        cookie=req.cookie,
-        access_token=req.access_token,
-        proxy_config=req.proxy_config,
-    )
-    db.commit()
-    db.refresh(via)
+    try:
+        via = create_or_update_via(
+            session=db,
+            uid=req.uid,
+            password=req.password,
+            profile_name=req.profile_name,
+            two_fa_secret=req.two_fa_secret,
+            email=req.email,
+            email_password=req.email_password,
+            backup_email=req.backup_email,
+            cookie=req.cookie,
+            access_token=req.access_token,
+            proxy_config=req.proxy_config,
+        )
+        db.commit()
+        db.refresh(via)
+    except RuntimeError as exc:
+        # Thiếu/sai cấu hình máy chủ (ví dụ ADSOS_EXCHANGE_MASTER_KEY) — báo rõ thay vì 500.
+        db.rollback()
+        raise HTTPException(status_code=503, detail=f"Lỗi cấu hình máy chủ: {exc}") from exc
+    except Exception as exc:  # noqa: BLE001
+        db.rollback()
+        logging.getLogger(__name__).exception("create_via failed for uid=%s", req.uid)
+        raise HTTPException(status_code=400, detail=f"Không tạo được VIA: {type(exc).__name__}: {exc}") from exc
     return {
         "success": True,
         "message": f"Đã lưu thành công hồ sơ VIA #{via.id} ({via.uid})",
