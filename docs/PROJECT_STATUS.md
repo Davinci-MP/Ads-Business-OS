@@ -13,7 +13,7 @@
 - **Nghiệm thu:** backend 682 pass (1 flaky `test_prepaid` đã biết); Graph `v26.0` xác nhận hợp lệ.
 
 **Chờ chủ dự án (chưa làm):**
-- DB server có thể đã có dữ liệu mock từ các lượt job trước khi có PR #17 (`ad_accounts.meta_ad_account_id LIKE 'act_mock_%'` + campaign/snapshot liên quan). **NEEDS_CONFIRMATION:** có dọn hay không — chưa xóa theo quy tắc không xóa dữ liệu.
+- **Dọn dữ liệu mock — chủ dự án đã duyệt (2026-11-28):** script `infra/sql/2026-11-28_cleanup_mock_meta_data.sql` (xem trước + xóa trong 1 transaction) chỉ xóa tài khoản `act_mock_%` và campaign/snapshot/drift/risk con của chúng; giữ `audit_log`. Đã thử trên PostgreSQL 16 tạm: xóa đúng dòng mock, tài khoản thật giữ đủ campaign/snapshot/drift, chạy lại lần hai xóa 0. **Chủ dự án tự chạy trên DB Railway** (agent không có quyền DB).
 - Đổi các secret đã lộ trong ảnh/chat (`FACEBOOK_APP_SECRET`, `ADSOS_EXCHANGE_MASTER_KEY`, `ADSOS_EXCHANGE_ADMIN_TOKEN`, `ADSOS_STAFF_AUTH_SECRET`) và mật khẩu Postgres; xóa TCP Proxy công khai của Postgres; xóa project Railway `fearless-appreciation` (Postgres cũ không dùng).
 - Máy của chủ dự án: Tailscale bật làm `api.vextech.vn` phân giải về Vercel cũ (router cache) → tắt Tailscale hoặc khởi động lại router khi thử.
 
