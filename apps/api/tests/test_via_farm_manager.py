@@ -387,3 +387,41 @@ def test_api_vias_endpoints(client, db):
     res_options = client.get("/api/v1/clients/bm-options")
     assert res_options.status_code == 200
     assert res_options.json()["available_bms"][0]["is_primary_rental"] is True
+
+
+def test_create_via_without_password_for_oauth(client, db):
+    """VIA chỉ dùng cấp quyền OAuth chính thức: tạo được khi không có mật khẩu."""
+    res = client.post(
+        "/api/v1/vias",
+        json={"uid": "100012345678901", "profile_name": "VIA-OAUTH-ONLY"},
+    )
+    assert res.status_code == 200, res.text
+    body = res.json()
+    assert body["success"] is True
+    assert body["via"]["uid"] == "100012345678901"
+    assert body["via"]["profile_name"] == "VIA-OAUTH-ONLY"
+
+    via = db.scalar(select(ViaProfile).where(ViaProfile.uid == "100012345678901"))
+    assert via is not None
+    assert decrypt_via_credentials(via.encrypted_credentials)["password"] == ""
+
+
+def test_update_via_blank_password_keeps_old_credentials(db):
+    """Cập nhật VIA mà bỏ trống mật khẩu/2FA/email thì giữ giá trị cũ, không ghi đè rỗng."""
+    create_or_update_via(
+        session=db,
+        uid="100099988877766",
+        password="OldSecretPass",
+        two_fa_secret="JBSWY3DPEHPK3PXP",
+        email="old@example.com",
+    )
+    db.commit()
+
+    via = create_or_update_via(session=db, uid="100099988877766", profile_name="Đổi tên")
+    db.commit()
+
+    creds = decrypt_via_credentials(via.encrypted_credentials)
+    assert creds["password"] == "OldSecretPass"
+    assert creds["two_fa_secret"] == "JBSWY3DPEHPK3PXP"
+    assert creds["email"] == "old@example.com"
+    assert via.profile_name == "Đổi tên"

@@ -1114,7 +1114,7 @@ export async function getVias(params?: {
 
 export async function createVia(body: {
   uid: string;
-  password: string;
+  password?: string;
   profile_name?: string;
   two_fa_secret?: string;
   email?: string;

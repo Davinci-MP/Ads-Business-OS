@@ -4,7 +4,8 @@ export type MonoIconName =
   | "dashboard" | "account" | "business" | "via" | "customer" | "analytics"
   | "campaign" | "settings" | "search" | "menu" | "sun" | "moon" | "bell"
   | "close" | "copy" | "refresh" | "edit" | "trash" | "filter" | "export" | "check"
-  | "chevron-left" | "chevron-right";
+  | "chevron-left" | "chevron-right"
+  | "plus" | "more" | "key" | "link" | "sync" | "chevron-down" | "shield" | "upload";
 
 const paths: Record<MonoIconName, ReactNode> = {
   dashboard: <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>,
@@ -30,6 +31,14 @@ const paths: Record<MonoIconName, ReactNode> = {
   check: <path d="m5 12 4 4L19 6"/>,
   "chevron-left": <path d="m15 18-6-6 6-6"/>,
   "chevron-right": <path d="m9 18 6-6-6-6"/>,
+  plus: <path d="M12 5v14M5 12h14"/>,
+  more: <><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></>,
+  key: <><circle cx="8" cy="15" r="4"/><path d="m10.8 12.2 9.2-9.2M17 6l3 3M14 9l2 2"/></>,
+  link: <><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></>,
+  sync: <><path d="M20 12a8 8 0 0 1-14 5.3M4 12a8 8 0 0 1 14-5.3"/><path d="M18 3v4h-4M6 21v-4h4"/></>,
+  "chevron-down": <path d="m6 9 6 6 6-6"/>,
+  shield: <><path d="M12 3 5 6v6c0 4.5 3 7.5 7 9 4-1.5 7-4.5 7-9V6Z"/><path d="m9 12 2 2 4-4"/></>,
+  upload: <><path d="M12 15V3m0 0-4 4m4-4 4 4M5 19h14"/></>,
 };
 
 export function MonoIcon({ name, ...props }: { name: MonoIconName } & SVGProps<SVGSVGElement>) {

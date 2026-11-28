@@ -1,5 +1,14 @@
 # PROJECT_STATUS.md — Trạng thái dự án
 
+## Cập nhật 2026-11-28 — Tối ưu trang Dàn VIA, tạo VIA không cần mật khẩu, sửa màu theme sáng toàn site
+
+- **Trang `/vias` làm lại** (giữ nguyên mọi chức năng cũ): nút chính **"+ Tạo VIA"**, "Nhập hàng loạt", các công cụ khác gom vào menu **"Công cụ"**; màn hướng dẫn 3 bước khi chưa có VIA; mỗi dòng có nút **"Cấp quyền Facebook"** (OAuth chính thức) làm thao tác chính, các thao tác phụ trong menu "⋯"; thông báo lỗi OAuth rõ theo từng mã (`uid_mismatch`, `token_exchange_failed`...).
+- **Modal "Tạo VIA" mới** (`components/CreateViaModal.tsx`): chỉ cần UID; tên/proxy tuỳ chọn; thông tin đăng nhập ẩn trong mục "không bắt buộc"; tạo xong có nút "Cấp quyền Facebook ngay".
+- **Backend:** `POST /api/v1/vias` không còn bắt buộc `password` (VIA chỉ dùng OAuth không cần mật khẩu Facebook). Cập nhật VIA mà bỏ trống mật khẩu/2FA/email thì giữ giá trị cũ. Thêm 2 test.
+- **Sửa màu toàn site (theme sáng):** khối CSS "đơn sắc" cũ dùng `!important` ép nút màu thành viên thuốc tối và chữ màu thành xám nhạt, làm mục menu đang chọn mất chữ — nay chỉ áp dụng ở theme tối. Thêm lớp chuyển đổi theme sáng cho nhãn nền sẫm `bg-*-800/900/950` và chữ `text-*-100…400`.
+- **Nghiệm thu:** build Next.js 32/32 route; test VIA 10/10; kiểm trực quan `/vias` (tạo VIA không mật khẩu, menu dòng, theme tối), `/accounts`, `/telegram`.
+- **Lưu ý kiểm thử:** chạy test backend khi backend local (có scheduler) đang chạy sẽ làm `test_exchange_wallets`/`test_prepaid` lỗi 409 do tranh chấp khóa — dừng backend local trước khi chạy test.
+
 ## Cập nhật 2026-11-27 — Turso (D-066), cấu hình deploy, dọn rác & nền tảng giao diện Vercel
 
 - **Database Turso/libSQL (D-066):** thêm `requirements-turso.txt` (`sqlalchemy-libsql`), cải thiện `app/db.py` (pool_pre_ping + check_same_thread cho SQLite-family). Nghiệm thu: **648 pass / 1 fail** (fail là test flaky `test_prepaid` đã biết, chạy riêng pass) — thay đổi db.py còn **giảm flaky từ 11 xuống 1**. Ghi quyết định D-066, cập nhật AGENTS.md + PROJECT_ARCHITECTURE §5.
