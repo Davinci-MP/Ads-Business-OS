@@ -24,6 +24,8 @@ from typing import Any, Optional
 
 import httpx
 
+from app.core.meta_proof import with_appsecret_proof
+
 from app.core.config import settings as _settings
 
 logger = logging.getLogger(__name__)
@@ -289,6 +291,9 @@ class MetaAdsConnector:
                 time.sleep(0.5)
 
             try:
+                for key in ("params", "data"):
+                    if isinstance(kwargs.get(key), dict):
+                        kwargs[key] = with_appsecret_proof(kwargs[key])
                 response = client.request(method, url, **kwargs)
                 self.telemetry.update_from_headers(response.headers)
 

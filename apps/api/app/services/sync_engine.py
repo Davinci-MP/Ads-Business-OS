@@ -15,6 +15,8 @@ from decimal import Decimal
 from typing import Any, Optional
 
 import httpx
+
+from app.core.meta_proof import add_proof_to_graph_request
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
@@ -151,6 +153,7 @@ def fetch_via_ad_account_reports(
 
     rows: list[dict[str, Any]] = []
     paging_next: Optional[str] = None
+    base_kwargs["event_hooks"] = {"request": [add_proof_to_graph_request]}
     with httpx.Client(**base_kwargs) as client:
         # Header isolation: không gửi Cookie hoặc Origin đến graph.facebook.com
         for hdr in ("Cookie", "cookie", "Origin", "origin", "Referer", "referer"):
