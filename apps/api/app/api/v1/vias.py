@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import case, func, or_, select
 from sqlalchemy.orm import Session
 
-from app.core.local_admin import require_local_admin
+from app.core.local_admin import require_local_admin, require_local_admin_or_owner
 from app.db import get_db
 from app.models.customer import Customer, utcnow
 from app.models.extension_remote import (
@@ -91,7 +91,7 @@ from app.services.via_manager import (
 router = APIRouter(
     prefix="/vias",
     tags=["vias-farm-management"],
-    dependencies=[Depends(require_local_admin)],
+    dependencies=[Depends(require_local_admin_or_owner)],
 )
 
 
