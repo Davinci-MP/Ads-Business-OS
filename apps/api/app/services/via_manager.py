@@ -642,7 +642,7 @@ def parse_bulk_via_text(raw_text: str) -> list[dict[str, Any]]:
 def create_or_update_via(
     session: Session,
     uid: str,
-    password: str,
+    password: Optional[str] = None,
     profile_name: Optional[str] = None,
     two_fa_secret: Optional[str] = None,
     email: Optional[str] = None,
@@ -652,7 +652,11 @@ def create_or_update_via(
     access_token: Optional[str] = None,
     proxy_config: Optional[str] = None,
 ) -> ViaProfile:
-    """Tạo mới hoặc cập nhật một hồ sơ VIA độc lập."""
+    """Tạo mới hoặc cập nhật một hồ sơ VIA độc lập.
+
+    Mật khẩu không bắt buộc: VIA chỉ dùng cấp quyền OAuth chính thức của Meta không cần
+    lưu mật khẩu Facebook. Khi cập nhật mà bỏ trống mật khẩu/2FA/email thì giữ giá trị cũ.
+    """
     clean_uid = uid.strip()
     profile = session.scalar(select(ViaProfile).where(ViaProfile.uid == clean_uid))
 
@@ -674,7 +678,7 @@ def create_or_update_via(
     # Đóng gói credentials để mã hóa Fernet
     cleaned_token = clean_meta_token(access_token) or (access_token or "").strip()
     creds = {
-        "password": password,
+        "password": password or "",
         "two_fa_secret": two_fa_secret or "",
         "email": email or "",
         "email_password": email_password or "",
@@ -685,6 +689,9 @@ def create_or_update_via(
     # Giữ lại cookie/token cũ nếu lần này không truyền
     if not is_new and profile.encrypted_credentials:
         old_creds = decrypt_via_credentials(profile.encrypted_credentials)
+        for key in ("password", "two_fa_secret", "email", "email_password", "backup_email"):
+            if not creds[key] and old_creds.get(key):
+                creds[key] = old_creds[key]
         if not creds["cookie"] and old_creds.get("cookie"):
             creds["cookie"] = old_creds["cookie"]
         if not creds["access_token"] and old_creds.get("access_token"):

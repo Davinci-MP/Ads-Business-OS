@@ -112,7 +112,10 @@ def ping_bridge() -> dict[str, Any]:
 
 class CreateSingleViaRequest(BaseModel):
     uid: str = Field(..., min_length=1, description="UID Facebook của VIA")
-    password: str = Field(..., min_length=1, description="Mật khẩu VIA")
+    password: Optional[str] = Field(
+        None,
+        description="Mật khẩu VIA — không bắt buộc với VIA chỉ dùng cấp quyền OAuth chính thức",
+    )
     profile_name: Optional[str] = Field(None, description="Tên định danh profile (VD: VIA-001)")
     two_fa_secret: Optional[str] = Field(None, description="Khóa 2FA TOTP bí mật (16/32 ký tự)")
     email: Optional[str] = Field(None, description="Email đăng nhập / liên kết")
