@@ -80,3 +80,45 @@ def test_hook_bo_qua_host_khac_va_khong_nhan_doi_proof():
     assert "appsecret_proof" not in seen[0].url.params
     assert seen[1].url.params.get_list("appsecret_proof") == ["san-co"]
     assert "appsecret_proof" not in seen[2].url.params
+
+
+def test_ensure_hook_ky_ca_request_dau_lan_link_next_va_khong_gan_trung():
+    from app.core.meta_proof import ensure_graph_proof_hook
+    from app.services.via_manager import fetch_all_graph_pages_with_fallback
+
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        if "after" in request.url.params:
+            return httpx.Response(200, json={"data": [{"id": "act_2"}]})
+        next_url = f"https://graph.facebook.com/v26.0/me/adaccounts?access_token={TOKEN}&after=c2"
+        return httpx.Response(200, json={"data": [{"id": "act_1"}], "paging": {"next": next_url}})
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        ensure_graph_proof_hook(client)
+        ensure_graph_proof_hook(client)
+        assert client.event_hooks["request"].count(add_proof_to_graph_request) == 1
+        status, items, _ = fetch_all_graph_pages_with_fallback(
+            client=client,
+            url="https://graph.facebook.com/v26.0/me/adaccounts",
+            token=TOKEN,
+            primary_fields="id",
+        )
+
+    assert status == 200 and [i["id"] for i in items] == ["act_1", "act_2"]
+    assert [r.url.params.get("appsecret_proof") for r in seen] == [_expected(TOKEN)] * 2
+
+
+def test_fetch_tu_gan_hook_khi_client_chua_co():
+    from app.services.via_manager import fetch_graph_with_fallback
+
+    seen = []
+
+    def handler(request):
+        seen.append(request)
+        return httpx.Response(200, json={"id": "1"})
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        fetch_graph_with_fallback(client, "https://graph.facebook.com/v26.0/me", TOKEN, "id")
+    assert seen[0].url.params.get("appsecret_proof") == _expected(TOKEN)

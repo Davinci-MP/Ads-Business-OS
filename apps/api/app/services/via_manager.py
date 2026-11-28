@@ -37,6 +37,7 @@ from sqlalchemy import delete, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.meta_proof import ensure_graph_proof_hook
 from app.models.ad_account import AdAccount, AdAccountAssignment
 from app.models.customer import Customer, utcnow
 from app.models.extension_remote import ExtensionClientKey
@@ -301,6 +302,9 @@ def fetch_graph_with_fallback(
     # Header isolation: loại bỏ Cookie, Origin, Referer khỏi client.headers
     for hdr in ("Cookie", "cookie", "Origin", "origin", "Referer", "referer"):
         client.headers.pop(hdr, None)
+    # App bật "Require App Secret": ký appsecret_proof cho mọi request Graph của client này
+    # (kể cả link phân trang next mà fetch_all_graph_pages_with_fallback đi theo).
+    ensure_graph_proof_hook(client)
 
     field_candidates = [f for f in (primary_fields, fallback_fields, minimal_fields) if f]
     last_status = 500
