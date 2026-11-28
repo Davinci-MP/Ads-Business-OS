@@ -236,6 +236,12 @@ def classify_account_type(acc: dict[str, Any]) -> tuple[str, Optional[str]]:
     return ("BM" if is_bm else "PERSONAL", bm_id)
 
 
+# https://developers.facebook.com/docs/marketing-api/currencies — offset 1 (không chia 100).
+META_OFFSET_ONE_CURRENCIES = frozenset(
+    {"CLP", "COP", "CRC", "HUF", "IDR", "ISK", "JPY", "KRW", "PYG", "TWD", "VND"}
+)
+
+
 def normalize_amount(raw_value: Any, currency: str = "VND") -> float:
     """Chuẩn hóa tiền tệ: minor unit (cents) -> đơn vị chính cho USD/EUR/GBP...; VND giữ nguyên."""
     try:
@@ -244,7 +250,8 @@ def normalize_amount(raw_value: Any, currency: str = "VND") -> float:
         return 0.0
     if value == 0:
         return 0.0
-    if (currency or "").strip().upper() not in ("USD", "EUR", "GBP", "AUD", "CAD", "SGD"):
+    # Bảng Currencies của Marketing API: 11 loại tiền offset 1, mọi loại khác offset 100.
+    if (currency or "").strip().upper() in META_OFFSET_ONE_CURRENCIES:
         return float(value)
     return float(value / Decimal("100"))
 
@@ -2812,11 +2819,19 @@ def serialize_synced_ad_account(acc: SyncedAdAccount) -> dict[str, Any]:
         "funding_source_last_four": card_last4,
         "card_display": card_display,
         "disable_reason": getattr(acc, "disable_reason", "NONE") or "NONE",
-        "user_role": getattr(acc, "user_role", "ADMIN") or "ADMIN",
-        "timezone_name": getattr(acc, "timezone_name", "Asia/Ho_Chi_Minh | GMT+7") or "Asia/Ho_Chi_Minh | GMT+7",
-        "country_code": getattr(acc, "country_code", "VN") or "VN",
-        "tax_status": getattr(acc, "tax_status", "MIỄN THUẾ") or "MIỄN THUẾ",
-        "admin_count": getattr(acc, "admin_count", 1) or 1,
+        # Chỉ trả giá trị thật đã lưu; trống → null (không điền mặc định giả).
+        "user_role": getattr(acc, "user_role", None) or None,
+        "user_tasks": getattr(acc, "user_tasks", None),
+        "timezone_name": getattr(acc, "timezone_name", None) or None,
+        "country_code": getattr(acc, "country_code", None) or None,
+        "tax_status": getattr(acc, "tax_status", None) or None,
+        "admin_count": getattr(acc, "admin_count", None) or None,
+        "spend_cap": getattr(acc, "spend_cap", None),
+        "created_time": acc.created_time.isoformat() if getattr(acc, "created_time", None) else None,
+        "business_name": getattr(acc, "business_name", None),
+        "is_prepay": getattr(acc, "is_prepay", None),
+        "last_scanned_at": acc.last_scanned_at.isoformat() if getattr(acc, "last_scanned_at", None) else None,
+        "pixel_count": len(getattr(acc, "pixel_list", None) or []),
         "hidden_admin_count": getattr(acc, "hidden_admin_count", 0) or 0,
         "hidden_limit": getattr(acc, "hidden_limit", 0.0) or acc.ad_trust_dsl or 0.0,
         "funding_source_summary": getattr(acc, "funding_source_summary", None) or card_display,

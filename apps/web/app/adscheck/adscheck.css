@@ -120,3 +120,33 @@
 
 @media (max-width:1000px){ .ac-stats{ grid-template-columns:repeat(2,1fr);} }
 @media (max-width:640px){ .ac-stats{ grid-template-columns:1fr;} .ac-hero{ flex-direction:column; align-items:flex-start;} }
+
+/* ===== Quét tài sản + cột mở rộng (ToolFB-style) ===== */
+.ac-hero-btn-primary { background:#fff; color:#4f46e5; border-color:#fff; }
+.ac-hero-btn-primary:hover { background:#f1efff; }
+.ac-hero-btn:disabled { opacity:.6; cursor:not-allowed; }
+.ac-scan { padding:18px 20px; display:grid; gap:14px; }
+.ac-scan-head { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; flex-wrap:wrap; }
+.ac-scan-head h3 { margin:0 0 4px; font-size:15px; font-weight:750; }
+.ac-scan-head p, .ac-scan-note { margin:0; font-size:12.5px; color:var(--ac-muted); max-width:560px; line-height:1.55; }
+.ac-scan-note a { color:var(--ac-primary); font-weight:600; }
+.ac-scan-actions { display:flex; gap:10px; flex-wrap:wrap; }
+.ac-btn-primary { height:38px; padding:0 18px; border:0; border-radius:10px; background:var(--ac-grad); color:#fff; font-weight:650; font-size:12.5px; cursor:pointer; box-shadow:0 6px 16px -6px rgba(108,92,231,.55); }
+.ac-btn-primary:disabled { opacity:.55; cursor:not-allowed; box-shadow:none; }
+.ac-progress { list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+.ac-progress-row { display:flex; gap:12px; align-items:flex-start; padding:10px 12px; border:1px solid var(--ac-line); border-radius:12px; background:var(--ac-bg); font-size:12.5px; }
+.ac-progress-main { display:grid; gap:3px; min-width:0; }
+.ac-progress-dot { width:10px; height:10px; border-radius:50%; margin-top:4px; flex-shrink:0; background:var(--ac-idle); }
+.ac-progress-row.run .ac-progress-dot { background:var(--ac-primary); box-shadow:0 0 0 4px color-mix(in srgb, var(--ac-primary) 20%, transparent); animation:ac-pulse 1s ease-in-out infinite; }
+.ac-progress-row.done .ac-progress-dot { background:var(--ac-ok); }
+.ac-progress-row.fail .ac-progress-dot { background:var(--ac-bad); }
+@keyframes ac-pulse { 50% { opacity:.4; } }
+.ac-warn-details summary { cursor:pointer; color:var(--ac-warn); font-weight:600; }
+.ac-warn-details ul { margin:6px 0 0; padding-left:18px; color:var(--ac-muted); }
+.ac-muted { color:var(--ac-muted); }
+.ac-sub { font-size:11px; color:var(--ac-muted); margin-top:3px; }
+.ac-error-text { color:var(--ac-bad); }
+.ac-error { margin:12px 18px 0; padding:10px 12px; border-radius:10px; background:var(--ac-bad-bg); color:var(--ac-bad); font-size:12.5px; }
+.ac-table td { white-space:nowrap; }
+.ac-table td .ac-sub { white-space:normal; max-width:220px; }
+@media (prefers-reduced-motion: reduce) { .ac-progress-row.run .ac-progress-dot { animation:none; } }

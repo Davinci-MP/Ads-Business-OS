@@ -7,11 +7,11 @@ import {
   checkViasLiveBulk,
   deleteVia,
   fetchJson,
-  forceSyncAllViaAssets,
   getSyncedBMs,
   getVia2FA,
   getVias,
-  syncViaAssets,
+  scanVia,
+  getServerEnv,
   SyncedBM,
   togglePrimaryRentalBM,
   updateViaInfo,
@@ -97,6 +97,11 @@ export default function ViasFarmPage() {
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [bulkChecking, setBulkChecking] = useState(false);
   const [syncingAll, setSyncingAll] = useState(false);
+  // Set Camp / Extension cần Extension trên máy chạy local → ẩn trên server.
+  const [isLocalEnv, setIsLocalEnv] = useState(false);
+  useEffect(() => {
+    void getServerEnv().then((env) => setIsLocalEnv(env === "local"));
+  }, []);
 
   // Sửa tên & ghi chú inline
   const [editingViaId, setEditingViaId] = useState<number | null>(null);
@@ -240,14 +245,31 @@ export default function ViasFarmPage() {
     }
   };
 
+  // Quét lần lượt từng VIA đã cấp quyền qua Graph API chính thức.
   const handleForceSyncAll = async () => {
+    const targets = vias.filter((v) => v.token_status === "ACTIVE");
+    if (!targets.length) {
+      setFeedback({ text: "Chưa có VIA nào cấp quyền Facebook để quét.", error: true });
+      return;
+    }
+    setSyncingAll(true);
+    let okCount = 0;
+    const failed: string[] = [];
     try {
-      setSyncingAll(true);
-      const res = await forceSyncAllViaAssets();
-      setFeedback({ text: res.message });
-      window.setTimeout(() => void loadData(), 1500);
-    } catch (err) {
-      fail(err, "Không thể khởi chạy đồng bộ toàn bộ VIA.");
+      for (const via of targets) {
+        try {
+          const res = await scanVia(via.id);
+          if (res.ok) okCount += 1;
+          else failed.push(`${via.profile_name || via.uid}: ${res.error}`);
+        } catch (err) {
+          failed.push(`${via.profile_name || via.uid}: ${err instanceof Error ? err.message : "lỗi"}`);
+        }
+      }
+      setFeedback({
+        text: `Đã quét ${okCount}/${targets.length} VIA.${failed.length ? " Lỗi: " + failed.join(" · ") : ""}`,
+        error: failed.length > 0,
+      });
+      await loadData();
     } finally {
       setSyncingAll(false);
     }
@@ -267,8 +289,15 @@ export default function ViasFarmPage() {
   const handleSyncAssets = async (via: ViaProfile) => {
     try {
       setActionLoadingId(via.id);
-      const res = await syncViaAssets(via.id);
-      setFeedback({ text: res.message });
+      const res = await scanVia(via.id);
+      if (res.ok && res.counts) {
+        const c = res.counts;
+        setFeedback({
+          text: `Quét xong ${via.profile_name || via.uid}: ${c.accounts} TKQC (${c.live} live · ${c.die} die), ${c.bms} BM, ${c.pages} Page, ${c.pixels} Pixel.${res.warnings?.length ? ` ${res.warnings.length} cảnh báo từ Meta.` : ""}`,
+        });
+      } else {
+        setFeedback({ text: res.error || "Quét thất bại.", error: true });
+      }
       await loadData();
     } catch (err) {
       fail(err, "Lỗi đồng bộ tài sản.");
@@ -422,21 +451,25 @@ export default function ViasFarmPage() {
                 </button>
                 <button type="button" disabled={syncingAll || vias.length === 0} onClick={() => { setToolsOpen(false); void handleForceSyncAll(); }}>
                   <MonoIcon name="sync" />
-                  {syncingAll ? "Đang xếp lịch..." : "Đồng bộ tài sản tất cả VIA"}
+                  {syncingAll ? "Đang quét..." : "Quét tài sản tất cả VIA"}
                 </button>
                 <hr />
-                <button type="button" onClick={() => { setToolsOpen(false); setTargetSetCampViaId(undefined); setShowSetCampModal(true); }}>
-                  <MonoIcon name="campaign" />
-                  Thiết lập chiến dịch từ xa
-                </button>
-                <Link href="/ads-check" onClick={() => setToolsOpen(false)}>
+                {isLocalEnv && (
+                  <button type="button" onClick={() => { setToolsOpen(false); setTargetSetCampViaId(undefined); setShowSetCampModal(true); }}>
+                    <MonoIcon name="campaign" />
+                    Thiết lập chiến dịch từ xa
+                  </button>
+                )}
+                <Link href="/adscheck" onClick={() => setToolsOpen(false)}>
                   <MonoIcon name="account" />
-                  Bảng ADSOS CHECK
+                  Bảng ADS CHECK
                 </Link>
-                <button type="button" onClick={() => { setToolsOpen(false); setShowExtensionModal(true); }}>
-                  <MonoIcon name="link" />
-                  Tiện ích trình duyệt
-                </button>
+                {isLocalEnv && (
+                  <button type="button" onClick={() => { setToolsOpen(false); setShowExtensionModal(true); }}>
+                    <MonoIcon name="link" />
+                    Tiện ích trình duyệt
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -824,13 +857,15 @@ export default function ViasFarmPage() {
               <MonoIcon name="check" />
               Kiểm tra Live UID
             </button>
-            <button type="button" onClick={() => { const v = rowMenu.via; setRowMenu(null); setTargetSetCampViaId(v.id); setShowSetCampModal(true); }}>
-              <MonoIcon name="campaign" />
-              Giao lệnh Set Camp
-            </button>
-            <Link href={`/ads-check?via_id=${rowMenu.via.id}`} onClick={() => setRowMenu(null)}>
+            {isLocalEnv && (
+              <button type="button" onClick={() => { const v = rowMenu.via; setRowMenu(null); setTargetSetCampViaId(v.id); setShowSetCampModal(true); }}>
+                <MonoIcon name="campaign" />
+                Giao lệnh Set Camp
+              </button>
+            )}
+            <Link href={`/adscheck?via_id=${rowMenu.via.id}`} onClick={() => setRowMenu(null)}>
               <MonoIcon name="account" />
-              Xem ADSOS CHECK
+              Xem ADS CHECK
             </Link>
             <hr />
             <button type="button" className="danger" onClick={() => { const v = rowMenu.via; setRowMenu(null); void handleDeleteVia(v); }}>

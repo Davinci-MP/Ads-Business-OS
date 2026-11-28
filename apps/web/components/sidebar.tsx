@@ -18,7 +18,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/accounts", label: "Tài khoản QC", icon: "account" },
   { href: "/vias", label: "Quản lý Dàn VIA & BM", icon: "via", badge: "100+ VIA" },
   { href: "/vias/maxcare", label: "MaxCare — Nuôi VIA", icon: "via", badge: "MaxCare" },
-  { href: "/ads-check", label: "ADSOS CHECK", icon: "account", badge: "CHECK" },
+  { href: "/adscheck", label: "ADS CHECK", icon: "account", badge: "CHECK" },
   { href: "/vcc-risk", label: "VCC & Rủi Ro Thẻ", icon: "account", badge: "VCC" },
   { href: "/risk", label: "Rủi ro tài khoản", icon: "filter" },
   { href: "/balances", label: "Số dư & Sổ giao dịch", icon: "analytics" },

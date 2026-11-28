@@ -496,6 +496,13 @@ class SyncedAdAccount(Base):
     location_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     appeal_status: Mapped[str] = mapped_column(String(64), default="NONE")  # NONE, IN_REVIEW, APPROVED, REJECTED
     pixel_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    # Trường quét qua Graph API chính thức (để trống khi Meta không trả).
+    spend_cap: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    created_time: Mapped[Optional[datetime]] = mapped_column(UTCDateTime(), nullable=True)
+    business_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    user_tasks: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    is_prepay: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    last_scanned_at: Mapped[Optional[datetime]] = mapped_column(UTCDateTime(), nullable=True)
     pixel_list: Mapped[Optional[list[dict[str, Any]]]] = mapped_column(JSON, nullable=True)
     last_billed_date: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)  # 23-12-2022
     next_bill_date: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)  # 23-12-2022

@@ -45,6 +45,7 @@ from app.services.maxcare_manager import (
     run_maxcare_bulk_login,
 )
 from app.services.maxcare_seeding import SEEDING_ACTIONS, run_via_seeding_bulk
+from app.services.meta_scan import aggregate_pixels, scan_via
 from app.services.sync_engine import (
     export_maxcare_report_csv,
     load_recent_snapshots,
@@ -749,6 +750,17 @@ def ads_check_explorer_endpoint(
         currency=currency,
         mode=mode,
     )
+
+
+@router.get("/ads-check/pixels")
+def ads_check_pixels_endpoint(
+    via_id: Optional[int] = Query(None, description="Lọc theo VIA ID"),
+    search: Optional[str] = Query(None, description="Tìm theo ID/tên pixel hoặc TKQC"),
+    db: Session = Depends(get_db),
+) -> dict[str, Any]:
+    """Pixel gộp từ các TKQC đã quét (Graph /act_x/adspixels, quyền ads_read)."""
+    items = aggregate_pixels(db, via_id=via_id, search=search)
+    return {"items": items, "total_count": len(items)}
 
 
 @router.post("/ads-check/assign-customer")
@@ -2051,6 +2063,15 @@ def update_manual_credentials_endpoint(
         "via": serialize_via_profile(via),
     }
 
+
+
+@router.post("/{via_id}/scan")
+def scan_via_endpoint(via_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
+    """Quét kiểu ToolFB qua Graph API chính thức: TKQC (cá nhân + BM), BM, Page, Pixel."""
+    via = db.get(ViaProfile, via_id)
+    if via is None:
+        raise HTTPException(status_code=404, detail=f"Không tìm thấy VIA với ID #{via_id}")
+    return scan_via(db, via)
 
 
 @router.post("/{via_id}/sync-assets")

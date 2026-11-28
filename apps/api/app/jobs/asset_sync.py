@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.core.config import settings
 from app.db import SessionLocal
 from app.models.via import ViaProfile
-from app.services.via_manager import sync_via_all_assets
+from app.services.meta_scan import scan_via_job
 
 logger = logging.getLogger(__name__)
 ASSET_SYNC_LOCK = Lock()
@@ -21,7 +21,7 @@ ASSET_SYNC_LOCK = Lock()
 def scheduled_asset_sync(
     *,
     session_factory: sessionmaker[Session] = SessionLocal,
-    sync_callable: Callable[..., dict[str, Any]] = sync_via_all_assets,
+    sync_callable: Callable[..., dict[str, Any]] = scan_via_job,
 ) -> dict[str, int | str]:
     """Đồng bộ từng VIA trong transaction riêng, giữ batch chạy khi một VIA lỗi."""
     if not settings.via_asset_sync_enabled:

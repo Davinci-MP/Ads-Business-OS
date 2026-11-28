@@ -1365,6 +1365,71 @@ export async function getAdsCheckData(params?: {
   return fetchJson<AdsCheckResponse>(`/vias/ads-check${query}`);
 }
 
+/** Trường bổ sung từ quét Graph API chính thức (null khi Meta không trả). */
+export type ScannedAccountFields = {
+  amount_spent?: number | null;
+  spend_cap?: number | null;
+  created_time?: string | null;
+  business_name?: string | null;
+  user_tasks?: string | null;
+  is_prepay?: boolean | null;
+  last_scanned_at?: string | null;
+  pixel_count?: number;
+};
+
+export type ScanCounts = {
+  accounts: number;
+  personal_accounts: number;
+  bm_accounts: number;
+  live: number;
+  die: number;
+  bms: number;
+  pages: number;
+  pixels: number;
+};
+
+export type ScanResult = {
+  ok: boolean;
+  via_id: number;
+  counts?: ScanCounts;
+  warnings?: string[];
+  error?: string;
+};
+
+/** Quét kiểu ToolFB qua Graph API chính thức: TKQC (cá nhân + BM), BM, Page, Pixel. */
+/** Môi trường backend (local/staging/production) từ /health — dùng để ẩn tính năng chỉ chạy local. */
+export async function getServerEnv(): Promise<string> {
+  try {
+    const res = await fetch(`${API_URL}/health`);
+    if (!res.ok) return "unknown";
+    const data = (await res.json()) as { app_env?: string };
+    return data.app_env || "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
+export async function scanVia(viaId: number): Promise<ScanResult> {
+  return postJson<ScanResult>(`/vias/${viaId}/scan`, {});
+}
+
+export type PixelItem = {
+  pixel_id: string;
+  name: string;
+  last_fired_time: string | null;
+  creation_time: string | null;
+  is_unavailable: boolean;
+  accounts: { act_id: string; name: string }[];
+};
+
+export async function getAdsCheckPixels(params?: { via_id?: number; search?: string }): Promise<{ items: PixelItem[]; total_count: number }> {
+  const q = new URLSearchParams();
+  if (params?.via_id) q.append("via_id", String(params.via_id));
+  if (params?.search) q.append("search", params.search);
+  const query = q.toString() ? `?${q.toString()}` : "";
+  return fetchJson<{ items: PixelItem[]; total_count: number }>(`/vias/ads-check/pixels${query}`);
+}
+
 export async function assignAccountCustomer(
   act_id: string,
   customer_id: number | null
