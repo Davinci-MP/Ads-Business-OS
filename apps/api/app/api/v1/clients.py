@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.local_admin import require_local_admin
+from app.core.local_admin import require_local_admin_or_owner
 from app.db import get_db
 from app.models.client_bm_preference import (
     ACCESS_TYPE_FULL,
@@ -31,7 +31,7 @@ from app.services.auto_fulfillment import (
     save_or_update_client_bm_preference,
 )
 
-router = APIRouter(tags=["clients-multi-bm"], dependencies=[Depends(require_local_admin)])
+router = APIRouter(tags=["clients-multi-bm"], dependencies=[Depends(require_local_admin_or_owner)])
 
 
 class UpdateBMPreferenceRequest(BaseModel):

@@ -15,7 +15,7 @@ from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.core.local_admin import require_local_admin
+from app.core.local_admin import require_local_admin_or_owner
 from app.models import AdAccount, Approval, AuditLog, Customer
 from app.connectors.sheets import parse_spreadsheet_url
 from app.services import accounts as account_service
@@ -168,7 +168,7 @@ class AdAccountCreate(BaseModel):
     business_manager_id: Optional[str] = None
 
 
-@router.post("/customers", dependencies=[Depends(require_local_admin)])
+@router.post("/customers", dependencies=[Depends(require_local_admin_or_owner)])
 def create_customer(payload: CustomerCreate, db: Session = Depends(get_db)) -> dict[str, Any]:
     try:
         customer = account_service.create_customer(
@@ -183,8 +183,8 @@ def create_customer(payload: CustomerCreate, db: Session = Depends(get_db)) -> d
     return {"status": "CREATED", "customer_id": customer.id, "name": customer.name}
 
 
-@router.patch("/customers/{customer_id}", dependencies=[Depends(require_local_admin)])
-@router.put("/customers/{customer_id}", dependencies=[Depends(require_local_admin)])
+@router.patch("/customers/{customer_id}", dependencies=[Depends(require_local_admin_or_owner)])
+@router.put("/customers/{customer_id}", dependencies=[Depends(require_local_admin_or_owner)])
 def update_customer(customer_id: int, payload: CustomerCreate, db: Session = Depends(get_db)) -> dict[str, Any]:
     try:
         customer = account_service.update_customer_profile(db, customer_id, payload.name, payload.telegram_chat_id,
@@ -196,7 +196,7 @@ def update_customer(customer_id: int, payload: CustomerCreate, db: Session = Dep
     return {"status": "UPDATED", "customer_id": customer.id, "name": customer.name}
 
 
-@router.delete("/customers/{customer_id}", dependencies=[Depends(require_local_admin)])
+@router.delete("/customers/{customer_id}", dependencies=[Depends(require_local_admin_or_owner)])
 def delete_customer(customer_id: int, db: Session = Depends(get_db)) -> dict[str, Any]:
     try:
         customer = account_service.deactivate_customer(db, customer_id)
@@ -206,7 +206,7 @@ def delete_customer(customer_id: int, db: Session = Depends(get_db)) -> dict[str
     return {"status": "DEACTIVATED", "customer_id": customer.id, "is_active": customer.is_active}
 
 
-@router.put("/customers/{customer_id}/ad-accounts", dependencies=[Depends(require_local_admin)])
+@router.put("/customers/{customer_id}/ad-accounts", dependencies=[Depends(require_local_admin_or_owner)])
 def replace_customer_accounts(customer_id: int, payload: CustomerAccountSet,
                               db: Session = Depends(get_db)) -> dict[str, Any]:
     try:
@@ -218,7 +218,7 @@ def replace_customer_accounts(customer_id: int, payload: CustomerAccountSet,
     return {"status": "UPDATED", "customer_id": customer_id, "act_ids": [a.act_id for a in accounts]}
 
 
-@router.post("/customers/{customer_id}/sheet-sync/approve", dependencies=[Depends(require_local_admin)])
+@router.post("/customers/{customer_id}/sheet-sync/approve", dependencies=[Depends(require_local_admin_or_owner)])
 def approve_customer_sheet_sync(customer_id: int, payload: SheetSyncApprovalRequest,
                                 db: Session = Depends(get_db)) -> dict[str, Any]:
     customer = db.get(Customer, customer_id)

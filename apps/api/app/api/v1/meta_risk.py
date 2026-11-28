@@ -7,14 +7,14 @@ from sqlalchemy.orm import Session
 
 from app.connectors.meta import MetaAPIError, MetaAdsConnector
 from app.db import get_db
-from app.core.local_admin import require_local_admin
+from app.core.local_admin import require_local_admin_or_owner
 from app.models.meta_risk import MetaAccountRisk
 from app.models.finance import AuditLog
 from app.core.config import settings
 from app.services.meta_risk import get_risk, lock_account, scan_account_risks, unlock_account
 from app.services.telegram_bot import get_configured_telegram_connector
 
-router = APIRouter(prefix="/meta-risk", tags=["rủi ro Meta"], dependencies=[Depends(require_local_admin)])
+router = APIRouter(prefix="/meta-risk", tags=["rủi ro Meta"], dependencies=[Depends(require_local_admin_or_owner)])
 
 
 @router.get("")
