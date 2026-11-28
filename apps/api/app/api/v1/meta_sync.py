@@ -14,7 +14,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.connectors.meta import MetaAPIError, build_connector
+from app.connectors.meta import MetaAPIError
+from app.services.meta_tokens import build_job_connector, mock_blocked
 from app.db import get_db
 from app.models import Campaign, SpendSnapshot
 from app.models.campaign import RECOGNITION_CONFIRMED, RECOGNITION_UNRECOGNIZED
@@ -23,6 +24,11 @@ from app.services.meta_sync import run_meta_sync
 
 router = APIRouter(prefix="/meta-sync", tags=["meta-sync"])
 
+_NO_TOKEN_DETAIL = (
+    "Chưa có token Meta thật: trên server hãy vào Dàn VIA → Cấp quyền Facebook cho ít nhất một VIA "
+    "(chạy local có thể dùng env ADSOS_META_ACCESS_TOKEN / ADSOS_META_TOKEN_MAP). KHÔNG dán token vào chat."
+)
+
 
 @router.post("/run")
 def run_sync(
@@ -30,8 +36,11 @@ def run_sync(
     now: Optional[str] = Query(None, description="ISO datetime mô phỏng thời điểm chạy — CHỈ khi connector ở mock mode (kiểm thử checkpoint/tiền trôi deterministic); live sẽ bị chặn"),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    """Chạy 1 lượt đồng bộ (idempotent). Connector tự mock khi chưa có token (D-027)."""
-    connector = build_connector()
+    """Chạy 1 lượt đồng bộ (idempotent). Local tự mock khi chưa có token (D-027); server
+    dùng token VIA đã cấp quyền OAuth và KHÔNG ghi dữ liệu mock."""
+    connector = build_job_connector(db)
+    if mock_blocked(connector):
+        raise HTTPException(status_code=409, detail=_NO_TOKEN_DETAIL)
     run_now: Optional[datetime] = None
     if now:
         if connector.mode != "mock":
@@ -50,23 +59,17 @@ def run_sync(
 
 
 @router.get("/mode")
-def connector_mode() -> dict[str, str]:
-    connector = build_connector()
+def connector_mode(db: Session = Depends(get_db)) -> dict[str, str]:
+    connector = build_job_connector(db)
     return {"mode": connector.mode}
 
 
 @router.get("/check")
-def check_access() -> dict[str, Any]:
+def check_access(db: Session = Depends(get_db)) -> dict[str, Any]:
     """S16: kiểm tra Meta token (hiệu lực + quyền ads_read + account truy cập được) — GET-only, không fallback mock."""
-    connector = build_connector()
+    connector = build_job_connector(db)
     if connector.mode == "mock":
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Chưa cấu hình Meta token (env ADSOS_META_ACCESS_TOKEN hoặc ADSOS_META_TOKEN_MAP) — "
-                "xem hướng dẫn setup token trong docs; KHÔNG dán token vào chat"
-            ),
-        )
+        raise HTTPException(status_code=400, detail=_NO_TOKEN_DETAIL)
     try:
         return connector.check_access()
     except MetaAPIError as exc:
