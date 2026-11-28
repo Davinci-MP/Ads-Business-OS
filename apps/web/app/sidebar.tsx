@@ -8,6 +8,7 @@ export const navigation = [
   { href: "/accounts", label: "Tài khoản quảng cáo", icon: "account" },
   { href: "/bms", label: "Business Manager", icon: "business" },
   { href: "/vias", label: "Dàn VIA", icon: "via" },
+  { href: "/adscheck", label: "ADS CHECK", icon: "shield" },
   { href: "/customers", label: "Khách hàng", icon: "customer" },
   { href: "/analytics", label: "Phân tích & báo cáo", icon: "analytics" },
   { href: "/auto-set-camp", label: "Thiết lập chiến dịch", icon: "campaign" },
