@@ -20,7 +20,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.local_admin import require_local_admin
+from app.core.local_admin import require_local_admin_or_owner
 from app.db import get_db
 from app.models.customer import utcnow
 from app.models.via import ViaProfile
@@ -149,7 +149,7 @@ async def _get_meta_json(
     return payload
 
 
-@router.get("/facebook/login", dependencies=[Depends(require_local_admin)])
+@router.get("/facebook/login", dependencies=[Depends(require_local_admin_or_owner)])
 def facebook_login(
     request: Request,
     via_id: int = Query(..., gt=0),
