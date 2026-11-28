@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from app.connectors.meta import build_connector
+from app.services.meta_tokens import build_job_connector
 from app.models import (
     AuditLog, AdAccount, AdAccountAssignment, AdAccountSnapshot, Campaign, Customer,
     DriftRecord, RemoteViaCommand, SpendSnapshot, SyncedAdAccount,
@@ -92,7 +92,7 @@ def overview(session: Session) -> dict[str, Any]:
     )
 
     return {
-        "mode": build_connector().mode,
+        "mode": build_job_connector(session).mode,
         "totals": {
             "customers": len(customers),
             "accounts_total": len(accounts),
@@ -227,7 +227,7 @@ def system_rows(session: Session) -> dict[str, Any]:
     ).scalars().all()
     campaign_names = {c.id: c.meta_campaign_id for c in campaigns}
     return {
-        "mode": build_connector().mode,
+        "mode": build_job_connector(session).mode,
         "last_sync_at": _iso(last_sync),
         "api_errors": [
             {
@@ -374,7 +374,7 @@ def operational_dashboard(
     commands = session.scalars(select(RemoteViaCommand).where(
         RemoteViaCommand.status.in_(("PENDING", "RUNNING", "PROCESSING", "COMPLETED")),
     ).order_by(RemoteViaCommand.created_at.desc(), RemoteViaCommand.id.desc()).limit(10)).all()
-    meta_mode = build_connector().mode
+    meta_mode = build_job_connector(session).mode
 
     return {
         "business_date": today.isoformat(),

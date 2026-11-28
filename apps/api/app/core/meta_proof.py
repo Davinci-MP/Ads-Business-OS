@@ -64,3 +64,12 @@ def add_proof_to_graph_request(request: httpx.Request) -> None:
     proof = compute_appsecret_proof(_token_from_request(request))
     if proof:
         request.url = request.url.copy_add_param("appsecret_proof", proof)
+
+
+def ensure_graph_proof_hook(client: httpx.Client) -> httpx.Client:
+    """Gắn ``add_proof_to_graph_request`` vào client (một lần). Hook ở lại trên client nên
+    cả các ``client.get(next_url)`` phân trang sau đó cũng được ký."""
+    hooks = client.event_hooks.get("request", [])
+    if add_proof_to_graph_request not in hooks:
+        client.event_hooks = {**client.event_hooks, "request": [*hooks, add_proof_to_graph_request]}
+    return client

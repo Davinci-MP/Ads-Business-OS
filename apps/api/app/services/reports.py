@@ -61,14 +61,19 @@ def _money_f(value: Decimal) -> float:
     return float(_money(value))
 
 
-def meta_connector_mode() -> str:
-    from app.connectors.meta import build_connector
+def meta_connector_mode(db: Optional[Session] = None) -> str:
+    """mock/live của nguồn Meta: env token (local) hoặc token VIA đã cấp quyền (server)."""
+    if db is None:
+        from app.connectors.meta import build_connector
 
-    return build_connector().mode
+        return build_connector().mode
+    from app.services.meta_tokens import build_job_connector
+
+    return build_job_connector(db).mode
 
 
-def _meta_source_label() -> str:
-    return META_LABEL_MOCK if meta_connector_mode() == "mock" else META_LABEL_LIVE
+def _meta_source_label(db: Optional[Session] = None) -> str:
+    return META_LABEL_MOCK if meta_connector_mode(db) == "mock" else META_LABEL_LIVE
 
 
 def _latest_verified_snapshot_per_campaign(db: Session) -> dict[int, SpendSnapshot]:
@@ -98,6 +103,7 @@ def daily_spend_rows(
     KHÔNG cộng USD/VND/GBP/EUR/USDT chéo: legacy `meta_spend`/`manual_spend`/`fee`/
     `billing_total` chỉ là phần USD; phần còn lại nằm trong `*_by_currency`.
     """
+    meta_source = _meta_source_label(db)  # tính 1 lần, không lặp theo từng dòng
     latest = _latest_verified_snapshot_per_campaign(db)
     campaigns = db.execute(select(Campaign).where(Campaign.recognition_status == "CONFIRMED")).scalars().all()
     if customer_id is not None:
@@ -128,7 +134,7 @@ def daily_spend_rows(
                 "manual_by_currency": {},
                 "fee_by_currency": {},
                 "billing_by_currency": {},
-                "meta_source": _meta_source_label(),
+                "meta_source": meta_source,
                 "campaign_count": 0,
             },
         )
@@ -239,8 +245,8 @@ def daily_spend_rows(
     ]
 
     return {
-        "meta_source_label": _meta_source_label(),
-        "meta_mode": meta_connector_mode(),
+        "meta_source_label": _meta_source_label(db),
+        "meta_mode": meta_connector_mode(db),
         "rows": rows,
         "chart_rows": chart_rows,
         "note": (
@@ -343,7 +349,7 @@ def company_kpi(
     # Độ phủ dữ liệu (D-042): ĐẦY ĐỦ chỉ khi live Meta + mọi khách có dữ liệu trong kỳ
     if not with_data_ids:
         company_state = STATE_INSUFFICIENT
-    elif len(with_data_ids) >= len(customers) and _meta_source_label() == META_LABEL_LIVE:
+    elif len(with_data_ids) >= len(customers) and _meta_source_label(db) == META_LABEL_LIVE:
         company_state = STATE_COMPLETE
     else:
         company_state = STATE_PARTIAL
@@ -356,8 +362,8 @@ def company_kpi(
             "from": date_from.isoformat() if date_from else None,
             "to": date_to.isoformat() if date_to else None,
         },
-        "meta_source_label": _meta_source_label(),
-        "meta_mode": meta_connector_mode(),
+        "meta_source_label": _meta_source_label(db),
+        "meta_mode": meta_connector_mode(db),
         "company_data_state": company_state,
         "coverage": {"customers_with_data": len(with_data_ids), "customers_total": len(customers)},
         "meta_spend": {
@@ -483,7 +489,7 @@ def customer_report(
             "recon_mode": customer.recon_mode,
             "profit_share_enabled": customer.profit_share_enabled,
         },
-        "meta_source_label": _meta_source_label(),
+        "meta_source_label": _meta_source_label(db),
         "company_reference_state": kpi["meta_spend"]["data_state"],
         "daily_spend": daily,
         "accounts_history": accounts_history,

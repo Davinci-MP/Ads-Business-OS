@@ -31,6 +31,15 @@ def default_test_telegram_mock(monkeypatch):
     monkeypatch.setattr(settings, "telegram_bot_token", "")
 
 
+@pytest.fixture(autouse=True)
+def _no_via_meta_tokens(monkeypatch):
+    """DB test dùng chung cả phiên: VIA ACTIVE do test khác tạo sẽ biến connector job thành
+    live. Mặc định tắt nguồn token VIA; test nào cần thì tự bật lại (xem test_meta_tokens)."""
+    from app.services import meta_tokens
+
+    monkeypatch.setattr(meta_tokens, "via_token_sources", lambda session: ({}, []))
+
+
 def datetime_utc(year, month, day, hour=0, minute=0):
     return datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
 

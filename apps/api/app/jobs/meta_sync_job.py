@@ -21,7 +21,8 @@ from typing import Any, Optional
 
 from sqlalchemy import select
 
-from app.connectors.meta import MetaAPIError, MetaAuthError, build_connector
+from app.connectors.meta import MetaAPIError, MetaAuthError, build_connector  # noqa: F401 (tests patch)
+from app.services.meta_tokens import NO_META_TOKEN_STATUS, build_job_connector, mock_blocked
 from app.connectors.telegram import TelegramAPIError, TelegramBotConnector
 from app.core.config import settings
 from app.db import SessionLocal
@@ -86,11 +87,16 @@ def meta_sync_job(
     """Job đồng bộ hằng giờ. Không tự tạo connector mock khi live lỗi."""
     own_session = session is None
     session = session or SessionLocal()
-    connector = connector or build_connector()
+    connector = connector or build_job_connector(session)
     notifier = notifier or TelegramBotConnector()
-    if settings.app_env == "production" and connector.mode == "mock":
-        # Guard: production không bao giờ ghi mock data (yêu cầu S4/S5).
-        return {"status": "MOCK_NOT_ALLOWED_IN_PRODUCTION"}
+    if mock_blocked(connector):
+        # Guard: ngoài local không bao giờ ghi mock data (S4/S5). Server chưa có VIA nào
+        # cấp quyền OAuth → bỏ qua, giữ nguyên dữ liệu.
+        if own_session:
+            session.close()
+        if settings.app_env == "production":
+            return {"status": "MOCK_NOT_ALLOWED_IN_PRODUCTION"}
+        return {"status": NO_META_TOKEN_STATUS, "app_env": settings.app_env}
     now = now or _default_now()
     if now.tzinfo is None:
         now = now.replace(tzinfo=timezone.utc)
@@ -136,9 +142,14 @@ def checkpoint_9h_job(
     """
     own_session = session is None
     session = session or SessionLocal()
-    connector = connector or build_connector()
+    connector = connector or build_job_connector(session)
     notifier = notifier or TelegramBotConnector()
     now = now or _default_now()
+    if mock_blocked(connector):
+        # Không có token thật ngoài local → không ghi checkpoint giả lập.
+        if own_session:
+            session.close()
+        return {"status": NO_META_TOKEN_STATUS, "app_env": settings.app_env}
     try:
         if not is_checkpoint_time(now):
             missed: dict[str, Any] = {

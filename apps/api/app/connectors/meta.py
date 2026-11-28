@@ -208,12 +208,16 @@ class MetaAdsConnector:
         client: Optional[httpx.Client] = None,
         max_retries: int = 3,
         retry_delay: float = 1.0,
+        discovery_tokens: Optional[list[str]] = None,
     ) -> None:
         self.api_version = api_version or os.environ.get("ADSOS_META_API_VERSION", "") or _default_api_version()
         raw_token_map = dict(token_map or load_token_map())
         self._token_map: dict[str, str] = {k: decrypt_token_if_encrypted(v) or v for k, v in raw_token_map.items()}
         raw_default = access_token or os.environ.get(TOKEN_ENV, "")
         self._default_token = decrypt_token_if_encrypted(raw_default) or ""
+        # Token của từng VIA đã cấp quyền OAuth: mỗi token tự liệt kê /me/adaccounts của nó
+        # (server không dùng env token như khi chạy local).
+        self._discovery_tokens: list[str] = [t for t in dict.fromkeys(discovery_tokens or []) if t]
         self._timeout = timeout
         self._transport = transport
         self._client: Optional[httpx.Client] = client
@@ -222,7 +226,8 @@ class MetaAdsConnector:
         self.telemetry = RateLimitTelemetry()
 
         # use_mock=True: ép mock (test); use_mock=None: tự mock khi chưa có token (D-027)
-        self._use_mock = not (self._default_token or self._token_map) if use_mock is None else use_mock
+        has_token = bool(self._default_token or self._token_map or self._discovery_tokens)
+        self._use_mock = not has_token if use_mock is None else use_mock
         if self._use_mock:
             self._mock = mock_connector or MockMetaConnector()
         else:
@@ -525,18 +530,28 @@ class MetaAdsConnector:
         seen: set[str] = set()
         fields = "id,account_id,name,timezone_name,currency,business"
         bm_ids = [k for k in self._token_map if not k.startswith("act_")]
-        sources: list[Optional[str]] = bm_ids if bm_ids else [None]
-        for bm_id in sources:
-            token = self.token_for_source(bm_id)
+        # (nguồn, token): BM trong token map → /{business_id}/owned_ad_accounts;
+        # token VIA → /me/adaccounts của từng token; còn lại → /me/adaccounts token mặc định.
+        sources: list[tuple[Optional[str], Optional[str]]]
+        if bm_ids:
+            sources = [(bm_id, self.token_for_source(bm_id)) for bm_id in bm_ids]
+        elif self._discovery_tokens:
+            sources = [(None, token) for token in self._discovery_tokens]
+        else:
+            sources = [(None, self.token_for_source(None))]
+        for bm_id, token in sources:
             if not token:
                 raise MetaAPIError(f"Không tìm thấy token cho nguồn {bm_id or 'default'}")
-            path = f"act_{bm_id}/owned_ad_accounts" if bm_id else "me/adaccounts"
+            # Graph API: /{business_id}/owned_ad_accounts (KHÔNG có tiền tố act_ cho BM).
+            path = f"{bm_id}/owned_ad_accounts" if bm_id else "me/adaccounts"
             page = self._graph_get(path, {"fields": fields, "access_token": token})
             for row in page:
                 account_id = row.get("id") or (f"act_{row.get('account_id')}" if row.get("account_id") else None)
                 if not account_id or account_id in seen:
                     continue
                 seen.add(account_id)
+                # Gọi campaign/insights của account này bằng đúng token đã thấy nó.
+                self._token_map.setdefault(account_id, token)
                 accounts.append(
                     {
                         "meta_ad_account_id": account_id,
@@ -546,8 +561,6 @@ class MetaAdsConnector:
                         "currency": row.get("currency") or "USD",
                     }
                 )
-            if not bm_ids:
-                break
         return accounts
 
     def get_account_campaigns(self, meta_ad_account_id: str) -> list[dict[str, Any]]:
