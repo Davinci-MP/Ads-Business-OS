@@ -446,7 +446,7 @@ export default function AccountsPage() {
       )}
 
       {/* ZONE 1: TOP HEADER & ACTIONS */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-6">
+      <div className="page-heading flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
             <span className="text-3xl"></span>

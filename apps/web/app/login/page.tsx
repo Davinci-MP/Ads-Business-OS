@@ -56,7 +56,8 @@ export default function LoginPage() {
         alignItems: "center",
         justifyContent: "center",
         padding: "20px",
-        background: "var(--page)",
+        background:
+          "radial-gradient(900px 500px at 15% 10%, #6c5ce722, transparent 60%), radial-gradient(800px 500px at 90% 90%, #4f7df922, transparent 60%), var(--page)",
         color: "var(--ink)",
         fontFamily: "var(--font-geist), -apple-system, system-ui, sans-serif",
       }}
@@ -65,18 +66,36 @@ export default function LoginPage() {
         style={{
           background: "var(--surface)",
           border: "1px solid var(--line)",
-          borderRadius: "10px",
+          borderRadius: "20px",
           padding: "40px",
           maxWidth: "400px",
           width: "100%",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+          boxShadow: "0 24px 60px -24px rgba(79,70,229,0.35)",
         }}
       >
+        <div
+          aria-hidden="true"
+          style={{
+            width: "52px",
+            height: "52px",
+            margin: "0 auto 16px",
+            borderRadius: "15px",
+            background: "linear-gradient(135deg,#6c5ce7 0%,#4f7df9 100%)",
+            color: "#fff",
+            fontSize: "30px",
+            fontWeight: 800,
+            lineHeight: "50px",
+            textAlign: "center",
+            boxShadow: "0 10px 24px -10px rgba(108,92,231,0.7)",
+          }}
+        >
+          a<span style={{ color: "#ffd166" }}>.</span>
+        </div>
         <h2
           style={{
             margin: "0 0 20px",
             fontSize: "1.4rem",
-            fontWeight: 600,
+            fontWeight: 750,
             letterSpacing: "-0.02em",
             color: "var(--ink)",
             textAlign: "center",
@@ -192,11 +211,12 @@ export default function LoginPage() {
             disabled={isLoading}
             style={{
               width: "100%",
-              padding: "10px",
-              background: "var(--ink)",
-              color: "var(--page)",
+              padding: "11px",
+              background: "linear-gradient(135deg,#6c5ce7 0%,#4f7df9 100%)",
+              color: "#fff",
               border: "none",
-              borderRadius: "6px",
+              borderRadius: "11px",
+              boxShadow: "0 8px 20px -8px rgba(108,92,231,0.6)",
               fontSize: "0.9rem",
               fontWeight: 600,
               cursor: "pointer",
