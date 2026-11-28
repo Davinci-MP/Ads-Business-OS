@@ -7,6 +7,7 @@ import binascii
 import hashlib
 import hmac
 import json
+import logging
 import secrets
 import time
 from collections.abc import AsyncIterator
@@ -26,6 +27,7 @@ from app.models.customer import utcnow
 from app.models.via import ViaProfile
 
 router = APIRouter(prefix="/oauth", tags=["meta-oauth"])
+logger = logging.getLogger(__name__)
 
 _OAUTH_SCOPES = ("ads_read", "business_management", "pages_show_list")
 _STATE_MAX_AGE_SECONDS = 600
@@ -145,6 +147,9 @@ async def _get_meta_json(
     except ValueError as exc:
         raise RuntimeError("Meta trả về phản hồi không hợp lệ") from exc
     if response.is_error or not isinstance(payload, dict) or payload.get("error"):
+        # Chỉ log nội dung lỗi Meta trả về (không log params vì chứa client_secret).
+        meta_error = payload.get("error") if isinstance(payload, dict) else payload
+        logger.error("Meta OAuth bị từ chối: status=%s error=%s", response.status_code, meta_error)
         raise RuntimeError("Meta từ chối yêu cầu OAuth")
     return payload
 
