@@ -1,5 +1,22 @@
 # PROJECT_STATUS.md — Trạng thái dự án
 
+## Cập nhật 2026-11-28 (tối) — Kết nối Meta chạy end-to-end trên server (Railway + Postgres)
+
+Đã nghiệm thu trên server thật: đăng nhập → tạo VIA → **Cấp quyền Facebook (OAuth)** → token ACTIVE → **Đồng bộ** tài sản thành công. PR #12–#17.
+
+- **DB production chuyển SQLite tạm → Postgres Railway (D-067):** trước đó backend chạy SQLite trong container (mất dữ liệu mỗi lần deploy) vì `ADSOS_DATABASE_URL` rỗng; tham chiếu `${{Postgres.DATABASE_URL}}` chỉ hoạt động khi Postgres **cùng project** với backend. `app/core/db_url.py` chuẩn hóa URL dùng chung cho app + Alembic (`postgresql://` → `postgresql+psycopg://`, báo lỗi rõ khi rỗng).
+- **Migration chạy được trên Postgres:** sửa 4 migration chỉ hợp SQLite (Boolean `DEFAULT 0` → `sa.false()`, FK `via_categories` sai tham số, trùng tên `uq_snapshot` → `uq_ad_account_snapshot` cho `ad_account_snapshots`, seed boolean bị `except Exception` nuốt lỗi). Thử `upgrade head → downgrade base → upgrade head` trên PostgreSQL 16 tạm + SQLite.
+- **`appsecret_proof`:** app Meta bật *Require App Secret* → `app/core/meta_proof.py` ký `HMAC-SHA256(token, FACEBOOK_APP_SECRET)` cho mọi lời gọi Graph bằng token (OAuth `/me`, đồng bộ VIA kể cả `paging.next`, connector, keepalive, MaxCare, ads_check). Bỏ qua token `EAAB/EAAG` (app nội bộ Facebook).
+- **OAuth liên kết bằng app-scoped user ID:** `/me` (Graph v2.0+) không trả UID thật → lần cấp quyền đầu lưu `via_profiles.meta_app_user_id` (unique) + `meta_user_name`; các lần sau phải trùng; một tài khoản Facebook chỉ gắn một VIA. Migration `y9z0a1b2c3d4`. Web hiện "FB: <tên>".
+- **Job/dashboard dùng token VIA, chặn mock ngoài local:** trước đây job hằng giờ, checkpoint 09:00, quét rủi ro, dashboard lấy token từ env (cách chạy local) → trên server rơi vào mock và **ghi dữ liệu giả lập vào Postgres** (guard chỉ chặn ở production, server là staging). `app/services/meta_tokens.py`: token map `act_<id>` → token VIA ACTIVE; mock chỉ được dùng ở `APP_ENV=local`, ngoài local không có token → `NO_META_TOKEN`, không ghi gì. Sửa đường dẫn BM `act_{bm}/owned_ad_accounts` → `{business_id}/owned_ad_accounts`.
+- **Chẩn đoán:** log lỗi Meta trả về ở bước OAuth (không log `client_secret`).
+- **Nghiệm thu:** backend 682 pass (1 flaky `test_prepaid` đã biết); Graph `v26.0` xác nhận hợp lệ.
+
+**Chờ chủ dự án (chưa làm):**
+- **Dọn dữ liệu mock — chủ dự án đã duyệt (2026-11-28):** script `infra/sql/2026-11-28_cleanup_mock_meta_data.sql` (xem trước + xóa trong 1 transaction) chỉ xóa tài khoản `act_mock_%` và campaign/snapshot/drift/risk con của chúng; giữ `audit_log`. Đã thử trên PostgreSQL 16 tạm: xóa đúng dòng mock, tài khoản thật giữ đủ campaign/snapshot/drift, chạy lại lần hai xóa 0. **Chủ dự án tự chạy trên DB Railway** (agent không có quyền DB).
+- Đổi các secret đã lộ trong ảnh/chat (`FACEBOOK_APP_SECRET`, `ADSOS_EXCHANGE_MASTER_KEY`, `ADSOS_EXCHANGE_ADMIN_TOKEN`, `ADSOS_STAFF_AUTH_SECRET`) và mật khẩu Postgres; xóa TCP Proxy công khai của Postgres; xóa project Railway `fearless-appreciation` (Postgres cũ không dùng).
+- Máy của chủ dự án: Tailscale bật làm `api.vextech.vn` phân giải về Vercel cũ (router cache) → tắt Tailscale hoặc khởi động lại router khi thử.
+
 ## Cập nhật 2026-11-28 — Tối ưu trang Dàn VIA, tạo VIA không cần mật khẩu, sửa màu theme sáng toàn site
 
 - **Trang `/vias` làm lại** (giữ nguyên mọi chức năng cũ): nút chính **"+ Tạo VIA"**, "Nhập hàng loạt", các công cụ khác gom vào menu **"Công cụ"**; màn hướng dẫn 3 bước khi chưa có VIA; mỗi dòng có nút **"Cấp quyền Facebook"** (OAuth chính thức) làm thao tác chính, các thao tác phụ trong menu "⋯"; thông báo lỗi OAuth rõ theo từng mã (`uid_mismatch`, `token_exchange_failed`...).
